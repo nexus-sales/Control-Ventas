@@ -21,6 +21,7 @@ import Reglas from "./components/Reglas";
 import ImportExcelMapperWrapper from "./components/ImportExcelMapperWrapper";
 import Config from "./components/Config.jsx";
 import LoginScreen from "./components/auth/LoginScreen";
+import ResetPasswordScreen from "./components/auth/ResetPasswordScreen";
 
 // ============================
 // App Routes Component (dentro de los providers)
@@ -52,6 +53,7 @@ function AppRoutes() {
         ) : (
           <Routes>
             <Route path="/login" element={<LoginScreen />} />
+            <Route path="/reset-password" element={<ResetPasswordScreen />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         )}
