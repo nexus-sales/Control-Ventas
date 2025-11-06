@@ -7,37 +7,34 @@ const AUTH_STORAGE_KEY = '__app_auth_state';
 const OFFLINE_FLAG = '__app_offline_mode';
 
 const loadStoredAuth = () => {
-  if (typeof window === 'undefined') return { user: null, profile: null };
-  try {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return { user: null, profile: null };
-    const parsed = JSON.parse(raw);
-    return {
-      user: parsed?.user || null,
-      profile: parsed?.profile || null,
-    };
-  } catch (error) {
-    console.warn('[AuthProvider] No se pudo cargar el estado almacenado', error);
-    return { user: null, profile: null };
-  }
+  // MODIFICADO: Siempre retornar null para forzar login en cada acceso
+  // if (typeof window === 'undefined') return { user: null, profile: null };
+  // try {
+  //   const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+  //   if (!raw) return { user: null, profile: null };
+  //   const parsed = JSON.parse(raw);
+  //   return {
+  //     user: parsed?.user || null,
+  //     profile: parsed?.profile || null,
+  //   };
+  // } catch (error) {
+  //   console.warn('[AuthProvider] No se pudo cargar el estado almacenado', error);
+  //   return { user: null, profile: null };
+  // }
+  
+  // Siempre requerir login fresco
+  return { user: null, profile: null };
 };
 
-const saveStoredAuth = (user, profile) => {
+const saveStoredAuth = () => {
+  // MODIFICADO: No guardar sesión para forzar login en cada acceso
   if (typeof window === 'undefined') return;
   try {
-    if (!user || !profile) {
-      window.localStorage.removeItem(AUTH_STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(
-      AUTH_STORAGE_KEY,
-      JSON.stringify({
-        user: { id: user.id, email: user.email },
-        profile,
-      })
-    );
+    // Siempre limpiar cualquier sesión almacenada
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    console.log('[AuthProvider] Sesión limpiada - login obligatorio en próximo acceso');
   } catch (error) {
-    console.warn('[AuthProvider] No se pudo guardar el estado de autenticación', error);
+    console.warn('[AuthProvider] No se pudo limpiar el estado de autenticación', error);
   }
 };
 
@@ -65,7 +62,8 @@ const writeOfflinePreference = (value) => {
 };
 
 export function AuthProvider({ children }) {
-  const initialAuthRef = useRef(loadStoredAuth());
+  // MODIFICADO: Siempre comenzar sin sesión para forzar login
+  const initialAuthRef = useRef({ user: null, profile: null });
   const initialOffline = useMemo(() => {
     if (AUTH_BYPASS) return true;
     if (typeof window === 'undefined') return false;
@@ -73,10 +71,12 @@ export function AuthProvider({ children }) {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
     return false;
   }, []);
-  const [user, setUser] = useState(initialAuthRef.current.user);
-  const [profile, setProfile] = useState(initialAuthRef.current.profile);
-  const [isLogged, setIsLogged] = useState(() => !!initialAuthRef.current.profile);
-  const [isAuthLoading, setIsAuthLoading] = useState(() => !initialAuthRef.current.profile && !initialOffline);
+  
+  // Siempre comenzar sin autenticación
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [isLogged, setIsLogged] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(!initialOffline);
   const [offlineMode, setOfflineMode] = useState(initialOffline);
   const offlineReasonRef = useRef(initialOffline ? 'initial' : null);
 
@@ -147,7 +147,7 @@ export function AuthProvider({ children }) {
       setIsAuthLoading(false);
       setOfflineMode(true);
       writeOfflinePreference(true);
-      saveStoredAuth(bypassUser, bypassProfile);
+      saveStoredAuth(); // Limpiar cualquier sesión almacenada
     };
 
     const applySession = async (sessionUser) => {
@@ -160,15 +160,15 @@ export function AuthProvider({ children }) {
         const hasProfile = !!userProfile;
         setIsLogged(hasProfile);
         if (hasProfile) {
-          saveStoredAuth(sessionUser, userProfile);
+          saveStoredAuth(); // Limpiar cualquier sesión almacenada
           deactivateOfflineMode();
         } else {
-          saveStoredAuth(null, null);
+          saveStoredAuth(); // Limpiar cualquier sesión almacenada
         }
       } else {
         setProfile(null);
         setIsLogged(false);
-        saveStoredAuth(null, null);
+        saveStoredAuth(); // Limpiar cualquier sesión almacenada
       }
     };
 
@@ -255,6 +255,36 @@ export function AuthProvider({ children }) {
     };
   }, [activateOfflineMode, deactivateOfflineMode]);
 
+  // NUEVO: Limpiar sesión al cerrar/recargar la página
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Limpiar cualquier sesión almacenada
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(AUTH_STORAGE_KEY);
+        // También cerrar sesión en Supabase si no estamos en modo bypass
+        if (!AUTH_BYPASS && !offlineMode) {
+          supabase.auth.signOut().catch(console.error);
+        }
+      }
+    };
+
+    const handleUnload = () => {
+      // Limpiar sesión al cerrar la ventana
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(AUTH_STORAGE_KEY);
+      }
+    };
+
+    // Agregar listeners para limpiar sesión al salir
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('unload', handleUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('unload', handleUnload);
+    };
+  }, [offlineMode]);
+
   const login = async (email, password) => {
     if (offlineMode && !AUTH_BYPASS) {
       return {
@@ -278,7 +308,7 @@ export function AuthProvider({ children }) {
           setUser(data.user);
           setProfile(userProfile);
           setIsLogged(true);
-          saveStoredAuth(data.user, userProfile);
+          saveStoredAuth(); // Limpiar cualquier sesión almacenada
           deactivateOfflineMode();
           return { success: true };
         } else {
@@ -300,7 +330,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setProfile(null);
     setIsLogged(false);
-    saveStoredAuth(null, null);
+    saveStoredAuth(); // Limpiar cualquier sesión almacenada
 
     if (AUTH_BYPASS) {
       return;

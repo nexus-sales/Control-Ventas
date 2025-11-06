@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
 import EmailInput from '../ui/EmailInput';
+import '../../styles/login-animations.css';
 
 export default function ForgotPasswordScreen({ onBackToLogin }) {
   const [email, setEmail] = useState('');
@@ -96,8 +97,15 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
   };
 
   return (
-    <div className="min-h-screen grid place-items-center bg-gradient-to-b from-sky-50 to-emerald-50 dark:from-gray-900 dark:to-gray-800">
-      <Card>
+    <div className="min-h-screen grid place-items-center bg-gradient-to-br from-sky-50 via-indigo-50 to-emerald-50 dark:from-gray-900 dark:via-slate-900 dark:to-gray-800 animate-fadeIn relative overflow-hidden">
+      {/* Elementos decorativos de fondo */}
+      <div className="absolute inset-0 opacity-10 dark:opacity-5">
+        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-500 rounded-full blur-3xl animate-pulse-slow"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-emerald-500 rounded-full blur-3xl animate-pulse-slow animate-delay-300"></div>
+        <div className="absolute top-3/4 left-3/4 w-24 h-24 bg-indigo-500 rounded-full blur-3xl animate-pulse-slow animate-delay-500"></div>
+      </div>
+      
+      <Card className="animate-slideUp card-shadow hover-lift smooth-transition relative z-10">
         <div className="text-center mb-6">
           <SectionTitle>Recuperar Contraseña</SectionTitle>
           <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
