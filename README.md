@@ -112,13 +112,55 @@ Herramienta moderna para la gestión y control de ventas, colaboradores y liquid
    npm run dev
    ```
 
-## Build para producción
+## 🚀 Deploy y Producción
+
+### **Build Local**
 
 ```sh
 npm run build
 ```
 
 Los archivos finales estarán en la carpeta `dist/`.
+
+### **Deploy en Vercel (Recomendado)**
+
+1. **Instalar Vercel CLI**:
+   ```sh
+   npm install -g vercel
+   ```
+
+2. **Deploy inicial**:
+   ```sh
+   vercel
+   ```
+
+3. **Configurar variables de entorno en Vercel**:
+   ```sh
+   vercel env add VITE_SUPABASE_URL
+   vercel env add VITE_SUPABASE_ANON_KEY
+   ```
+
+4. **Deploy automático**:
+   - Conecta tu repositorio de GitHub
+   - Cada push a main se despliega automáticamente
+   - Branch previews para testing
+
+### **Características de Vercel**
+
+- ✅ **Zero-config deployment** para Vite
+- ✅ **Edge Network global** para máximo rendimiento
+- ✅ **SSL automático** y custom domains
+- ✅ **Analytics integrado** para monitoreo
+- ✅ **Security headers** automáticos
+- ✅ **Branch previews** para testing
+- ✅ **Rollbacks instantáneos**
+
+### **URL de Producción**
+
+Una vez deployado, tu aplicación estará disponible en:
+```
+https://control-ventas-tu-usuario.vercel.app
+```
 
 ## ⚙️ Configuración
 

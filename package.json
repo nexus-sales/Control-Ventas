@@ -18,7 +18,10 @@
     "format:check": "echo 'Prettier not configured yet'",
     "type-check": "echo 'Type checking not configured (JavaScript project)'",
     "validate": "npm run lint && npm run test",
-    "healthcheck": "node -e \"import('./src/utils/healthcheck.js').then(m => m.healthcheck().then(console.log))\""
+    "healthcheck": "node -e \"import('./src/utils/healthcheck.js').then(m => m.healthcheck().then(console.log))\"",
+    "deploy": "vercel --prod",
+    "deploy:preview": "vercel",
+    "vercel:env": "vercel env add"
   },
   "dependencies": {
     "@radix-ui/react-tooltip": "^1.2.8",
