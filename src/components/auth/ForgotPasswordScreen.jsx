@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../hooks/useAuth';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
 import EmailInput from '../ui/EmailInput';
@@ -10,6 +11,13 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const { offlineMode } = useAuth();
+
+  useEffect(() => {
+    if (offlineMode) {
+      setMessage('La recuperación de contraseña no está disponible en modo offline. Conéctate a internet para continuar.');
+    }
+  }, [offlineMode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,24 +27,63 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
       return;
     }
 
+    // Verificar modo offline primero
+    if (offlineMode) {
+      setMessage('La recuperación de contraseña no está disponible en modo offline. Conéctate a internet para continuar.');
+      return;
+    }
+
     setIsSubmitting(true);
     setMessage('');
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      // Verificar conectividad primero
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        setMessage('No hay conexión a internet. Verifica tu conectividad.');
+        setIsSuccess(false);
+        return;
+      }
+
+      console.log('Attempting to send reset email to:', email);
+      
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
+      console.log('Reset password response:', { data, error });
+
       if (error) {
-        setMessage(error.message);
+        console.error('Supabase reset password error:', error);
+        
+        // Manejar errores específicos de Supabase
+        if (error.message.includes('fetch')) {
+          setMessage('Error de conexión. Verifica tu internet y que Supabase esté configurado correctamente.');
+        } else if (error.message.includes('Invalid email')) {
+          setMessage('El email ingresado no es válido.');
+        } else if (error.message.includes('Email not confirmed')) {
+          setMessage('El email no está confirmado. Contacta al administrador.');
+        } else if (error.message.includes('User not found')) {
+          setMessage('No existe una cuenta con ese email.');
+        } else {
+          setMessage(`Error: ${error.message}`);
+        }
         setIsSuccess(false);
       } else {
-        setMessage('Se ha enviado un enlace de recuperación a tu email. Revisa tu bandeja de entrada.');
+        console.log('Reset email sent successfully');
+        setMessage('Se ha enviado un enlace de recuperación a tu email. Revisa tu bandeja de entrada y la carpeta de spam.');
         setIsSuccess(true);
       }
     } catch (error) {
-      console.error('Error sending reset email:', error);
-      setMessage('Error al enviar el email de recuperación. Inténtalo de nuevo.');
+      console.error('Unexpected error sending reset email:', error);
+      
+      // Manejar errores de red
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        setMessage('Error de conexión. Verifica tu internet y que el servidor esté disponible.');
+      } else if (error.name === 'AbortError') {
+        setMessage('La solicitud tardó demasiado. Inténtalo de nuevo.');
+      } else {
+        setMessage(`Error inesperado: ${error.message || 'Problema de conexión'}`);
+      }
       setIsSuccess(false);
     } finally {
       setIsSubmitting(false);
@@ -60,6 +107,13 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
 
         {!isSuccess ? (
           <form onSubmit={handleSubmit} className="grid gap-4 w-80">
+            {/* Información de diagnóstico */}
+            <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+              <p>Estado: {navigator.onLine ? '🟢 Online' : '🔴 Offline'}</p>
+              <p>Modo: {offlineMode ? '🔴 Offline Mode' : '🟢 Online Mode'}</p>
+              <p>Supabase: {import.meta.env.VITE_SUPABASE_URL ? '🟢 Configurado' : '🔴 No configurado'}</p>
+            </div>
+            
             <EmailInput
               value={email}
               onChange={handleEmailChange}
@@ -103,13 +157,40 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
               )}
             </button>
 
-            <button
-              type="button"
-              onClick={onBackToLogin}
-              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm transition-colors duration-200"
-            >
-              ← Volver al login
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const response = await fetch(import.meta.env.VITE_SUPABASE_URL + '/rest/v1/', {
+                      method: 'GET',
+                      headers: {
+                        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+                      }
+                    });
+                    if (response.ok) {
+                      setMessage('✅ Conexión con Supabase exitosa');
+                    } else {
+                      setMessage(`❌ Error de conexión: ${response.status}`);
+                    }
+                  } catch (error) {
+                    setMessage(`❌ Error de red: ${error.message}`);
+                  }
+                }}
+                className="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-2 py-1 rounded transition-colors duration-200"
+              >
+                🔧 Probar conexión
+              </button>
+              
+              <button
+                type="button"
+                onClick={onBackToLogin}
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm transition-colors duration-200"
+              >
+                ← Volver al login
+              </button>
+            </div>
           </form>
         ) : (
           <div className="w-80 text-center space-y-4">
