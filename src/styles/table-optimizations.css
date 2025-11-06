@@ -1,0 +1,136 @@
+/* src/styles/table-optimizations.css */
+/* Optimizaciones específicas para tablas con muchos datos */
+
+/* Tabla con scroll sticky headers */
+.ventas-table-container {
+  position: relative;
+  max-height: 70vh;
+  overflow: auto;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  background: white;
+}
+
+.ventas-table {
+  width: 100%;
+  min-width: 1200px;
+  font-size: 0.75rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.ventas-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  font-weight: 500;
+  text-align: left;
+  color: #64748b;
+  z-index: 10;
+  font-size: 0.75rem;
+}
+
+.ventas-table tbody td {
+  padding: 6px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  font-size: 0.75rem;
+}
+
+.ventas-table tbody tr:hover {
+  background-color: #f0f9ff;
+}
+
+.ventas-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.ventas-table tbody tr:nth-child(even):hover {
+  background-color: #f0f9ff;
+}
+
+/* Mejoras de accesibilidad */
+.ventas-table tbody tr:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+/* Columnas con ancho fijo para mejor layout */
+.ventas-table .col-fecha { width: 80px; }
+.ventas-table .col-cliente { width: 180px; }
+.ventas-table .col-producto { width: 160px; }
+.ventas-table .col-zona { width: 100px; }
+.ventas-table .col-colaborador { width: 160px; }
+.ventas-table .col-pvp { width: 80px; }
+.ventas-table .col-comision { width: 90px; }
+.ventas-table .col-neto { width: 90px; }
+.ventas-table .col-estado { width: 120px; }
+.ventas-table .col-acciones { width: 100px; }
+.ventas-table .col-checkbox { width: 40px; }
+
+/* Responsive para móvil */
+@media (max-width: 768px) {
+  .ventas-table-container {
+    max-height: 60vh;
+  }
+  
+  .ventas-table {
+    min-width: 800px;
+    font-size: 0.7rem;
+  }
+  
+  .ventas-table thead th,
+  .ventas-table tbody td {
+    padding: 4px 8px;
+  }
+}
+
+/* Loading skeleton para paginación */
+.table-loading {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Estilos para paginación */
+.pagination-container {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+/* Scroll suave */
+.ventas-table-container {
+  scroll-behavior: smooth;
+}
+
+/* Mejor indicador de ordenación */
+.sortable-header {
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background-color 0.2s;
+}
+
+.sortable-header:hover {
+  background-color: #e2e8f0;
+}
+
+/* Indicadores de estado más visibles */
+.estado-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}

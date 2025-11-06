@@ -1,0 +1,35 @@
+{
+  "extends": [
+    "web-recommended"
+  ],
+  "browserslist": [
+    "defaults",
+    "not ie 11",
+    "not and_ff <= 140",
+    "not firefox <= 141",
+    "not opera <= 117"
+  ],
+  "hints": {
+    "compat-api/css": "warning",
+    "compat-api/html": "warning",
+    "meta-charset-utf-8": "error",
+    "meta-viewport": "error",
+    "no-disallowed-headers": "error",
+    "no-inline-styles": "warning",
+    "no-protocol-relative-urls": "error",
+    "axe/language": "error",
+    "axe/text-alternatives": "error",
+    "axe/keyboard": "warning",
+    "axe/forms": "warning",
+    "manifest-exists": "warning",
+    "content-type": "error",
+    "html-checker": "error",
+    "http-compression": "warning",
+    "minified-js": "off",
+    "no-broken-links": "off",
+    "pwas/offline-ready": "off",
+    "performance-budget": "off",
+    "image-optimization-cloudinary": "off",
+    "sri": "warning"
+  }
+}

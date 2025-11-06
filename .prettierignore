@@ -1,0 +1,22 @@
+# Dependencias
+node_modules
+dist
+build
+
+# Archivos generados
+coverage
+*.log
+*.lock
+
+# Cache
+.cache
+.vite
+.eslintcache
+
+# Archivos de configuración grandes
+package-lock.json
+*.min.js
+*.bundle.js
+
+# Archivos de prueba generados
+lhreport.json

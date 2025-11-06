@@ -1,0 +1,511 @@
+import { useState, useContext } from "react";
+import Toast from "./ui/Toast";
+import {
+  Layers,
+  Settings,
+  Phone,
+  Zap,
+  Shield,
+  Plus,
+  Edit2,
+  Trash2
+} from "lucide-react";
+import Card from "./ui/Card";
+import SectionTitle from "./ui/SectionTitle";
+import { DataCtx } from "../context/contexts";
+
+import { NivelEditModal, ReglaEditModal } from "./reglas/index.js";
+
+export default function Reglas() {
+  // Usar el contexto de datos - CORREGIDO: usar las funciones del contexto directamente
+  const { 
+    data, 
+    setNiveles: contextSetNiveles, 
+    setReglas: contextSetReglas,
+    dataInitialized
+  } = useContext(DataCtx);
+  
+  // DEBUG: Añadir console.logs para verificar
+  console.log('Data from context:', data);
+  console.log('Niveles:', data?.niveles);
+  console.log('setNiveles function:', contextSetNiveles);
+  
+  const reglas = Array.isArray(data?.reglas) ? data.reglas : [];
+  const operadores = Array.isArray(data?.operadores) ? data.operadores : [];
+  const productos = Array.isArray(data?.productos) ? data.productos : [];
+  const niveles = Array.isArray(data?.niveles) ? data.niveles : [];
+  
+  // CORREGIDO: usar las funciones del contexto directamente
+  const setReglas = contextSetReglas;
+  const setNiveles = contextSetNiveles;
+
+  const [toast, setToast] = useState({ message: "", type: "info" });
+  const [activeTab, setActiveTab] = useState("niveles");
+
+  // Estados para modales
+  const [modalNivel, setModalNivel] = useState(null);
+  const [modalRegla, setModalRegla] = useState(null);
+
+  // Funciones para niveles
+  const handleModalNivelSave = (nivel, shouldClose) => {
+    console.log('handleModalNivelSave called with:', nivel);
+    console.log('Current niveles before save:', niveles);
+    console.log('modalNivel state:', modalNivel);
+    
+    // CORRECCIÓN: verificar si es edición basándose en modalNivel, no en nivel.id
+    const isEditing = modalNivel && modalNivel.id && niveles.some(n => n.id === modalNivel.id);
+    
+    if (isEditing) {
+      // Editando nivel existente
+      console.log('Updating existing nivel');
+      setNiveles(prev => {
+        console.log('setNiveles prev:', prev);
+        const updated = prev.map((n) => (n.id === nivel.id ? nivel : n));
+        console.log('setNiveles updated:', updated);
+        return updated;
+      });
+    } else {
+      // Nuevo nivel
+      console.log('Creating new nivel');
+      const nuevoNivel = {
+        ...nivel,
+        id: nivel.id || `n_${Date.now()}` // Usar el ID del formulario o generar uno
+      };
+      console.log('nuevoNivel:', nuevoNivel);
+      setNiveles(prev => {
+        console.log('setNiveles prev:', prev);
+        const updated = [nuevoNivel, ...prev];
+        console.log('setNiveles updated:', updated);
+        return updated;
+      });
+    }
+    
+    if (shouldClose) setModalNivel(null);
+    setToast({ message: "Nivel guardado correctamente", type: "success" });
+  };
+
+  const removeNivel = (id) => {
+    if (window.confirm("¿Seguro que quieres eliminar este nivel?")) {
+      setNiveles((arr) => arr.filter((x) => x.id !== id));
+      setToast({ message: "Nivel eliminado", type: "info" });
+    }
+  };
+
+  // Funciones para reglas
+  const handleModalReglaSave = (regla, shouldClose) => {
+    if (regla.id) {
+      // Editando regla existente
+      setReglas(prev => prev.map((r) => (r.id === regla.id ? regla : r)));
+    } else {
+      // Nueva regla
+      const nuevaRegla = {
+        ...regla,
+        id: `r_${Date.now()}`
+      };
+      setReglas(prev => [nuevaRegla, ...prev]);
+    }
+    
+    if (shouldClose) setModalRegla(null);
+    setToast({ message: "Regla guardada correctamente", type: "success" });
+  };
+
+  const removeRegla = (id) => {
+    if (window.confirm("¿Seguro que quieres eliminar esta regla?")) {
+      setReglas((arr) => arr.filter((x) => x.id !== id));
+      setToast({ message: "Regla eliminada", type: "info" });
+    }
+  };
+
+  // Función para obtener icono de sector
+  const getSectorIcon = (sector) => {
+    switch(sector) {
+      case 'telefonia': return <Phone className="w-4 h-4 text-blue-600" />;
+      case 'energia': return <Zap className="w-4 h-4 text-yellow-600" />;
+      case 'seguridad': return <Shield className="w-4 h-4 text-red-600" />;
+      default: return null;
+    }
+  };
+
+  if (!dataInitialized) {
+    return <Loading />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ message: "", type: "info" })}
+      />
+
+      {/* Modales */}
+      {modalNivel && (
+        <NivelEditModal
+          nivel={modalNivel.id ? modalNivel : null}
+          onSave={handleModalNivelSave}
+          onClose={() => setModalNivel(null)}
+        />
+      )}
+
+      {modalRegla && (
+        <ReglaEditModal
+          regla={modalRegla.id ? modalRegla : null}
+          onSave={handleModalReglaSave}
+          onClose={() => setModalRegla(null)}
+          operadores={operadores}
+          productos={productos}
+        />
+      )}
+
+      {/* Pestañas */}
+      <div className="border-b border-slate-200">
+        <nav className="flex gap-8">
+          <button
+            onClick={() => setActiveTab("niveles")}
+            className={`pb-3 px-1 border-b-2 font-medium transition-colors flex items-center gap-2 ${
+              activeTab === "niveles"
+                ? "border-sky-500 text-sky-600"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+            aria-label="Ver niveles de comisión"
+          >
+            <Layers className="w-4 h-4" />
+            Niveles de Comisión
+          </button>
+          <button
+            onClick={() => setActiveTab("reglas")}
+            className={`pb-3 px-1 border-b-2 font-medium transition-colors flex items-center gap-2 ${
+              activeTab === "reglas"
+                ? "border-sky-500 text-sky-600"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+            aria-label="Ver reglas específicas"
+          >
+            <Settings className="w-4 h-4" />
+            Reglas Específicas
+          </button>
+        </nav>
+      </div>
+
+      {/* Contenido de Niveles */}
+      {activeTab === "niveles" && (
+        <div className="space-y-6">
+          {/* Formulario para nuevo nivel */}
+          <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <Layers className="w-6 h-6 mr-2 text-emerald-600" />
+                <SectionTitle>Nuevo Nivel de Comisión</SectionTitle>
+              </div>
+              <button
+                onClick={() => setModalNivel({})}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Nuevo Nivel
+              </button>
+            </div>
+            
+            <div className="text-sm text-emerald-700 mb-4 p-3 bg-emerald-100 rounded-lg">
+              <p className="font-medium mb-1">Comisiones diferenciadas por sector:</p>
+              <ul className="space-y-1">
+                <li className="flex items-center gap-2">
+                  <Phone className="w-4 h-4" />
+                  <span>Telefonía: Porcentaje sobre comisión</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  <span>Energía: Porcentaje sobre comisión</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  <span>Seguridad: Importe fijo por venta</span>
+                </li>
+              </ul>
+            </div>
+          </Card>
+
+          {/* Tabla de niveles */}
+          <Card>
+            <div className="flex justify-between items-center mb-4">
+              <SectionTitle>Niveles Existentes ({niveles.length})</SectionTitle>
+              <button
+                onClick={() => setModalNivel({})}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg"
+              >
+                <Plus className="w-4 h-4" />
+                Nuevo Nivel
+              </button>
+            </div>
+            
+            <div className="overflow-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-slate-500 bg-slate-50">
+                    <th className="py-3 px-3 font-medium">ID</th>
+                    <th className="py-3 px-3 font-medium">Nombre</th>
+                    <th className="py-3 px-3 font-medium">Tipo</th>
+                    <th className="py-3 px-3 font-medium">Telefonía</th>
+                    <th className="py-3 px-3 font-medium">Energía</th>
+                    <th className="py-3 px-3 font-medium">Seguridad</th>
+                    <th className="py-3 px-3 font-medium">Descripción</th>
+                    <th className="py-3 px-3 font-medium">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {niveles.map((n) => (
+                    <tr key={n.id} className="border-t hover:bg-slate-50">
+                      <td className="py-3 px-3">
+                        <span className="font-mono font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded">
+                          {n.id}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="font-medium text-slate-800">{n.nombre}</span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                          n.tipo === "MANAGER"
+                            ? "bg-purple-100 text-purple-700"
+                            : n.tipo === "SUPERVISOR"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-green-100 text-green-700"
+                        }`}>
+                          {n.tipo}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-blue-600" />
+                          <span className="font-medium text-blue-700">
+                            {((n.pct_telefonia || 0) * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-4 h-4 text-yellow-600" />
+                          <span className="font-medium text-yellow-700">
+                            {((n.pct_energia || 0) * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-red-600" />
+                          <span className="font-medium text-red-700">
+                            {(n.fijo_seguridad || 0).toFixed(2)}€
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="text-slate-600 text-sm">
+                          {n.descripcion || "-"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => setModalNivel(n)}
+                            className="p-1.5 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                            title="Editar"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => removeNivel(n.id)}
+                            className="p-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {niveles.length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                  <Layers className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                  <p>No hay niveles configurados</p>
+                  <p className="text-sm mt-1">
+                    Añade niveles para poder asignarlos a los colaboradores
+                  </p>
+                  <button
+                    onClick={() => setModalNivel({})}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors mt-4"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Crear Primer Nivel
+                  </button>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Contenido de Reglas */}
+      {activeTab === "reglas" && (
+        <>
+          <Card className="bg-blue-50 border-blue-200 mb-2">
+            <div className="flex items-center gap-3">
+              <Settings className="w-5 h-5 text-blue-600" />
+              <div>
+                <p className="font-medium text-blue-800">
+                  Aquí defines las reglas de comisión que la empresa cobra a los
+                  operadores por producto.
+                </p>
+                <p className="text-sm text-blue-700">
+                  Estas reglas pueden ser porcentajes, cuotas, importes fijos,
+                  rappel, etc. Los colaboradores solo toman referencia de aquí
+                  para calcular su comisión, pero no se gestionan desde esta
+                  sección.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Botón para nueva regla */}
+          <Card className="border-sky-200 bg-gradient-to-br from-sky-50 to-sky-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Settings className="w-6 h-6 mr-2 text-sky-600" />
+                <SectionTitle>Reglas de Comisión</SectionTitle>
+              </div>
+              <button
+                onClick={() => setModalRegla({})}
+                disabled={operadores.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl hover:from-sky-600 hover:to-sky-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus className="w-4 h-4" />
+                Nueva Regla
+              </button>
+            </div>
+          </Card>
+
+          {/* Tabla de reglas */}
+          <Card>
+            <div className="flex justify-between items-center mb-4">
+              <SectionTitle>Reglas Existentes ({reglas.length})</SectionTitle>
+                              <button
+                onClick={() => setModalRegla({})}
+                disabled={operadores.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl hover:from-sky-600 hover:to-sky-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus className="w-4 h-4" />
+                Nueva Regla
+              </button>
+            </div>
+            
+            <div className="overflow-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-slate-500 bg-slate-50">
+                    <th className="py-3 px-3 font-medium">Operador</th>
+                    <th className="py-3 px-3 font-medium">Producto</th>
+                    <th className="py-3 px-3 font-medium">Tipo</th>
+                    <th className="py-3 px-3 font-medium">Sobre</th>
+                    <th className="py-3 px-3 font-medium">Valor</th>
+                    <th className="py-3 px-3 font-medium">Prioridad</th>
+                    <th className="py-3 px-3 font-medium">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reglas.map((r) => {
+                    const operador = operadores.find((o) => o.id === r.operador_id);
+                    const producto = productos.find((p) => p.id === r.producto_id);
+                    
+                    return (
+                      <tr key={r.id} className="border-t hover:bg-slate-50">
+                        <td className="py-3 px-3">
+                          <div className="space-y-1">
+                            <span className="font-medium text-slate-800">
+                              {operador?.nombre || r.operador_id}
+                            </span>
+                            {operador?.sector && (
+                              <div className="flex items-center gap-1">
+                                {getSectorIcon(operador.sector)}
+                                <span className="text-xs text-slate-500 capitalize">
+                                  {operador.sector}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className={r.producto_id ? "" : "text-slate-400"}>
+                            {producto?.nombre || "Todos"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            r.tipo === "%"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-green-100 text-green-700"
+                          }`}>
+                            {r.tipo === "%" ? "Porcentaje" : "Fijo"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-sm">
+                          {r.pct_sobre === "ComisiónOperador" ? "Comisión Op." : "Base"}
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="font-semibold">
+                            {r.tipo === "%"
+                              ? `${(r.valor * 100).toFixed(2)}%`
+                              : `${r.valor.toFixed(2)} €`}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="text-slate-600">{r.prioridad}</span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => setModalRegla(r)}
+                              className="p-1.5 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                              title="Editar"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => removeRegla(r.id)}
+                              className="p-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {reglas.length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                  <Settings className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                  <p>No hay reglas configuradas</p>
+                  <p className="text-sm mt-1">
+                    Las reglas específicas definen la comisión que la empresa
+                    cobra a los operadores.
+                  </p>
+                  <button
+                    onClick={() => setModalRegla({})}
+                    disabled={operadores.length === 0}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Crear Primera Regla
+                  </button>
+                </div>
+              )}
+            </div>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}

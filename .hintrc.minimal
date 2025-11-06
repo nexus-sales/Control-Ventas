@@ -1,0 +1,16 @@
+{
+  "extends": [
+    "development"
+  ],
+  "browserslist": [
+    "defaults",
+    "not ie 11"
+  ],
+  "hints": {
+    "meta-charset-utf-8": "error",
+    "meta-viewport": "error",
+    "html-checker": "warning",
+    "axe/language": "warning",
+    "no-inline-styles": "warning"
+  }
+}

@@ -1,0 +1,141 @@
+/* src/styles/mobile-optimizations.css */
+/* Optimizaciones específicas para móvil y tablet */
+
+/* Mejoras generales para móvil */
+@media (max-width: 768px) {
+  /* Reducir padding en móvil */
+  .mobile-padding {
+    padding: 1rem !important;
+  }
+  
+  /* Botones más grandes para touch */
+  .mobile-button {
+    min-height: 44px;
+    padding: 12px 16px;
+    font-size: 16px; /* Evita zoom en iOS */
+  }
+  
+  /* Cards más compactas */
+  .mobile-card {
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  /* Texto más legible */
+  .mobile-text {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  
+  /* Ocultar elementos no críticos en móvil */
+  .desktop-only {
+    display: none !important;
+  }
+  
+  /* Tablas responsive */
+  .mobile-table {
+    font-size: 14px;
+  }
+  
+  .mobile-table th,
+  .mobile-table td {
+    padding: 8px 4px;
+  }
+}
+
+/* Optimizaciones para tablet */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .tablet-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  
+  .tablet-padding {
+    padding: 1.5rem;
+  }
+}
+
+/* Mejoras para touch devices */
+@media (hover: none) and (pointer: coarse) {
+  /* Elementos clickables más grandes */
+  button, .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Evitar hover effects en touch */
+  .no-hover:hover {
+    background-color: initial !important;
+    transform: none !important;
+  }
+  
+  /* Scroll suave en touch */
+  .touch-scroll {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Modo offline indicator */
+.offline-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #f59e0b;
+  color: white;
+  padding: 8px;
+  text-align: center;
+  font-size: 14px;
+  z-index: 1000;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+.offline-indicator.visible {
+  transform: translateY(0);
+}
+
+/* Mejoras de accesibilidad */
+.focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Loading states optimizados */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* PWA specific styles */
+.pwa-install-prompt {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+
+/* Dark mode considerations */
+@media (prefers-color-scheme: dark) {
+  .dark-mode-bg {
+    background-color: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .dark-mode-card {
+    background-color: #374151;
+    border-color: #4b5563;
+  }
+}
