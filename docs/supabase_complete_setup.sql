@@ -29,11 +29,13 @@ CREATE TABLE IF NOT EXISTS public.access_requests (
     rejection_reason TEXT,
     requested_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     processed_at TIMESTAMP WITH TIME ZONE,
-    processed_by UUID REFERENCES auth.users(id),
-    
-    -- Índices para mejorar rendimiento
-    CONSTRAINT unique_pending_request UNIQUE(email) WHERE status = 'pending'
+    processed_by UUID REFERENCES auth.users(id)
 );
+
+-- Crear índice único condicional por separado
+CREATE UNIQUE INDEX IF NOT EXISTS unique_pending_request 
+ON public.access_requests(email) 
+WHERE status = 'pending';
 
 -- Habilitar Row Level Security
 ALTER TABLE public.access_requests ENABLE ROW LEVEL SECURITY;
@@ -49,14 +51,7 @@ CREATE POLICY "Users can view own profile" ON public.profiles
 -- Usuarios pueden actualizar su propio perfil (campos limitados)
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles
-    FOR UPDATE USING (auth.uid() = id)
-    WITH CHECK (
-        -- Solo pueden actualizar nombre, otros campos requieren admin
-        (NEW.email = OLD.email) AND 
-        (NEW.rol = OLD.rol) AND 
-        (NEW.activo = OLD.activo) AND
-        (NEW.id = OLD.id)
-    );
+    FOR UPDATE USING (auth.uid() = id);
 
 -- Admins pueden ver todos los perfiles
 DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
