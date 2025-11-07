@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { AuthCtx } from './contexts';
+import { isEmailAuthorized, getUserRole, USER_ROLES } from '../utils/accessControl';
 
 const AUTH_BYPASS = import.meta.env.VITE_AUTH_BYPASS === 'true';
 const AUTH_STORAGE_KEY = '__app_auth_state';
@@ -79,6 +80,14 @@ export function AuthProvider({ children }) {
   const [isAuthLoading, setIsAuthLoading] = useState(!initialOffline);
   const [offlineMode, setOfflineMode] = useState(initialOffline);
   const offlineReasonRef = useRef(initialOffline ? 'initial' : null);
+  
+  // Estados de control de acceso
+  const [accessStatus, setAccessStatus] = useState({
+    hasAccess: false,
+    userRole: null,
+    accessMessage: null,
+    isAccessLoading: true
+  });
 
   const activateOfflineMode = useCallback((reason = 'unknown') => {
     if (AUTH_BYPASS) return;
@@ -97,13 +106,100 @@ export function AuthProvider({ children }) {
     console.log('[AuthProvider] Modo offline desactivado');
   }, [offlineMode]);
 
+  // Función para verificar control de acceso
+  const checkAccessControl = useCallback((userEmail) => {
+    if (!userEmail) {
+      setAccessStatus({
+        hasAccess: false,
+        userRole: null,
+        accessMessage: {
+          type: 'error',
+          title: 'No Autenticado',
+          message: 'Debes iniciar sesión para acceder a la aplicación.'
+        },
+        isAccessLoading: false
+      });
+      return false;
+    }
+
+    // En modo bypass, permitir acceso total
+    if (AUTH_BYPASS) {
+      setAccessStatus({
+        hasAccess: true,
+        userRole: USER_ROLES.ADMIN,
+        accessMessage: null,
+        isAccessLoading: false
+      });
+      return true;
+    }
+
+    try {
+      const isAuthorized = isEmailAuthorized(userEmail);
+      const userRole = getUserRole(userEmail);
+      
+      if (!isAuthorized || userRole === USER_ROLES.BLOCKED) {
+        setAccessStatus({
+          hasAccess: false,
+          userRole,
+          accessMessage: {
+            type: 'error',
+            title: 'Acceso Denegado',
+            message: 'No tienes permisos para acceder a esta aplicación. Si crees que esto es un error, solicita acceso al administrador.'
+          },
+          isAccessLoading: false
+        });
+        return false;
+      }
+
+      if (userRole === USER_ROLES.PENDING) {
+        setAccessStatus({
+          hasAccess: false,
+          userRole,
+          accessMessage: {
+            type: 'warning',
+            title: 'Acceso Pendiente',
+            message: 'Tu solicitud de acceso está siendo revisada. Te contactaremos pronto.'
+          },
+          isAccessLoading: false
+        });
+        return false;
+      }
+
+      // Usuario autorizado
+      setAccessStatus({
+        hasAccess: true,
+        userRole,
+        accessMessage: null,
+        isAccessLoading: false
+      });
+      return true;
+      
+    } catch (error) {
+      console.error('[AuthProvider] Error verificando control de acceso:', error);
+      setAccessStatus({
+        hasAccess: false,
+        userRole: null,
+        accessMessage: {
+          type: 'error',
+          title: 'Error del Sistema',
+          message: 'Ocurrió un error al verificar el acceso. Inténtalo de nuevo.'
+        },
+        isAccessLoading: false
+      });
+      return false;
+    }
+  }, []);
+
   const applyLocalAuthFallback = useCallback(() => {
     const stored = loadStoredAuth();
     setUser(stored.user);
     setProfile(stored.profile);
     setIsLogged(!!stored.profile);
     setIsAuthLoading(false);
-  }, []);
+    
+    // Verificar control de acceso
+    checkAccessControl(stored.user?.email);
+  }, [checkAccessControl]);
 
   const fetchUserProfile = useCallback(async (userId) => {
     try {
@@ -159,6 +255,10 @@ export function AuthProvider({ children }) {
         setProfile(userProfile);
         const hasProfile = !!userProfile;
         setIsLogged(hasProfile);
+        
+        // Verificar control de acceso
+        checkAccessControl(sessionUser.email);
+        
         if (hasProfile) {
           saveStoredAuth(); // Limpiar cualquier sesión almacenada
           deactivateOfflineMode();
@@ -168,6 +268,12 @@ export function AuthProvider({ children }) {
       } else {
         setProfile(null);
         setIsLogged(false);
+        setAccessStatus({
+          hasAccess: false,
+          userRole: null,
+          accessMessage: null,
+          isAccessLoading: false
+        });
         saveStoredAuth(); // Limpiar cualquier sesión almacenada
       }
     };
@@ -239,7 +345,7 @@ export function AuthProvider({ children }) {
         unsubscribe();
       }
     };
-  }, [offlineMode, applyLocalAuthFallback, fetchUserProfile, activateOfflineMode, deactivateOfflineMode]);
+  }, [offlineMode, applyLocalAuthFallback, fetchUserProfile, activateOfflineMode, deactivateOfflineMode, checkAccessControl]);
 
   useEffect(() => {
     if (AUTH_BYPASS) return;
@@ -292,6 +398,7 @@ export function AuthProvider({ children }) {
         error: { message: 'Actualmente estás en modo offline. Conéctate para iniciar sesión.' }
       };
     }
+    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -304,6 +411,23 @@ export function AuthProvider({ children }) {
 
       if (data.user) {
         const userProfile = await fetchUserProfile(data.user.id);
+        
+        // Verificar control de acceso antes de establecer la sesión
+        const hasAccess = checkAccessControl(data.user.email);
+        
+        if (!hasAccess) {
+          // Si no tiene acceso, cerrar la sesión de Supabase
+          await supabase.auth.signOut();
+          return { 
+            success: false, 
+            error: { 
+              message: 'No tienes permisos para acceder a esta aplicación.',
+              accessDenied: true,
+              userEmail: data.user.email
+            } 
+          };
+        }
+        
         if (userProfile) {
           setUser(data.user);
           setProfile(userProfile);
@@ -356,6 +480,17 @@ export function AuthProvider({ children }) {
     offlineReason: offlineReasonRef.current,
     activateOfflineMode,
     deactivateOfflineMode,
+    // Control de acceso
+    accessStatus,
+    hasAccess: accessStatus.hasAccess,
+    userRole: accessStatus.userRole,
+    accessMessage: accessStatus.accessMessage,
+    isAccessLoading: accessStatus.isAccessLoading,
+    refreshAccessControl: () => {
+      if (user?.email) {
+        checkAccessControl(user.email);
+      }
+    }
   };
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

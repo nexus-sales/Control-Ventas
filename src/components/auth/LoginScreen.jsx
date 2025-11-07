@@ -5,6 +5,7 @@ import SectionTitle from '../ui/SectionTitle';
 import EmailInput from '../ui/EmailInput';
 import PasswordInput from '../ui/PasswordInput';
 import ForgotPasswordScreen from './ForgotPasswordScreen';
+import AccessDeniedScreen from './AccessDeniedScreen';
 import { LoginRateLimit, formatTime } from '../../utils/authValidation';
 import '../../styles/login-animations.css';
 
@@ -20,6 +21,8 @@ export default function LoginScreen() {
   const [remainingAttempts, setRemainingAttempts] = useState(5);
   const [rememberMe, setRememberMe] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
+  const [accessDeniedInfo, setAccessDeniedInfo] = useState(null);
   const { login } = useAuth();
 
   // Verificar rate limiting y cargar email recordado al cargar el componente
@@ -83,6 +86,19 @@ export default function LoginScreen() {
     const { error: authError } = await login(email, password);
     
     if (authError) {
+      // Si es error de acceso denegado, mostrar pantalla especial
+      if (authError.accessDenied) {
+        setAccessDeniedInfo({
+          email: authError.userEmail,
+          type: 'error',
+          title: 'Acceso Denegado',
+          message: authError.message
+        });
+        setShowAccessDenied(true);
+        setIsSubmitting(false);
+        return;
+      }
+      
       // Registrar intento fallido
       LoginRateLimit.recordAttempt();
       checkRateLimit();
@@ -139,11 +155,24 @@ export default function LoginScreen() {
 
   const handleBackToLogin = () => {
     setShowForgotPassword(false);
+    setShowAccessDenied(false);
+    setAccessDeniedInfo(null);
   };
 
   // Si está en modo "olvidé mi contraseña"
   if (showForgotPassword) {
     return <ForgotPasswordScreen onBackToLogin={handleBackToLogin} />;
+  }
+
+  // Si el acceso fue denegado, mostrar pantalla especial
+  if (showAccessDenied && accessDeniedInfo) {
+    return (
+      <AccessDeniedScreen 
+        email={accessDeniedInfo.email}
+        accessInfo={accessDeniedInfo}
+        onRetry={handleBackToLogin}
+      />
+    );
   }
 
   return (
