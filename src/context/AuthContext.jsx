@@ -301,20 +301,24 @@ export function AuthProvider({ children }) {
         }
         const { data, error } = await supabase.auth.getSession();
         if (error) {
-          console.error('[AuthProvider] Error obteniendo sesión inicial:', error);
-          activateOfflineMode('session-error');
-          applyLocalAuthFallback();
-          return false;
+          console.warn('[AuthProvider] Error obteniendo sesión inicial (no crítico):', error);
+          // NO activar modo offline por errores de sesión - permitir intentos de login
+          // activateOfflineMode('session-error');
+          // applyLocalAuthFallback();
+          setIsAuthLoading(false);
+          return true; // Permitir continuar para intentos de login
         }
         const sessionUser = data?.session?.user ?? null;
         await applySession(sessionUser);
         deactivateOfflineMode();
         return true;
       } catch (error) {
-        console.error('[AuthProvider] Error inicializando autenticación:', error);
-        activateOfflineMode('init-exception');
-        applyLocalAuthFallback();
-        return false;
+        console.warn('[AuthProvider] Error inicializando autenticación (no crítico):', error);
+        // NO activar modo offline automáticamente - solo en casos extremos
+        // activateOfflineMode('init-exception');
+        // applyLocalAuthFallback();
+        setIsAuthLoading(false);
+        return true; // Permitir continuar para intentos de login
       } finally {
         if (isMounted) {
           setIsAuthLoading(false);
@@ -361,6 +365,31 @@ export function AuthProvider({ children }) {
     };
   }, [activateOfflineMode, deactivateOfflineMode]);
 
+  // NUEVO: Verificación periódica de conectividad en modo offline
+  useEffect(() => {
+    if (!offlineMode || AUTH_BYPASS) return;
+
+    const checkConnectivity = async () => {
+      if (navigator.onLine) {
+        try {
+          // Probar conexión real con Supabase
+          const { data, error } = await supabase.auth.getSession();
+          if (!error) {
+            console.log('[AuthProvider] Conectividad restaurada - desactivando modo offline');
+            deactivateOfflineMode();
+          }
+        } catch (error) {
+          console.log('[AuthProvider] Aún sin conectividad real con Supabase');
+        }
+      }
+    };
+
+    // Verificar cada 30 segundos cuando estamos offline
+    const interval = setInterval(checkConnectivity, 30000);
+    
+    return () => clearInterval(interval);
+  }, [offlineMode, deactivateOfflineMode]);
+
   // NUEVO: Limpiar sesión al cerrar/recargar la página
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -392,6 +421,12 @@ export function AuthProvider({ children }) {
   }, [offlineMode]);
 
   const login = async (email, password) => {
+    // Verificar y limpiar modo offline si hay conectividad
+    if (offlineMode && navigator.onLine) {
+      console.log('[AuthProvider] Detectada conectividad - desactivando modo offline');
+      deactivateOfflineMode();
+    }
+    
     if (offlineMode && !AUTH_BYPASS) {
       return {
         success: false,

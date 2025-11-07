@@ -278,6 +278,34 @@ export default function LoginScreen() {
                 </svg>
                 {error}
               </div>
+              
+              {/* Botón de emergencia para problemas de conectividad */}
+              {error.includes('modo offline') && (
+                <div className="mt-3 pt-2 border-t border-red-200 dark:border-red-700">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        // Limpiar flag de modo offline
+                        localStorage.removeItem('__app_offline_mode');
+                        console.log('🔧 Flag offline eliminado');
+                        
+                        // Recargar la página
+                        window.location.reload();
+                      } catch (error) {
+                        console.error('Error en fix de emergencia:', error);
+                        alert('Error al intentar restaurar conectividad. Intenta recargar la página manualmente.');
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-xs bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-colors duration-200 font-medium"
+                  >
+                    🔧 Forzar Reconexión (Emergency Fix)
+                  </button>
+                  <p className="text-xs text-red-500 mt-1 text-center">
+                    Si el problema persiste, verifica tu conexión a internet
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
