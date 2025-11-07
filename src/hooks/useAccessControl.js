@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   isEmailAuthorized, 
-  getUserRole, 
+  getRoleFromEmail, 
   getAccessDeniedMessage,
   checkUserPermission,
   USER_ROLES 
@@ -36,7 +36,7 @@ export function useAccessControl(user) {
       try {
         const email = user.email;
         const isAuthorized = isEmailAuthorized(email);
-        const userRole = getUserRole(email);
+        const userRole = getRoleFromEmail(email);
         
         if (!isAuthorized || userRole === USER_ROLES.BLOCKED) {
           const accessMessage = getAccessDeniedMessage(email);

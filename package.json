@@ -8,7 +8,6 @@
     "build": "vite build",
     "build:prod": "NODE_ENV=production vite build",
     "preview": "vite preview",
-    "prepare": "node -e \"if (process.env.NODE_ENV !== 'production') require('husky')()\"",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
@@ -47,20 +46,12 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.4.0",
     "hint": "^7.1.13",
-    "husky": "^9.1.7",
     "jsdom": "^27.0.0",
-    "lint-staged": "^16.2.3",
     "postcss": "^8.5.6",
     "prettier": "^3.6.2",
     "tailwindcss": "^3.4.17",
     "vite": "^7.1.6",
     "vite-plugin-pwa": "^1.0.3",
     "vitest": "^3.2.4"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ]
   }
 }

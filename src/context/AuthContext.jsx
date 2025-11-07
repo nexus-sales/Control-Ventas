@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { AuthCtx } from './contexts';
-import { isEmailAuthorized, getUserRole, USER_ROLES } from '../utils/accessControl';
+import { isEmailAuthorized, getRoleFromEmail, USER_ROLES } from '../utils/accessControl';
 
 const AUTH_BYPASS = import.meta.env.VITE_AUTH_BYPASS === 'true';
 const AUTH_STORAGE_KEY = '__app_auth_state';
@@ -135,7 +135,7 @@ export function AuthProvider({ children }) {
 
     try {
       const isAuthorized = isEmailAuthorized(userEmail);
-      const userRole = getUserRole(userEmail);
+      const userRole = getRoleFromEmail(userEmail);
       
       if (!isAuthorized || userRole === USER_ROLES.BLOCKED) {
         setAccessStatus({

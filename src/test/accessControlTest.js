@@ -1,6 +1,6 @@
 import { 
   isEmailAuthorized, 
-  getUserRole, 
+  getRoleFromEmail, 
   USER_ROLES, 
   AccessRequestManager, 
   getAccessDeniedMessage 
@@ -19,7 +19,7 @@ const testEmails = [
 
 testEmails.forEach(email => {
   const authorized = isEmailAuthorized(email);
-  const role = getUserRole(email);
+  const role = getRoleFromEmail(email);
   console.log(`   ${email}: ${authorized ? '✅ Autorizado' : '❌ No autorizado'} - Rol: ${role}`);
 });
 

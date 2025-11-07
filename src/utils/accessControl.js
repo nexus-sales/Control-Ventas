@@ -3,15 +3,17 @@
  * Gestiona quién puede acceder a la aplicación y con qué permisos
  */
 
-// Lista de emails autorizados - En producción esto debería estar en Supabase
+// Lista de emails autorizados - FALLBACK para cuando no hay conexión a Supabase
+// En producción, la autorización principal se maneja desde Supabase
 const AUTHORIZED_EMAILS = [
   'info@luzmatel.com',
   'admin@luzmatel.com',
   'gerencia@luzmatel.com',
-  // Agregar emails autorizados aquí
+  // Agregar emails autorizados aquí como fallback
 ];
 
-// Lista de administradores
+// Lista de administradores - FALLBACK
+// En producción, los roles se manejan desde la tabla profiles en Supabase
 const ADMIN_EMAILS = [
   'info@luzmatel.com',
   'admin@luzmatel.com'
@@ -93,7 +95,15 @@ export const hasPermission = (userRole, permission) => {
 };
 
 /**
- * Verifica si un usuario puede acceder a la aplicación
+ * Verificar si un usuario tiene un permiso específico
+ */
+export const checkUserPermission = (email, permission) => {
+  const userRole = getRoleFromEmail(email);
+  return hasPermission(userRole, permission);
+};
+
+/**
+ * Verificar si un usuario puede acceder a la aplicación
  */
 export const canAccessApp = (userRole) => {
   return userRole === USER_ROLES.ADMIN || userRole === USER_ROLES.USER;
