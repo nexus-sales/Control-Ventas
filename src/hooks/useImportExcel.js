@@ -3,6 +3,7 @@
 
 import { useState, useMemo, useCallback, useContext } from "react";
 import { DataCtx } from "../context/contexts";
+import { useAuth } from "./useAuth";
 // import { supabase } from "../lib/supabaseClient";
 import {
   autoguessMapping,
@@ -46,6 +47,7 @@ export function useImportExcel({
 }) {
   // Permite usar setters del contexto si no se pasan por props
   const dataCtx = useContext(DataCtx);
+  const { startImporting, finishImporting } = useAuth();
   const setVentas = propSetVentas || dataCtx?.setVentas;
   const setProductos = propSetProductos || dataCtx?.setProductos;
   const setOperadores = propSetOperadores || dataCtx?.setOperadores;
@@ -245,10 +247,11 @@ export function useImportExcel({
     [rows, mapping, crearAutomaticamente, indexers, resolverNombres],
   );
 
-  // Importación normal (sin creación automática) - MEJORADO
+  // Importación normal (sin creación automática) - MEJORADO CON PROTECCIÓN DE SESIÓN
   const importNormal = useCallback(async () => {
     if (!rows.length) throw new Error("No hay datos para importar");
 
+    startImporting(); // 🔒 PROTEGER SESIÓN DURANTE IMPORTACIÓN
     setIsLoading(true);
     const nuevasVentas = [];
     const erroresDetallados = [];
@@ -374,10 +377,11 @@ export function useImportExcel({
       throw error;
     } finally {
       setIsLoading(false);
+      finishImporting(); // 🔓 LIBERAR PROTECCIÓN DE SESIÓN
     }
-  }, [rows, mapping, indexers, resolverNombres, zonas, productos, setVentas, guardarExtras, onImportSuccess, refreshData]);
+  }, [rows, mapping, indexers, resolverNombres, zonas, productos, setVentas, guardarExtras, onImportSuccess, refreshData, startImporting, finishImporting]);
 
-  // Importación inteligente (con creación automática) - CORREGIDO
+  // Importación inteligente (con creación automática) - CON PROTECCIÓN DE SESIÓN
   const importInteligente = useCallback(async () => {
     console.log('🚀 INICIANDO IMPORTACIÓN INTELIGENTE');
     console.log('Datos:', { 
@@ -394,6 +398,7 @@ export function useImportExcel({
 
     if (!rows.length) throw new Error("No hay datos para importar");
 
+    startImporting(); // 🔒 PROTEGER SESIÓN DURANTE IMPORTACIÓN INTELIGENTE
     setIsLoading(true);
 
     try {
@@ -446,26 +451,33 @@ export function useImportExcel({
 
         const colaborador_id =
           mapeos.colaboradores[colaboradorNombre] ||
+          mapeos.colaboradores[colaboradorNombre.toUpperCase()] ||
           resolveId(colaboradorNombre, indexers.colaboradores, resolverNombres);
         
         const zonaOriginal = get("zona_id");
         const zona_id =
           mapeos.zonas[zonaOriginal] ||
+          mapeos.zonas[zonaOriginal?.toUpperCase()] ||
           resolveId(zonaOriginal, indexers.zonas, resolverNombres) ||
           zonas[0]?.id;
         
         const productoOriginal = get("producto_id");
         const producto_id =
           mapeos.productos[productoOriginal] ||
+          mapeos.productos[productoOriginal?.toUpperCase()] ||
           resolveId(productoOriginal, indexers.productos, resolverNombres);
         
         const operadorOriginal = get("operador_id");
         const operador_id =
           mapeos.operadores[operadorOriginal] ||
+          mapeos.operadores[operadorOriginal?.toUpperCase()] ||
           resolveId(operadorOriginal, indexers.operadores, resolverNombres);
 
         if (!colaborador_id) {
           console.log(`❌ Rechazando fila ${index + 1}: colaborador_id no resuelto`);
+          console.log(`   - Colaborador original: "${colaboradorNombre}"`);
+          console.log(`   - Mapeos disponibles:`, Object.keys(mapeos.colaboradores));
+          console.log(`   - Indexers disponibles:`, Object.keys(indexers.colaboradores.byName));
           rechazadas++;
           erroresDetallados.push({
             fila: index + 1,
@@ -477,6 +489,9 @@ export function useImportExcel({
 
         if (!zona_id) {
           console.log(`❌ Rechazando fila ${index + 1}: zona_id no resuelto`);
+          console.log(`   - Zona original: "${zonaOriginal}"`);
+          console.log(`   - Mapeos disponibles:`, Object.keys(mapeos.zonas));
+          console.log(`   - Indexers disponibles:`, Object.keys(indexers.zonas.byName));
           rechazadas++;
           erroresDetallados.push({
             fila: index + 1,
@@ -486,7 +501,8 @@ export function useImportExcel({
           continue;
         }
 
-        console.log(`✅ Fila ${index + 1}: IDs resueltos - colaborador: ${colaborador_id}, zona: ${zona_id}`);
+        console.log(`✅ Fila ${index + 1}: IDs resueltos - colaborador: ${colaborador_id}, zona: ${zona_id}, producto: ${producto_id || 'N/A'}, operador: ${operador_id || 'N/A'}`);
+        console.log(`   - Mapeos utilizados: colaborador desde ${mapeos.colaboradores[colaboradorNombre] ? 'mapeo' : 'indexer'}, zona desde ${mapeos.zonas[zonaOriginal] ? 'mapeo' : 'indexer'}`);
 
         let ventaCompleta = {
           id: generateUniqueId("v", index),
@@ -519,21 +535,37 @@ export function useImportExcel({
         }
 
         nuevasVentas.push(ventaCompleta);
+        console.log(`💾 Venta ${index + 1} preparada para guardar:`, {
+          id: ventaCompleta.id,
+          cliente: ventaCompleta.cliente,
+          colaborador_id: ventaCompleta.colaborador_id,
+          zona_id: ventaCompleta.zona_id,
+          pvp: ventaCompleta.pvp
+        });
       }
 
       console.log(`💾 Guardando ${nuevasVentas.length} ventas en memoria (local)...`);
       if (nuevasVentas.length > 0) {
+        console.log('📋 RESUMEN DE VENTAS A GUARDAR:');
+        nuevasVentas.forEach((venta, i) => {
+          console.log(`   ${i + 1}. ${venta.cliente} - ${venta.colaborador_id} - ${venta.zona_id} - €${venta.pvp}`);
+        });
+        
         if (setVentas) {
+          console.log('🔄 Actualizando estado de ventas...');
           setVentas((prev) => {
+            console.log(`   - Ventas anteriores: ${prev.length}`);
             // Evitar duplicados por id
             const idsNuevas = new Set(nuevasVentas.map(v => v.id));
             const prevFiltrado = prev.filter(v => !idsNuevas.has(v.id));
-            return [...nuevasVentas, ...prevFiltrado];
+            const resultado = [...nuevasVentas, ...prevFiltrado];
+            console.log(`   - Ventas después del merge: ${resultado.length} (${nuevasVentas.length} nuevas, ${prevFiltrado.length} existentes)`);
+            return resultado;
           });
+          console.log(`✅ ${nuevasVentas.length} ventas guardadas exitosamente en el estado local`);
         } else {
           console.warn('⚠️ setVentas no está disponible (inteligente) - no se actualiza estado local');
         }
-        console.log(`✅ ${nuevasVentas.length} ventas guardadas exitosamente (local)`);
       } else {
         console.log('⚠️ No hay ventas nuevas para guardar (inteligente)');
       }
@@ -557,6 +589,7 @@ export function useImportExcel({
       throw new Error(`Error en importación inteligente: ${error.message}`);
     } finally {
       setIsLoading(false);
+      finishImporting(); // 🔓 LIBERAR PROTECCIÓN DE SESIÓN INTELIGENTE
     }
   }, [
     rows,
@@ -576,6 +609,8 @@ export function useImportExcel({
     guardarExtras,
     onImportSuccess,
     refreshData,
+    startImporting,
+    finishImporting,
   ]);
 
   // Limpiar datos
