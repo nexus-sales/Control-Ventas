@@ -89,6 +89,9 @@ export function AuthProvider({ children }) {
     isAccessLoading: true
   });
 
+  // NUEVO: Flag para prevenir logout durante importaciones
+  const [isImporting, setIsImporting] = useState(false);
+
   const activateOfflineMode = useCallback((reason = 'unknown') => {
     if (AUTH_BYPASS) return;
     offlineReasonRef.current = reason;
@@ -248,6 +251,13 @@ export function AuthProvider({ children }) {
 
     const applySession = async (sessionUser) => {
       if (!isMounted) return;
+      
+      // NUEVO: No interferir con la sesión durante importaciones
+      if (isImporting) {
+        console.log('[AuthProvider] Importación en progreso - manteniendo sesión actual');
+        return;
+      }
+      
       setUser(sessionUser);
       if (sessionUser) {
         const userProfile = await fetchUserProfile(sessionUser.id);
@@ -373,12 +383,12 @@ export function AuthProvider({ children }) {
       if (navigator.onLine) {
         try {
           // Probar conexión real con Supabase
-          const { data, error } = await supabase.auth.getSession();
+          const { error } = await supabase.auth.getSession();
           if (!error) {
             console.log('[AuthProvider] Conectividad restaurada - desactivando modo offline');
             deactivateOfflineMode();
           }
-        } catch (error) {
+        } catch {
           console.log('[AuthProvider] Aún sin conectividad real con Supabase');
         }
       }
@@ -409,7 +419,6 @@ export function AuthProvider({ children }) {
     const handleUnload = () => {
       // NO hacer nada aquí para permitir navegación normal
       console.log('[AuthProvider] Navegación normal - sesión mantenida');
-    };
     };
 
     // Agregar listeners para limpiar sesión al salir
@@ -502,7 +511,24 @@ export function AuthProvider({ children }) {
       return;
     }
 
+    // NUEVO: No cerrar sesión si hay una importación en progreso
+    if (isImporting) {
+      console.warn('[AuthProvider] Logout bloqueado - importación en progreso');
+      return;
+    }
+
     await supabase.auth.signOut();
+  };
+
+  // NUEVO: Funciones para controlar el estado de importación
+  const startImporting = () => {
+    console.log('[AuthProvider] Iniciando importación - protegiendo sesión');
+    setIsImporting(true);
+  };
+
+  const finishImporting = () => {
+    console.log('[AuthProvider] Finalizando importación - liberando sesión');
+    setIsImporting(false);
   };
 
   const value = {
@@ -523,6 +549,10 @@ export function AuthProvider({ children }) {
     userRole: accessStatus.userRole,
     accessMessage: accessStatus.accessMessage,
     isAccessLoading: accessStatus.isAccessLoading,
+    // NUEVO: Control de importación
+    isImporting,
+    startImporting,
+    finishImporting,
     refreshAccessControl: () => {
       if (user?.email) {
         checkAccessControl(user.email);
