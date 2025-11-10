@@ -28,14 +28,14 @@ const loadStoredAuth = () => {
 };
 
 const saveStoredAuth = () => {
-  // MODIFICADO: No guardar sesión para forzar login en cada acceso
+  // MODIFICADO: Mantener sesión durante navegación, limpiar solo al cerrar
   if (typeof window === 'undefined') return;
   try {
-    // Siempre limpiar cualquier sesión almacenada
-    window.localStorage.removeItem(AUTH_STORAGE_KEY);
-    console.log('[AuthProvider] Sesión limpiada - login obligatorio en próximo acceso');
+    // NO limpiar sesión durante operaciones normales (importaciones, navegación)
+    // Solo se limpiará en beforeunload
+    console.log('[AuthProvider] Sesión mantenida para operaciones normales');
   } catch (error) {
-    console.warn('[AuthProvider] No se pudo limpiar el estado de autenticación', error);
+    console.warn('[AuthProvider] Error en saveStoredAuth', error);
   }
 };
 
@@ -390,12 +390,14 @@ export function AuthProvider({ children }) {
     return () => clearInterval(interval);
   }, [offlineMode, deactivateOfflineMode]);
 
-  // NUEVO: Limpiar sesión al cerrar/recargar la página
+  // NUEVO: Limpiar sesión SOLO al cerrar/recargar la página (NO en navegación normal)
   useEffect(() => {
     const handleBeforeUnload = () => {
-      // Limpiar cualquier sesión almacenada
+      // SOLO limpiar sesión cuando se cierre/recargue la página
+      // NO durante navegación normal o importaciones
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem(AUTH_STORAGE_KEY);
+        console.log('[AuthProvider] Sesión limpiada - página cerrada/recargada');
         // También cerrar sesión en Supabase si no estamos en modo bypass
         if (!AUTH_BYPASS && !offlineMode) {
           supabase.auth.signOut().catch(console.error);
@@ -403,11 +405,11 @@ export function AuthProvider({ children }) {
       }
     };
 
+    // REMOVER handleUnload - no limpiar sesión durante navegación normal
     const handleUnload = () => {
-      // Limpiar sesión al cerrar la ventana
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(AUTH_STORAGE_KEY);
-      }
+      // NO hacer nada aquí para permitir navegación normal
+      console.log('[AuthProvider] Navegación normal - sesión mantenida');
+    };
     };
 
     // Agregar listeners para limpiar sesión al salir
