@@ -359,7 +359,7 @@ export function AuthProvider({ children }) {
         unsubscribe();
       }
     };
-  }, [offlineMode, applyLocalAuthFallback, fetchUserProfile, activateOfflineMode, deactivateOfflineMode, checkAccessControl]);
+  }, [offlineMode, applyLocalAuthFallback, fetchUserProfile, activateOfflineMode, deactivateOfflineMode, checkAccessControl, isImporting]);
 
   useEffect(() => {
     if (AUTH_BYPASS) return;

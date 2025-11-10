@@ -111,10 +111,23 @@ export function DataProvider({ children }) {
       supabaseAvailableRef.current = true;
     } catch (error) {
       console.error(`[DataProvider] Error sincronizando ${collectionKey}:`, error);
-      setIsSupabaseAvailable(false);
-      supabaseAvailableRef.current = false;
-      if (typeof activateOfflineMode === 'function') {
-        activateOfflineMode('data-persist-error');
+      
+      // Solo activar modo offline para errores de conectividad, no de validación
+      const isConnectivityError = error.code === 'PGRST301' || 
+                                  error.message?.includes('network') || 
+                                  error.message?.includes('fetch') ||
+                                  error.message?.includes('timeout') ||
+                                  error.message?.includes('connection');
+      
+      if (isConnectivityError) {
+        setIsSupabaseAvailable(false);
+        supabaseAvailableRef.current = false;
+        if (typeof activateOfflineMode === 'function') {
+          activateOfflineMode('data-persist-error');
+        }
+      } else {
+        // Error de validación/constraint - mantener conexión activa
+        console.warn(`[DataProvider] Error de validación en ${collectionKey}, manteniendo conexión:`, error.message);
       }
     }
   }, [remoteEnabled, activateOfflineMode]);
@@ -151,18 +164,44 @@ export function DataProvider({ children }) {
           });
         } else {
           recordDebugEvent("load:remote-error", { errors });
-          setIsSupabaseAvailable(false);
-          supabaseAvailableRef.current = false;
-          if (typeof activateOfflineMode === 'function') {
-            activateOfflineMode('data-remote-error');
+          
+          // Solo activar modo offline si hay errores de conectividad
+          const hasConnectivityErrors = errors.some(error => 
+            error.code === 'PGRST301' || 
+            error.message?.includes('network') || 
+            error.message?.includes('fetch') ||
+            error.message?.includes('timeout') ||
+            error.message?.includes('connection')
+          );
+          
+          if (hasConnectivityErrors) {
+            setIsSupabaseAvailable(false);
+            supabaseAvailableRef.current = false;
+            if (typeof activateOfflineMode === 'function') {
+              activateOfflineMode('data-remote-error');
+            }
+          } else {
+            console.warn('[DataProvider] Errores de validación detectados, manteniendo conexión:', errors);
           }
         }
       } catch (error) {
         recordDebugEvent("load:remote-exception", { message: error.message });
-        setIsSupabaseAvailable(false);
-        supabaseAvailableRef.current = false;
-        if (typeof activateOfflineMode === 'function') {
-          activateOfflineMode('data-remote-exception');
+        
+        // Solo activar modo offline para errores de conectividad
+        const isConnectivityError = error.code === 'PGRST301' || 
+                                    error.message?.includes('network') || 
+                                    error.message?.includes('fetch') ||
+                                    error.message?.includes('timeout') ||
+                                    error.message?.includes('connection');
+        
+        if (isConnectivityError) {
+          setIsSupabaseAvailable(false);
+          supabaseAvailableRef.current = false;
+          if (typeof activateOfflineMode === 'function') {
+            activateOfflineMode('data-remote-exception');
+          }
+        } else {
+          console.warn('[DataProvider] Error de validación/constraint, manteniendo conexión:', error.message);
         }
       }
     }

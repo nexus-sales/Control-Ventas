@@ -83,6 +83,11 @@ export const fetchAllData = async () => {
 const sanitizeRecord = (record) => {
   const sanitized = { ...record };
   
+  // Asegurar que operadores tengan sector válido
+  if (Object.prototype.hasOwnProperty.call(sanitized, 'sector') && (!sanitized.sector || sanitized.sector === 'telefonia')) {
+    sanitized.sector = 'telecomunicaciones';
+  }
+  
   // Convierte arrays vacíos a JSON para campos JSONB
   if (Array.isArray(sanitized.historial) && sanitized.historial.length === 0) {
     sanitized.historial = {};
@@ -91,7 +96,10 @@ const sanitizeRecord = (record) => {
     sanitized.extras = {};
   }
   
-  // Asegura que las fechas ISO sean válidas
+  // Nota: La columna año ahora existe directamente en la BD (renombrada desde ano)
+  // No necesitamos mapeo adicional
+  
+  // Asegurar que las fechas ISO sean válidas
   Object.keys(sanitized).forEach(key => {
     const value = sanitized[key];
     if (typeof value === 'string' && value.includes('T') && value.includes('Z')) {
@@ -110,6 +118,11 @@ const sanitizeRecord = (record) => {
       delete sanitized[key];
     }
   });
+  
+  // Para productos, asegurar que tengan sector
+  if (Object.prototype.hasOwnProperty.call(sanitized, 'operador_id') && !Object.prototype.hasOwnProperty.call(sanitized, 'sector')) {
+    sanitized.sector = 'telecomunicaciones';
+  }
   
   return sanitized;
 };
