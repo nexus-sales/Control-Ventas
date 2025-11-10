@@ -1,10 +1,9 @@
 // src/hooks/useImportExcel.js
-// Hook personalizado para toda la lógica de importación Excel/CSV
+// Hook personalizado para toda la lógica de importación Excel/CSV - CORREGIDO
 
 import { useState, useMemo, useCallback, useContext } from "react";
 import { DataCtx } from "../context/contexts";
 import { useAuth } from "./useAuth";
-// import { supabase } from "../lib/supabaseClient";
 import {
   autoguessMapping,
   validateRow,
@@ -12,7 +11,6 @@ import {
   generateUniqueId,
   parseDate,
   parseNumber,
-  resolveId,
 } from "../utils/importValidation";
 import {
   recopilarEntidadesUnicas,
@@ -28,6 +26,14 @@ function detectSeparator(line) {
   counts.sort((a, b) => b[1] - a[1]);
   return counts[0][1] > 0 ? counts[0][0] : ",";
 }
+
+/**
+ * ✅ FUNCIÓN AÑADIDA: Normalización para búsquedas case-insensitive
+ */
+const normalizeNameSearch = (name) => {
+  if (!name || typeof name !== 'string') return name;
+  return name.trim().toUpperCase();
+};
 
 /**
  * Hook de importación Excel/CSV con integración y sincronización global.
@@ -54,6 +60,7 @@ export function useImportExcel({
   const setColaboradores = propSetColaboradores || dataCtx?.setColaboradores;
   const setZonas = propSetZonas || dataCtx?.setZonas;
   const refreshData = dataCtx?.refreshData;
+  
   // Estados del hook
   const [headers, setHeaders] = useState([]);
   const [rows, setRows] = useState([]);
@@ -66,31 +73,34 @@ export function useImportExcel({
   const [resolverNombres, setResolverNombres] = useState(true);
   const [guardarExtras, setGuardarExtras] = useState(true);
 
-  // Indexadores para resolución de IDs
+  // ✅ INDEXADORES MEJORADOS con normalización case insensitive
   const indexers = useMemo(
     () => ({
       productos: {
         byId: Object.fromEntries(productos.map((p) => [p.id, p])),
         byName: Object.fromEntries(
-          productos.map((p) => [p.nombre.toLowerCase(), p]),
+          productos.map((p) => [normalizeNameSearch(p.nombre), p]),
         ),
       },
       zonas: {
         byId: Object.fromEntries(zonas.map((z) => [z.id, z])),
         byName: Object.fromEntries(
-          zonas.map((z) => [z.nombre.toLowerCase(), z]),
+          zonas.map((z) => [normalizeNameSearch(z.nombre), z]),
         ),
       },
       colaboradores: {
         byId: Object.fromEntries(colaboradores.map((c) => [c.id, c])),
         byName: Object.fromEntries(
-          colaboradores.map((c) => [c.nombre.toLowerCase(), c]),
+          colaboradores.map((c) => [normalizeNameSearch(c.nombre), c]),
         ),
       },
       operadores: {
         byId: Object.fromEntries(operadores.map((o) => [o.id, o])),
         byName: Object.fromEntries(
-          operadores.map((o) => [o.nombre?.toLowerCase() || "", o]),
+          operadores.map((o) => [normalizeNameSearch(o.nombre || ""), o]),
+        ),
+        byCodigo: Object.fromEntries(
+          operadores.map((o) => [normalizeNameSearch(o.codigo || ""), o]),
         ),
       },
     }),
@@ -247,7 +257,32 @@ export function useImportExcel({
     [rows, mapping, crearAutomaticamente, indexers, resolverNombres],
   );
 
-  // Importación normal (sin creación automática) - MEJORADO CON PROTECCIÓN DE SESIÓN
+  // ✅ FUNCIÓN HELPER: Resolver ID mejorada con case insensitive
+  const resolveIdImproved = useCallback((value, indexer, resolverNombres) => {
+    if (!value) return null;
+    const raw = String(value).trim();
+
+    // Si ya es ID exacta
+    if (indexer.byId && indexer.byId[raw]) return raw;
+
+    // Intentar por nombre case insensitive
+    if (resolverNombres && indexer.byName) {
+      const normalizedValue = normalizeNameSearch(raw);
+      const found = indexer.byName[normalizedValue];
+      if (found) return found.id;
+    }
+
+    // Para operadores, también buscar por código
+    if (indexer.byCodigo) {
+      const normalizedValue = normalizeNameSearch(raw);
+      const found = indexer.byCodigo[normalizedValue];
+      if (found) return found.id;
+    }
+
+    return null;
+  }, []);
+
+  // Importación normal (sin creación automática) - CORREGIDO
   const importNormal = useCallback(async () => {
     if (!rows.length) throw new Error("No hay datos para importar");
 
@@ -286,18 +321,19 @@ export function useImportExcel({
         const cliente = get("cliente") || "Cliente sin especificar";
         const cif = get("cif") || "";
 
-        const colaborador_id = resolveId(
+        // ✅ USAR resolveIdImproved para mejor búsqueda
+        const colaborador_id = resolveIdImproved(
           get("colaborador_id"),
           indexers.colaboradores,
           resolverNombres,
         );
         const zona_id =
-          resolveId(get("zona_id"), indexers.zonas, resolverNombres) ||
+          resolveIdImproved(get("zona_id"), indexers.zonas, resolverNombres) ||
           zonas[0]?.id;
         const producto_id =
-          resolveId(get("producto_id"), indexers.productos, resolverNombres) ||
+          resolveIdImproved(get("producto_id"), indexers.productos, resolverNombres) ||
           productos[0]?.id;
-        const operador_id = resolveId(
+        const operador_id = resolveIdImproved(
           get("operador_id"),
           indexers.operadores,
           resolverNombres,
@@ -313,6 +349,7 @@ export function useImportExcel({
           continue;
         }
 
+        // ✅ CORRECCIÓN CRÍTICA: NO incluir 'sector' en ventas
         let ventaCompleta = {
           id: generateUniqueId("v", index),
           fecha,
@@ -325,6 +362,7 @@ export function useImportExcel({
           pvp: parseNumber(get("pvp")) || 0,
           cantidad: parseNumber(get("cantidad")) || 1,
           estado: get("estado") || "Confirmada",
+          // ❌ NO incluir: sector: 'TELEFONIA', // La tabla ventas NO tiene esta columna
         };
 
         ventaCompleta = applyDefaults(ventaCompleta, false);
@@ -379,11 +417,11 @@ export function useImportExcel({
       setIsLoading(false);
       finishImporting(); // 🔓 LIBERAR PROTECCIÓN DE SESIÓN
     }
-  }, [rows, mapping, indexers, resolverNombres, zonas, productos, setVentas, guardarExtras, onImportSuccess, refreshData, startImporting, finishImporting]);
+  }, [rows, mapping, indexers, resolverNombres, zonas, productos, setVentas, guardarExtras, onImportSuccess, refreshData, startImporting, finishImporting, resolveIdImproved]);
 
-  // Importación inteligente (con creación automática) - CON PROTECCIÓN DE SESIÓN
+  // Importación inteligente (con creación automática) - CORREGIDO
   const importInteligente = useCallback(async () => {
-    console.log('🚀 INICIANDO IMPORTACIÓN INTELIGENTE');
+    console.log('🚀 INICIANDO IMPORTACIÓN INTELIGENTE CORREGIDA');
     console.log('Datos:', { 
       rowsLength: rows.length, 
       mappingKeys: Object.keys(mapping),
@@ -422,7 +460,7 @@ export function useImportExcel({
       console.log('Resumen creación (local):', resumen);
 
       // 3. Crear ventas con los nuevos mapeos
-      console.log('💼 Paso 3: Creando ventas...');
+      console.log('💼 Paso 3: Creando ventas (CORREGIDO)...');
       const nuevasVentas = [];
       let rechazadas = 0;
       const erroresDetallados = [];
@@ -449,29 +487,43 @@ export function useImportExcel({
           continue;
         }
 
+        // ✅ BÚSQUEDA MEJORADA case insensitive con múltiples intentos
+        const buscarEnMapeos = (nombre, mapeo) => {
+          if (!nombre) return null;
+          
+          // Intento 1: exacto
+          if (mapeo[nombre]) return mapeo[nombre];
+          
+          // Intento 2: normalizado
+          const normalizado = normalizeNameSearch(nombre);
+          for (const [key, value] of Object.entries(mapeo)) {
+            if (normalizeNameSearch(key) === normalizado) {
+              return value;
+            }
+          }
+          
+          return null;
+        };
+
         const colaborador_id =
-          mapeos.colaboradores[colaboradorNombre] ||
-          mapeos.colaboradores[colaboradorNombre.toUpperCase()] ||
-          resolveId(colaboradorNombre, indexers.colaboradores, resolverNombres);
+          buscarEnMapeos(colaboradorNombre, mapeos.colaboradores) ||
+          resolveIdImproved(colaboradorNombre, indexers.colaboradores, resolverNombres);
         
         const zonaOriginal = get("zona_id");
         const zona_id =
-          mapeos.zonas[zonaOriginal] ||
-          mapeos.zonas[zonaOriginal?.toUpperCase()] ||
-          resolveId(zonaOriginal, indexers.zonas, resolverNombres) ||
+          buscarEnMapeos(zonaOriginal, mapeos.zonas) ||
+          resolveIdImproved(zonaOriginal, indexers.zonas, resolverNombres) ||
           zonas[0]?.id;
         
         const productoOriginal = get("producto_id");
         const producto_id =
-          mapeos.productos[productoOriginal] ||
-          mapeos.productos[productoOriginal?.toUpperCase()] ||
-          resolveId(productoOriginal, indexers.productos, resolverNombres);
+          buscarEnMapeos(productoOriginal, mapeos.productos) ||
+          resolveIdImproved(productoOriginal, indexers.productos, resolverNombres);
         
         const operadorOriginal = get("operador_id");
         const operador_id =
-          mapeos.operadores[operadorOriginal] ||
-          mapeos.operadores[operadorOriginal?.toUpperCase()] ||
-          resolveId(operadorOriginal, indexers.operadores, resolverNombres);
+          buscarEnMapeos(operadorOriginal, mapeos.operadores) ||
+          resolveIdImproved(operadorOriginal, indexers.operadores, resolverNombres);
 
         if (!colaborador_id) {
           console.log(`❌ Rechazando fila ${index + 1}: colaborador_id no resuelto`);
@@ -502,8 +554,8 @@ export function useImportExcel({
         }
 
         console.log(`✅ Fila ${index + 1}: IDs resueltos - colaborador: ${colaborador_id}, zona: ${zona_id}, producto: ${producto_id || 'N/A'}, operador: ${operador_id || 'N/A'}`);
-        console.log(`   - Mapeos utilizados: colaborador desde ${mapeos.colaboradores[colaboradorNombre] ? 'mapeo' : 'indexer'}, zona desde ${mapeos.zonas[zonaOriginal] ? 'mapeo' : 'indexer'}`);
 
+        // ✅ CORRECCIÓN CRÍTICA: NO incluir 'sector' en ventas
         let ventaCompleta = {
           id: generateUniqueId("v", index),
           fecha,
@@ -516,6 +568,7 @@ export function useImportExcel({
           pvp: parseNumber(get("pvp")) || 50.0,
           cantidad: parseNumber(get("cantidad")) || 1,
           estado: get("estado") || "Confirmada",
+          // ❌ NO incluir sector - la tabla ventas NO tiene esta columna
         };
 
         ventaCompleta = applyDefaults(ventaCompleta, true);
@@ -578,11 +631,12 @@ export function useImportExcel({
       };
 
       console.log('✅ Importación inteligente completada:', resultadoFinal);
-  // Refrescar datos globales tras importar
-  if (refreshData) await refreshData();
-  if (typeof onImportSuccess === 'function') onImportSuccess();
-  setResumenImportacion(resultadoFinal);
-  return resultadoFinal;
+      
+      // Refrescar datos globales tras importar
+      if (refreshData) await refreshData();
+      if (typeof onImportSuccess === 'function') onImportSuccess();
+      setResumenImportacion(resultadoFinal);
+      return resultadoFinal;
       
     } catch (error) {
       console.error('❌ Error en importación inteligente:', error);
@@ -611,6 +665,7 @@ export function useImportExcel({
     refreshData,
     startImporting,
     finishImporting,
+    resolveIdImproved,
   ]);
 
   // Limpiar datos

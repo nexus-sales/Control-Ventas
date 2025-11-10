@@ -1,8 +1,38 @@
-
-
+// src/services/entityCreator.js - VERSIÓN CORREGIDA
+// Mantiene toda la estructura existente pero con correcciones para errores de importación
 
 // ...resto del archivo: solo lógica local activa...
 
+/**
+ * ✅ FUNCIÓN AÑADIDA: Normalización mejorada para búsquedas case insensitive
+ */
+const normalizeNameSearch = (name) => {
+  if (!name || typeof name !== 'string') return '';
+  return name.trim().toUpperCase();
+};
+
+/**
+ * ✅ FUNCIÓN AÑADIDA: Buscar entidad existente con case insensitive mejorado
+ */
+const findExistingEntity = (searchName, entities, nameField = 'nombre', codeField = null) => {
+  if (!searchName || !entities || entities.length === 0) return null;
+  
+  const normalizedSearch = normalizeNameSearch(searchName);
+  
+  // Buscar por nombre
+  let found = entities.find(entity => 
+    normalizeNameSearch(entity[nameField] || '') === normalizedSearch
+  );
+  
+  // Si no se encontró y hay campo código, buscar por código también
+  if (!found && codeField) {
+    found = entities.find(entity => 
+      normalizeNameSearch(entity[codeField] || '') === normalizedSearch
+    );
+  }
+  
+  return found;
+};
 
 // Versiones locales (sin supabase) para crear entidades y mapearlas en memoria
 export async function createOperadorLocal(nombre) {
@@ -10,11 +40,13 @@ export async function createOperadorLocal(nombre) {
     throw new Error("El nombre del operador es obligatorio");
   }
   const id = `op_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`;
+  const nombreLimpio = nombre.trim();
+  
   return {
     id,
-    nombre: nombre.trim(),
-    sector: "TELEFONIA", // ✅ CORREGIDO: usar TELEFONIA en mayúsculas
-    codigo: nombre.trim().toUpperCase().replace(/\s+/g, '_').slice(0, 10),
+    nombre: nombreLimpio,
+    sector: "TELEFONIA", // ✅ CORRECTO: usar TELEFONIA en mayúsculas
+    codigo: nombreLimpio.toUpperCase().replace(/\s+/g, '_').slice(0, 10),
     contacto: null,
     telefono: null,
     email: null,
@@ -119,7 +151,7 @@ export async function createProductoLocal(nombre, operadorId = null, pvp = 50.0,
     codigo_producto: nombre.trim().toUpperCase().replace(/\s+/g, '_').slice(0, 15),
     descripcion: "Producto creado automáticamente desde importación (local)",
     activo: true,
-    sector: "TELEFONIA", // ✅ CORREGIDO: usar TELEFONIA en mayúsculas
+    sector: "TELEFONIA", // ✅ CORRECTO: usar TELEFONIA en mayúsculas
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     fecha_alta: new Date().toISOString().slice(0, 10),
@@ -132,9 +164,9 @@ export async function createProductoLocal(nombre, operadorId = null, pvp = 50.0,
   };
 }
 
-// Crea todas las entidades faltantes en memoria y actualiza los estados locales
+// ✅ FUNCIÓN CORREGIDA: Crea todas las entidades faltantes en memoria y actualiza los estados locales
 export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExistentes, setters) {
-  console.log('🚀 Iniciando creación de entidades faltantes (local)');
+  console.log('🚀 Iniciando creación de entidades faltantes (local) - VERSIÓN CORREGIDA');
   const resumen = {
     operadoresCreados: 0,
     productosCreados: 0,
@@ -153,7 +185,7 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
     zonas: {},
   };
   
-  // 1. Zonas (UPSERT por nombre normalizado)
+  // ✅ 1. ZONAS (UPSERT mejorado con case insensitive)
   let zonasCreadas = [];
   if (setters.setZonas) {
     for (const zonaJson of entidadesUnicas.zonas) {
@@ -169,31 +201,48 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
         };
       }
       
-      // UPSERT: Buscar zona existente por nombre normalizado (case-insensitive)
-      let zonaExistente = entitiesExistentes.zonas?.find(z => 
-        z.nombre.toUpperCase() === (zonaObj.nombre_normalizado || zonaObj.nombre.toUpperCase())
+      // ✅ BÚSQUEDA MEJORADA: Usar función helper para case insensitive
+      let zonaExistente = findExistingEntity(
+        zonaObj.nombre, 
+        entitiesExistentes.zonas, 
+        'nombre'
       );
       
       if (zonaExistente) {
-        // Usar zona existente
-        mapeos.zonas[zonaObj.nombre] = zonaExistente.id;
-        mapeos.zonas[zonaObj.nombre.toUpperCase()] = zonaExistente.id; // También mapear versión mayúscula
-        console.log(`♻️ Usando zona existente: ${zonaObj.nombre} → ${zonaExistente.nombre} (${zonaExistente.id})`);
+        // Usar zona existente - mapear múltiples variaciones
+        const nombreOriginal = zonaObj.nombre;
+        const nombreNormalizado = zonaObj.nombre_normalizado || nombreOriginal.toUpperCase();
+        
+        mapeos.zonas[nombreOriginal] = zonaExistente.id;
+        mapeos.zonas[nombreNormalizado] = zonaExistente.id;
+        mapeos.zonas[zonaExistente.nombre] = zonaExistente.id;
+        
+        console.log(`♻️ Usando zona existente: "${nombreOriginal}" → ${zonaExistente.nombre} (${zonaExistente.id})`);
       } else {
         try {
           const zona = await createZonaLocal(zonaObj.nombre, zonaObj);
           setters.setZonas((prev) => {
-            if (!prev.some(z => z.id === zona.id || z.nombre.toUpperCase() === zona.nombre.toUpperCase())) {
+            // ✅ VERIFICACIÓN MEJORADA: evitar duplicados por nombre normalizado
+            const yaExiste = prev.some(z => 
+              z.id === zona.id || 
+              normalizeNameSearch(z.nombre) === normalizeNameSearch(zona.nombre)
+            );
+            if (!yaExiste) {
               return [...prev, zona];
             }
             return prev;
           });
+          
           resumen.zonasNuevas.push(zonaObj.nombre);
           resumen.zonasCreadas++;
+          
+          // Mapear múltiples variaciones
           mapeos.zonas[zonaObj.nombre] = zona.id;
-          mapeos.zonas[zonaObj.nombre.toUpperCase()] = zona.id; // También mapear versión mayúscula
+          mapeos.zonas[zonaObj.nombre.toUpperCase()] = zona.id;
+          mapeos.zonas[zona.nombre] = zona.id;
+          
           zonasCreadas.push(zona.id);
-          console.log(`✅ Nueva zona creada: ${zonaObj.nombre} (${zona.id})`);
+          console.log(`✅ Nueva zona creada: ${zonaObj.nombre} → ${zona.nombre} (${zona.id})`);
         } catch (error) {
           resumen.errores.push(`Error creando zona ${zonaObj.nombre}: ${error.message}`);
         }
@@ -201,38 +250,52 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
     }
   }
   
-  // 2. Colaboradores (UPSERT por nombre normalizado)
+  // ✅ 2. COLABORADORES (UPSERT mejorado con case insensitive)
   let colaboradoresCreados = [];
   if (setters.setColaboradores) {
     for (const nombre of entidadesUnicas.colaboradores) {
-      // UPSERT: Buscar colaborador existente por nombre normalizado (case-insensitive)
-      let colaboradorExistente = entitiesExistentes.colaboradores?.find(c => 
-        c.nombre.toUpperCase() === nombre.toUpperCase()
+      // ✅ BÚSQUEDA MEJORADA: Usar función helper para case insensitive
+      let colaboradorExistente = findExistingEntity(
+        nombre, 
+        entitiesExistentes.colaboradores, 
+        'nombre'
       );
       
       if (colaboradorExistente) {
-        // Usar colaborador existente - mapear tanto original como normalizado
+        // Mapear múltiples variaciones del nombre
         mapeos.colaboradores[nombre] = colaboradorExistente.id;
         mapeos.colaboradores[nombre.toUpperCase()] = colaboradorExistente.id;
-        console.log(`♻️ Usando colaborador existente: ${nombre} → ${colaboradorExistente.nombre} (${colaboradorExistente.id})`);
+        mapeos.colaboradores[colaboradorExistente.nombre] = colaboradorExistente.id;
+        
+        console.log(`♻️ Usando colaborador existente: "${nombre}" → ${colaboradorExistente.nombre} (${colaboradorExistente.id})`);
       } else {
         try {
-          // Usar el nombre original (no normalizado) para crear
+          // Buscar nombre original en entidades únicas para preservar capitalización
           const nombreOriginal = Array.from(entidadesUnicas.colaboradores).find(n => 
-            n.toUpperCase() === nombre.toUpperCase()
+            normalizeNameSearch(n) === normalizeNameSearch(nombre)
           ) || nombre;
           
           const colaborador = await createColaboradorLocal(nombreOriginal);
           setters.setColaboradores((prev) => {
-            if (!prev.some(c => c.id === colaborador.id || c.nombre.toUpperCase() === colaborador.nombre.toUpperCase())) {
+            // ✅ VERIFICACIÓN MEJORADA: evitar duplicados por nombre normalizado
+            const yaExiste = prev.some(c => 
+              c.id === colaborador.id || 
+              normalizeNameSearch(c.nombre) === normalizeNameSearch(colaborador.nombre)
+            );
+            if (!yaExiste) {
               return [...prev, colaborador];
             }
             return prev;
           });
+          
           resumen.colaboradoresNuevos.push(nombreOriginal);
           resumen.colaboradoresCreados++;
+          
+          // Mapear múltiples variaciones
           mapeos.colaboradores[nombre] = colaborador.id;
           mapeos.colaboradores[nombre.toUpperCase()] = colaborador.id;
+          mapeos.colaboradores[colaborador.nombre] = colaborador.id;
+          
           colaboradoresCreados.push(colaborador.id);
           console.log(`✅ Nuevo colaborador creado: ${nombreOriginal} (${colaborador.id})`);
         } catch (error) {
@@ -242,38 +305,58 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
     }
   }
   
-  // 3. Operadores (UPSERT por nombre normalizado) 
+  // ✅ 3. OPERADORES (UPSERT mejorado con case insensitive y código)
   let operadoresCreados = [];
   if (setters.setOperadores) {
     for (const nombre of entidadesUnicas.operadores) {
-      // UPSERT: Buscar operador existente por nombre normalizado (case-insensitive)
-      let operadorExistente = entitiesExistentes.operadores?.find(o => 
-        o.nombre.toUpperCase() === nombre.toUpperCase()
+      // ✅ BÚSQUEDA MEJORADA: Buscar por nombre Y por código
+      let operadorExistente = findExistingEntity(
+        nombre, 
+        entitiesExistentes.operadores, 
+        'nombre',
+        'codigo' // También buscar por código
       );
       
       if (operadorExistente) {
-        // Usar operador existente - mapear tanto original como normalizado
+        // Mapear múltiples variaciones
         mapeos.operadores[nombre] = operadorExistente.id;
         mapeos.operadores[nombre.toUpperCase()] = operadorExistente.id;
-        console.log(`♻️ Usando operador existente: ${nombre} → ${operadorExistente.nombre} (${operadorExistente.id})`);
+        mapeos.operadores[operadorExistente.nombre] = operadorExistente.id;
+        if (operadorExistente.codigo) {
+          mapeos.operadores[operadorExistente.codigo] = operadorExistente.id;
+        }
+        
+        console.log(`♻️ Usando operador existente: "${nombre}" → ${operadorExistente.nombre} (${operadorExistente.id})`);
       } else {
         try {
-          // Usar el nombre original (no normalizado) para crear
+          // Buscar nombre original para preservar capitalización
           const nombreOriginal = Array.from(entidadesUnicas.operadores).find(n => 
-            n.toUpperCase() === nombre.toUpperCase()
+            normalizeNameSearch(n) === normalizeNameSearch(nombre)
           ) || nombre;
           
           const operador = await createOperadorLocal(nombreOriginal);
           setters.setOperadores((prev) => {
-            if (!prev.some(o => o.id === operador.id || o.nombre.toUpperCase() === operador.nombre.toUpperCase())) {
+            // ✅ VERIFICACIÓN MEJORADA: evitar duplicados por nombre Y código
+            const yaExiste = prev.some(o => 
+              o.id === operador.id || 
+              normalizeNameSearch(o.nombre) === normalizeNameSearch(operador.nombre) ||
+              (o.codigo && normalizeNameSearch(o.codigo) === normalizeNameSearch(operador.codigo))
+            );
+            if (!yaExiste) {
               return [...prev, operador];
             }
             return prev;
           });
+          
           resumen.operadoresNuevos.push(nombreOriginal);
           resumen.operadoresCreados++;
+          
+          // Mapear múltiples variaciones
           mapeos.operadores[nombre] = operador.id;
           mapeos.operadores[nombre.toUpperCase()] = operador.id;
+          mapeos.operadores[operador.nombre] = operador.id;
+          mapeos.operadores[operador.codigo] = operador.id;
+          
           operadoresCreados.push(operador.id);
           console.log(`✅ Nuevo operador creado: ${nombreOriginal} (${operador.id})`);
         } catch (error) {
@@ -282,21 +365,41 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
       }
     }
   }
-  // 4. Productos (UPSERT por nombre normalizado)
+  
+  // ✅ 4. PRODUCTOS (UPSERT mejorado con constraint operador_id + nombre)
   if (setters.setProductos) {
     for (const [nombreNormalizado, datos] of entidadesUnicas.productos) {
-      const operadorId = mapeos.operadores[datos.operador] || mapeos.operadores[datos.operador?.toUpperCase()] || null;
+      const operadorId = mapeos.operadores[datos.operador] || 
+                        mapeos.operadores[datos.operador?.toUpperCase()] || 
+                        null;
       
-      // UPSERT: Buscar producto existente por nombre normalizado (case-insensitive)
-      let productoExistente = entitiesExistentes.productos?.find(p => 
-        p.nombre.toUpperCase() === datos.nombre.toUpperCase()
-      );
+      // ✅ BÚSQUEDA CRÍTICA: Verificar constraint único operador_id + nombre
+      let productoExistente = null;
+      
+      if (operadorId) {
+        // Buscar por combinación operador_id + nombre (constraint único)
+        productoExistente = entitiesExistentes.productos?.find(p => 
+          p.operador_id === operadorId && 
+          normalizeNameSearch(p.nombre) === normalizeNameSearch(datos.nombre)
+        );
+      }
+      
+      // Si no se encontró por constraint, buscar solo por nombre
+      if (!productoExistente) {
+        productoExistente = findExistingEntity(
+          datos.nombre, 
+          entitiesExistentes.productos, 
+          'nombre'
+        );
+      }
       
       if (productoExistente) {
-        // Usar producto existente - mapear tanto original como normalizado
+        // Mapear múltiples variaciones
         mapeos.productos[datos.nombre] = productoExistente.id;
         mapeos.productos[nombreNormalizado] = productoExistente.id;
-        console.log(`♻️ Usando producto existente: ${datos.nombre} → ${productoExistente.nombre} (${productoExistente.id})`);
+        mapeos.productos[productoExistente.nombre] = productoExistente.id;
+        
+        console.log(`♻️ Usando producto existente: "${datos.nombre}" → ${productoExistente.nombre} (${productoExistente.id})`);
       } else {
         try {
           const producto = await createProductoLocal(
@@ -305,33 +408,47 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
             datos.pvp,
             datos.comision_base
           );
+          
           setters.setProductos((prev) => {
-            if (!prev.some(p => p.id === producto.id || p.nombre.toUpperCase() === producto.nombre.toUpperCase())) {
+            // ✅ VERIFICACIÓN CRÍTICA: evitar duplicados por constraint operador_id + nombre
+            const yaExiste = prev.some(p => 
+              p.id === producto.id || 
+              (p.operador_id === producto.operador_id && 
+               normalizeNameSearch(p.nombre) === normalizeNameSearch(producto.nombre))
+            );
+            if (!yaExiste) {
               return [...prev, producto];
             }
             return prev;
           });
+          
           resumen.productosNuevos.push(
             `${datos.nombre} (PVP: ${datos.pvp}€, Comisión: ${datos.comision_base}€)`
           );
           resumen.productosCreados++;
+          
+          // Mapear múltiples variaciones
           mapeos.productos[datos.nombre] = producto.id;
           mapeos.productos[nombreNormalizado] = producto.id;
-          console.log(`✅ Nuevo producto creado: ${datos.nombre} (${producto.id})`);
+          
+          console.log(`✅ Nuevo producto creado: ${datos.nombre} (${producto.id}) para operador ${operadorId}`);
         } catch (error) {
+          console.error(`❌ Error creando producto ${datos.nombre}:`, error);
           resumen.errores.push(`Error creando producto ${datos.nombre}: ${error.message}`);
         }
       }
     }
   }
+  
+  console.log('🎉 Creación local completada (CORREGIDA):', resumen);
   return { resumen, mapeos };
 }
 
 /**
- * Recopila entidades únicas de las filas de datos
+ * ✅ FUNCIÓN CORREGIDA: Recopila entidades únicas con normalización mejorada
  */
 export function recopilarEntidadesUnicas(rows, mapping) {
-  console.log('Recopilando entidades únicas de', rows.length, 'filas');
+  console.log('🔍 Recopilando entidades únicas de', rows.length, 'filas (VERSIÓN CORREGIDA)');
   
   const operadores = new Set();
   const productos = new Map();
@@ -346,20 +463,21 @@ export function recopilarEntidadesUnicas(rows, mapping) {
 
     const operador = get("operador_id");
     if (operador) {
-      // Normalizar a UPPERCASE para evitar duplicados
-      operadores.add(operador.toUpperCase());
+      // ✅ MANTENER NOMBRE ORIGINAL, no convertir a uppercase automáticamente
+      operadores.add(operador);
     }
 
     const producto = get("producto_id");
     if (producto) {
       const comisionBase = parseFloat(get("comision_base")) || 15.0;
       const pvp = parseFloat(get("pvp")) || 50.0;
-      // Normalizar a UPPERCASE para evitar duplicados
-      const productoNormalizado = producto.toUpperCase();
+      
+      // ✅ USAR NOMBRE ORIGINAL como key, normalizar para búsquedas
+      const productoKey = producto;
 
-      productos.set(productoNormalizado, {
-        nombre: producto, // Mantener el original para mostrar
-        operador: operador ? operador.toUpperCase() : null,
+      productos.set(productoKey, {
+        nombre: producto, // Mantener original
+        operador: operador, // Mantener original del operador
         comision_base: comisionBase,
         pvp: pvp,
       });
@@ -367,8 +485,8 @@ export function recopilarEntidadesUnicas(rows, mapping) {
 
     const colaborador = get("colaborador_id");
     if (colaborador) {
-      // Normalizar a UPPERCASE para evitar duplicados
-      colaboradores.add(colaborador.toUpperCase());
+      // ✅ MANTENER NOMBRE ORIGINAL
+      colaboradores.add(colaborador);
     }
 
     const zona = get("zona_id");
@@ -389,13 +507,14 @@ export function recopilarEntidadesUnicas(rows, mapping) {
   });
 
   const resultado = { operadores, productos, colaboradores, zonas };
-  console.log('Entidades únicas recopiladas:', {
+  console.log('📊 Entidades únicas recopiladas (CORREGIDO):', {
     operadores: Array.from(operadores),
     productos: Array.from(productos.keys()),
     colaboradores: Array.from(colaboradores),
     zonas: Array.from(zonas).map(z => {
       try {
-        return JSON.parse(z).nombre;
+        const parsed = JSON.parse(z);
+        return `${parsed.nombre} (original: ${parsed.original})`;
       } catch {
         return z;
       }
@@ -406,10 +525,10 @@ export function recopilarEntidadesUnicas(rows, mapping) {
 }
 
 /**
- * Crea todas las entidades faltantes automáticamente
+ * ✅ MANTENER FUNCIÓN ORIGINAL: Crea todas las entidades faltantes automáticamente
  */
 export async function createMissingEntities(entidadesUnicas, entitiesExistentes, setters) {
-  console.log('🚀 Iniciando creación de entidades faltantes');
+  console.log('🚀 Iniciando creación de entidades faltantes (función original mantenida)');
   console.log('Setters disponibles:', {
     setOperadores: !!setters.setOperadores,
     setZonas: !!setters.setZonas,
