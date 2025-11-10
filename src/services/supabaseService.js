@@ -76,21 +76,75 @@ export const fetchAllData = async () => {
 // --- Funciones de Escritura ---
 
 /**
+ * Sanitiza datos antes de enviarlos a Supabase
+ * @param {object} record - Registro a sanitizar
+ * @returns {object} - Registro sanitizado
+ */
+const sanitizeRecord = (record) => {
+  const sanitized = { ...record };
+  
+  // Convierte arrays vacíos a JSON para campos JSONB
+  if (Array.isArray(sanitized.historial) && sanitized.historial.length === 0) {
+    sanitized.historial = {};
+  }
+  if (Array.isArray(sanitized.extras) && sanitized.extras.length === 0) {
+    sanitized.extras = {};
+  }
+  
+  // Asegura que las fechas ISO sean válidas
+  Object.keys(sanitized).forEach(key => {
+    const value = sanitized[key];
+    if (typeof value === 'string' && value.includes('T') && value.includes('Z')) {
+      try {
+        const date = new Date(value);
+        if (isNaN(date.getTime())) {
+          delete sanitized[key]; // Elimina fechas inválidas
+        }
+      } catch {
+        delete sanitized[key]; // Elimina fechas que no se pueden parsear
+      }
+    }
+    
+    // Elimina valores null/undefined para evitar conflictos
+    if (value === null || value === undefined) {
+      delete sanitized[key];
+    }
+  });
+  
+  return sanitized;
+};
+
+/**
  * Realiza un "upsert" (insertar o actualizar) en una tabla.
  * @param {string} tableName - El nombre de la tabla.
  * @param {object | object[]} records - El/los registro(s) a guardar.
  * @returns {Promise<{data: any[], error: any}>}
  */
 export const upsert = async (tableName, records) => {
-  const { data, error } = await supabase.from(tableName).upsert(records, {
-    onConflict: 'id', // Asume que 'id' es la clave primaria para resolver conflictos
-  }).select();
-  
-  if (error) {
-    console.error(`Error en upsert a ${tableName}:`, error);
+  try {
+    // Sanitiza los registros
+    const sanitizedRecords = Array.isArray(records) 
+      ? records.map(record => sanitizeRecord(record))
+      : sanitizeRecord(records);
+    
+    console.log(`[Supabase] Upsert a ${tableName}:`, sanitizedRecords.length || 1, 'registros');
+    
+    const { data, error } = await supabase.from(tableName).upsert(sanitizedRecords, {
+      onConflict: 'id',
+    }).select();
+    
+    if (error) {
+      console.error(`Error en upsert a ${tableName}:`, error);
+      console.error('Datos enviados:', sanitizedRecords);
+    } else {
+      console.log(`✅ Upsert exitoso a ${tableName}:`, data?.length || 1, 'registros');
+    }
+    
+    return { data, error };
+  } catch (exception) {
+    console.error(`Excepción en upsert a ${tableName}:`, exception);
+    return { data: null, error: exception };
   }
-  
-  return { data, error };
 };
 
 /**

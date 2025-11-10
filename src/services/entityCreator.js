@@ -97,7 +97,7 @@ export async function createProductoLocal(nombre, operadorId = null, pvp = 50.0,
     email: null,
     telefono: null,
     observaciones: "Creado automáticamente (local)",
-    historial: []
+    historial: {} // Cambiado de [] a {} para que sea un objeto JSON válido
   };
 }
 
