@@ -3,6 +3,7 @@ import { AuthCtx } from './contexts';
 import { DataCtx } from './contexts';
 import { fetchAllData, TABLES, upsert, removeByIds } from '../services/supabaseService';
 import { isSupabaseConfigured } from '../config/env';
+import { runSeedIfNeeded } from '../data/seeds';
 
 // Función para cargar datos desde localStorage
 const loadFromStorage = (key, defaultValue = []) => {
@@ -39,6 +40,7 @@ export function DataProvider({ children }) {
     zonas: [],
     reglas: [],
     liquidaciones: [],
+    decomisiones: [],
   });
   
   const [dataInitialized, setDataInitialized] = useState(() => {
@@ -100,8 +102,25 @@ export function DataProvider({ children }) {
 
     try {
       if (upserts.length) {
-        const { error } = await upsert(tableName, upserts);
+        const { data: insertedData, error } = await upsert(tableName, upserts);
         if (error) throw error;
+        
+        // ✅ NUEVA LÓGICA: Actualizar IDs locales con los IDs reales de Supabase
+        if (insertedData && insertedData.length > 0 && collectionKey === 'ventas') {
+          console.log('🔄 Actualizando IDs locales con IDs reales de Supabase:', insertedData.length);
+          // Programar recarga después de un delay para evitar dependencia circular
+          setTimeout(() => {
+            // Forzar recarga solo de ventas desde Supabase
+            fetchAllData().then(({ data: remoteData }) => {
+              if (remoteData?.ventas) {
+                setData(prev => ({ ...prev, ventas: remoteData.ventas }));
+                saveToStorage('appcv_ventas', remoteData.ventas);
+              }
+            }).catch(error => {
+              console.warn('Error recargando ventas tras inserción:', error);
+            });
+          }, 500);
+        }
       }
       if (deletions.length) {
         const { error } = await removeByIds(tableName, deletions);
@@ -113,11 +132,13 @@ export function DataProvider({ children }) {
       console.error(`[DataProvider] Error sincronizando ${collectionKey}:`, error);
       
       // Solo activar modo offline para errores de conectividad, no de validación
-      const isConnectivityError = error.code === 'PGRST301' || 
-                                  error.message?.includes('network') || 
-                                  error.message?.includes('fetch') ||
-                                  error.message?.includes('timeout') ||
-                                  error.message?.includes('connection');
+  const isConnectivityError = error.code === 'PGRST301' || 
+              error.code === 'SUPABASE_OFFLINE' ||
+              error.code === 'FETCH_TIMEOUT' ||
+              error.message?.includes('network') || 
+              error.message?.includes('fetch') ||
+              error.message?.includes('timeout') ||
+              error.message?.includes('connection');
       
       if (isConnectivityError) {
         setIsSupabaseAvailable(false);
@@ -141,7 +162,7 @@ export function DataProvider({ children }) {
   }, [persistCollection, remoteEnabled]);
 
   const loadAllData = useCallback(async ({ forceRemote = false } = {}) => {
-  recordDebugEvent("load:start", { forceRemote, supabaseConfigured, remoteEnabled, offlineMode, supabaseAvailable: supabaseAvailableRef.current });
+    recordDebugEvent("load:start", { forceRemote, supabaseConfigured, remoteEnabled, offlineMode, supabaseAvailable: supabaseAvailableRef.current });
 
     let loadedData = null;
 
@@ -166,13 +187,16 @@ export function DataProvider({ children }) {
           recordDebugEvent("load:remote-error", { errors });
           
           // Solo activar modo offline si hay errores de conectividad
-          const hasConnectivityErrors = errors.some(error => 
-            error.code === 'PGRST301' || 
-            error.message?.includes('network') || 
-            error.message?.includes('fetch') ||
-            error.message?.includes('timeout') ||
-            error.message?.includes('connection')
-          );
+          const hasConnectivityErrors = errors.some(({ error }) => {
+            const err = error || {};
+            return err.code === 'PGRST301' ||
+                   err.code === 'SUPABASE_OFFLINE' ||
+                   err.code === 'FETCH_TIMEOUT' ||
+                   err.message?.includes('network') ||
+                   err.message?.includes('fetch') ||
+                   err.message?.includes('timeout') ||
+                   err.message?.includes('connection');
+          });
           
           if (hasConnectivityErrors) {
             setIsSupabaseAvailable(false);
@@ -188,7 +212,9 @@ export function DataProvider({ children }) {
         recordDebugEvent("load:remote-exception", { message: error.message });
         
         // Solo activar modo offline para errores de conectividad
-        const isConnectivityError = error.code === 'PGRST301' || 
+  const isConnectivityError = error.code === 'PGRST301' || 
+                                    error.code === 'SUPABASE_OFFLINE' ||
+            error.code === 'FETCH_TIMEOUT' ||
                                     error.message?.includes('network') || 
                                     error.message?.includes('fetch') ||
                                     error.message?.includes('timeout') ||
@@ -216,6 +242,7 @@ export function DataProvider({ children }) {
         zonas: loadFromStorage('appcv_zonas', []),
         reglas: loadFromStorage('appcv_reglas', []),
         liquidaciones: loadFromStorage('appcv_liquidaciones', []),
+        decomisiones: loadFromStorage('appcv_decomisiones', []),
       };
       loadedData = localData;
       recordDebugEvent("load:local", {
@@ -235,6 +262,8 @@ export function DataProvider({ children }) {
   // Cargar datos cuando el componente se monta
   useEffect(() => {
     console.log('DataProvider - Iniciando carga de datos...');
+    // Cargar datos de semilla si son necesarios
+    runSeedIfNeeded();
     loadAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // loadAllData se define con useCallback y es estable
@@ -295,6 +324,7 @@ export function DataProvider({ children }) {
   const setNiveles = useMemo(() => createCollectionSetter('niveles'), [createCollectionSetter]);
   const setReglas = useMemo(() => createCollectionSetter('reglas'), [createCollectionSetter]);
   const setLiquidaciones = useMemo(() => createCollectionSetter('liquidaciones'), [createCollectionSetter]);
+  const setDecomisiones = useMemo(() => createCollectionSetter('decomisiones'), [createCollectionSetter]);
 
   // Insertar ventas solo en localStorage y supabase cuando aplique
   const insertVentas = useCallback(async (ventas) => {
@@ -328,6 +358,7 @@ export function DataProvider({ children }) {
     setNiveles,
     setReglas,
     setLiquidaciones,
+    setDecomisiones,
     // Info de usuario actual
     userRole: profile?.rol,
     isSupabaseAvailable,
@@ -346,6 +377,7 @@ export function DataProvider({ children }) {
     setNiveles,
     setReglas,
     setLiquidaciones,
+    setDecomisiones,
     profile?.rol,
     isSupabaseAvailable
   ]);

@@ -62,6 +62,7 @@ export default function ImportExcelMapperV2({
     validateSingleRow,
     importNormal,
     importInteligente,
+    importSimplificado,
     clearData,
   } = useImportExcel({
     productos,
@@ -102,7 +103,7 @@ export default function ImportExcelMapperV2({
           FECHA_ENVIO: "16/01/2024",
           CLIENTE: "Servicios XYZ Ltd",
           COLABORADOR: "MARIA GONZALEZ LOPEZ",
-          ZONA: "Peninsula",
+          ZONA: "Península",
           PRODUCTO: "Móvil Unlimited",
           OPERADOR: "Vodafone",
           PVP: 35.0,
@@ -162,7 +163,7 @@ export default function ImportExcelMapperV2({
         },
         {
           aspecto: "Zonas",
-          instruccion: "Nombres de zonas geográficas (Peninsula, Canarias, etc.)",
+          instruccion: "Nombres de zonas geográficas (Península, Canarias, etc.)",
         }
       ];
       instrucciones.forEach((row) => wsInstrucciones.addRow(row));
@@ -288,6 +289,43 @@ export default function ImportExcelMapperV2({
       // clearData();
     } catch (error) {
       console.error('❌ ERROR IMPORTACIÓN:', error);
+      setToast({ message: `❌ Error: ${error.message}`, type: "error" });
+    }
+  };
+
+  // Importación simplificada para casos difíciles
+  const handleImportSimplificado = async () => {
+    if (!rows.length) {
+      setToast({ message: "No hay datos para importar", type: "error" });
+      return;
+    }
+
+    try {
+      console.log('🔧 EJECUTANDO IMPORTACIÓN SIMPLIFICADA...');
+      setToast({ message: "🔧 Ejecutando importación simplificada...", type: "info" });
+
+      const resultado = await importSimplificado();
+      
+      console.log('🔧 RESULTADO SIMPLIFICADO:', resultado);
+
+      setToast({ 
+        message: `✅ IMPORTACIÓN COMPLETADA: ${resultado.ventasCreadas} ventas creadas`, 
+        type: "success" 
+      });
+
+      // Recargar datos
+      if (onImportSuccess) {
+        console.log("🔧 Recargando datos después de importación simplificada...");
+        try {
+          await onImportSuccess();
+          console.log("🔧 Datos recargados correctamente");
+        } catch (reloadError) {
+          console.error("🔧 Error recargando datos:", reloadError);
+        }
+      }
+
+    } catch (error) {
+      console.error('🔧 ERROR IMPORTACIÓN SIMPLIFICADA:', error);
       setToast({ message: `❌ Error: ${error.message}`, type: "error" });
     }
   };
@@ -629,6 +667,20 @@ export default function ImportExcelMapperV2({
                 : crearAutomaticamente && autoCreacionDisponible
                   ? `🚀 Importación Inteligente (${validationStats.valid} filas)`
                   : `Importar ${validationStats.valid} filas válidas`}
+            </button>
+
+            {/* Botón de importación simplificada */}
+            <button
+              onClick={handleImportSimplificado}
+              disabled={rows.length === 0 || isLoading}
+              className="px-4 py-2 rounded-xl text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                background: "linear-gradient(to right, #f59e0b, #d97706)",
+              }}
+            >
+              {isLoading
+                ? "Procesando..."
+                : `🔧 Importar Simplificado (${rows.length} filas)`}
             </button>
 
             <button
