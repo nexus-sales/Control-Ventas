@@ -56,8 +56,10 @@ function createHistoryEntry(original, updated) {
 export default function ProductoEditModal({ producto, onSave, onClose }) {
   // Obtener campos personalizados para productos
   const customFields = useCustomFields('productos');
+  // Obtener operadores desde window (por props no llegan)
+  const operadores = window.__operadores || [];
   const [draft, setDraft] = useState(() => ({
-    operador_id: producto?.operador_id || "",
+    operador_id: producto?.operador_id || operadores[0]?.id || "",
     nombre: producto?.nombre || "",
     familia: producto?.familia || "",
     pvp: producto?.pvp ?? "",
@@ -325,17 +327,23 @@ export default function ProductoEditModal({ producto, onSave, onClose }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700" htmlFor="producto-contacto">
-                    Contacto
+                  <label className="text-sm font-medium text-slate-700" htmlFor="producto-operador">
+                    Operador *
                   </label>
-                  <input
-                    id="producto-contacto"
-                    name="contacto"
-                    className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-purple-400"
-                    value={draft.contacto}
+                  <select
+                    id="producto-operador"
+                    name="operador_id"
+                    className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-green-400"
+                    value={draft.operador_id}
                     onChange={handleChange}
-                    aria-label="Persona de contacto"
-                  />
+                    required
+                    aria-label="Operador del producto"
+                  >
+                    <option value="">Selecciona un operador</option>
+                    {operadores.map(op => (
+                      <option key={op.id} value={op.id}>{op.nombre}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

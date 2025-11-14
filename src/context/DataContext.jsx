@@ -132,6 +132,70 @@ export function DataProvider({ children }) {
     initializeFromStorage();
   }, [initializeFromStorage]);
 
+
+  // Función para limpiar todos los datos y localStorage
+  const resetAllData = useCallback(() => {
+    const emptyData = {
+      ventas: [],
+      colaboradores: [],
+      niveles: [],
+      operadores: [],
+      productos: [],
+      zonas: [],
+      reglas: [],
+      liquidaciones: [],
+    };
+    Object.keys(emptyData).forEach(key => {
+      localStorage.setItem(`appcv_${key}`, JSON.stringify([]));
+    });
+    setData(emptyData);
+    setDataInitialized(true);
+  }, []);
+
+  // Función para validar relaciones y limpiar duplicados
+  const validateAllRelations = useCallback(() => {
+    // Eliminar duplicados por id en cada entidad
+    function uniqueById(arr) {
+      const seen = new Set();
+      return arr.filter(item => {
+        if (!item.id || seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      });
+    }
+    // Limpiar operadores
+    let operadores = uniqueById(data.operadores).filter(op => op.nombre && op.id);
+    // Limpiar zonas
+    let zonas = uniqueById(data.zonas).filter(z => z.nombre && z.id);
+    // Limpiar colaboradores
+    let colaboradores = uniqueById(data.colaboradores).filter(c => c.nombre && c.id);
+    // Limpiar productos y validar operador
+    let productos = uniqueById(data.productos).filter(p => p.nombre && p.id && operadores.some(op => op.id === p.operador_id));
+    // Limpiar ventas y validar relaciones
+    let ventas = uniqueById(data.ventas).filter(v =>
+      v.id &&
+      productos.some(p => p.id === v.producto_id) &&
+      operadores.some(op => op.id === v.operador_id) &&
+      colaboradores.some(c => c.id === v.colaborador_id) &&
+      zonas.some(z => z.id === v.zona_id)
+    );
+    // Limpiar niveles, reglas, liquidaciones
+    let niveles = uniqueById(data.niveles);
+    let reglas = uniqueById(data.reglas);
+    let liquidaciones = uniqueById(data.liquidaciones);
+    // Guardar y actualizar
+    setData({ ventas, colaboradores, niveles, operadores, productos, zonas, reglas, liquidaciones });
+    saveToStorage('appcv_ventas', ventas);
+    saveToStorage('appcv_colaboradores', colaboradores);
+    saveToStorage('appcv_niveles', niveles);
+    saveToStorage('appcv_operadores', operadores);
+    saveToStorage('appcv_productos', productos);
+    saveToStorage('appcv_zonas', zonas);
+    saveToStorage('appcv_reglas', reglas);
+    saveToStorage('appcv_liquidaciones', liquidaciones);
+    setDataInitialized(true);
+  }, [data]);
+
   // Valor del contexto
   const contextValue = {
     data,
@@ -144,6 +208,8 @@ export function DataProvider({ children }) {
     setZonas,
     setReglas,
     setLiquidaciones,
+    resetAllData,
+    validateAllRelations,
   };
 
   return (

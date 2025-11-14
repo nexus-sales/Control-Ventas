@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect } from "react";
 import Loading from "./common/Loading";
 import { useLocation } from "react-router-dom";
 import { MapPin, Building, Package, Settings, SlidersHorizontal } from "lucide-react";
-import { DataCtx } from "../context/contexts";
+import { DataContext } from "../context/DataContextDef";
 import ProductosSection from "./config/ProductosSection";
 import OperadoresSection from "./config/OperadoresSection";
 import ZonasSection from "./config/ZonasSection";
@@ -24,42 +24,28 @@ export default function Config() {
   }, [location.search]);
   
     // Usar el contexto de datos
-  const { data, setZonas, setOperadores, setProductos, dataInitialized } = useContext(DataCtx);
+  const { data, setZonas, setOperadores, setProductos, dataInitialized } = useContext(DataContext);
   const zonas = Array.isArray(data?.zonas) ? data.zonas : [];
   const operadores = Array.isArray(data?.operadores) ? data.operadores : [];
   const productos = Array.isArray(data?.productos) ? data.productos : [];
+
+  // Importar funciones de limpieza/validación
+  const { resetAllData, validateAllRelations } = useContext(DataContext);
 
   // ======= ESTADOS PARA BÚSQUEDA Y PAGINACIÓN =======
   const [searchZona, setSearchZona] = useState('');
   const [searchOperador, setSearchOperador] = useState('');
   const [searchProducto, setSearchProducto] = useState('');
-  const [zonaPage, setZonaPage] = useState(1);
-  const [operadorPage, setOperadorPage] = useState(1);
-  const [productoPage, setProductoPage] = useState(1);
-  const PAGE_SIZE = 10;
-
-  // ======= FILTRADO Y PAGINACIÓN =======
+  // ======= FILTRADO SIN PAGINACIÓN =======
   const filteredZonas = zonas.filter(z =>
     z.nombre?.toLowerCase().includes(searchZona.toLowerCase())
   );
-  const pagedZonas = filteredZonas.slice((zonaPage - 1) * PAGE_SIZE, zonaPage * PAGE_SIZE);
-  const totalZonaPages = Math.max(1, Math.ceil(filteredZonas.length / PAGE_SIZE));
-
   const filteredOperadores = operadores.filter(o =>
     o.nombre?.toLowerCase().includes(searchOperador.toLowerCase())
   );
-  const pagedOperadores = filteredOperadores.slice((operadorPage - 1) * PAGE_SIZE, operadorPage * PAGE_SIZE);
-  const totalOperadorPages = Math.max(1, Math.ceil(filteredOperadores.length / PAGE_SIZE));
-
   const filteredProductos = productos.filter(p =>
     p.nombre?.toLowerCase().includes(searchProducto.toLowerCase())
   );
-  const pagedProductos = filteredProductos.slice((productoPage - 1) * PAGE_SIZE, productoPage * PAGE_SIZE);
-  const totalProductoPages = Math.max(1, Math.ceil(filteredProductos.length / PAGE_SIZE));
-
-  if (false && !dataInitialized) {
-    return <Loading />;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-darkBg dark:to-darkCard p-6 transition-colors">
@@ -82,6 +68,22 @@ export default function Config() {
         {activeSection === "campos" && (
           <CustomFieldsSection />
         )}
+        {/* Acciones globales de datos */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => { if(window.confirm('¿Seguro que quieres limpiar todos los datos?')) resetAllData(); }}
+            className="px-4 py-2 rounded-lg bg-red-600 text-white font-bold shadow hover:bg-red-700"
+          >
+            Limpiar todos los datos
+          </button>
+          <button
+            onClick={() => { validateAllRelations(); alert('Relaciones validadas y datos limpiados.'); }}
+            className="px-4 py-2 rounded-lg bg-green-600 text-white font-bold shadow hover:bg-green-700"
+          >
+            Validar relaciones y limpiar duplicados
+          </button>
+        </div>
+
         {/* Navegación */}
         <div className="flex gap-2 mb-8 bg-white dark:bg-darkCard rounded-xl p-2 shadow-lg border border-slate-200 dark:border-darkAccent/30">
           <button
@@ -124,36 +126,16 @@ export default function Config() {
                 className="border border-slate-200 rounded-xl px-3 py-2 w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
                 placeholder="Buscar zona..."
                 value={searchZona}
-                onChange={e => { setSearchZona(e.target.value); setZonaPage(1); }}
+                onChange={e => { setSearchZona(e.target.value); }}
               />
               <div className="text-sm text-slate-300">
                 {filteredZonas.length} zona{filteredZonas.length !== 1 ? 's' : ''} 
                 {searchZona && ` (filtrado de ${zonas.length})`}
               </div>
             </div>
-            <ZonasSection zonas={pagedZonas} setZonas={setZonas} />
+            <ZonasSection zonas={filteredZonas} setZonas={setZonas} />
             {/* Paginación */}
-            {totalZonaPages > 1 && (
-              <div className="flex justify-end items-center gap-2 mt-4">
-                <button
-                  onClick={() => setZonaPage(z => Math.max(1, z - 1))}
-                  disabled={zonaPage === 1}
-                  className="px-3 py-1 rounded border text-slate-200 disabled:opacity-50 hover:bg-slate-50 dark:text-white"
-                >
-                  Anterior
-                </button>
-                <span className="text-sm text-slate-200">
-                  Página {zonaPage} de {totalZonaPages}
-                </span>
-                <button
-                  onClick={() => setZonaPage(z => Math.min(totalZonaPages, z + 1))}
-                  disabled={zonaPage >= totalZonaPages}
-                  className="px-3 py-1 rounded border text-slate-200 disabled:opacity-50 hover:bg-slate-50 dark:text-white"
-                >
-                  Siguiente
-                </button>
-              </div>
-            )}
+            {/* Sin paginación, se muestran todas las zonas filtradas */}
           </>
         )}
         
@@ -166,39 +148,18 @@ export default function Config() {
                 className="border border-slate-200 rounded-xl px-3 py-2 w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-green-400"
                 placeholder="Buscar operador..."
                 value={searchOperador}
-                onChange={e => { setSearchOperador(e.target.value); setOperadorPage(1); }}
+                onChange={e => { setSearchOperador(e.target.value); }}
               />
               <div className="text-sm text-slate-300">
                 {filteredOperadores.length} operador{filteredOperadores.length !== 1 ? 'es' : ''} 
                 {searchOperador && ` (filtrado de ${operadores.length})`}
               </div>
             </div>
+            {/* Mostrar todos los operadores, no solo la página */}
             <OperadoresSection
-              operadores={pagedOperadores}
+              operadores={operadores}
               setOperadores={setOperadores}
             />
-            {/* Paginación */}
-            {totalOperadorPages > 1 && (
-              <div className="flex justify-end items-center gap-2 mt-4">
-                <button
-                  onClick={() => setOperadorPage(z => Math.max(1, z - 1))}
-                  disabled={operadorPage === 1}
-                  className="px-3 py-1 rounded border text-slate-200 disabled:opacity-50 hover:bg-slate-50 dark:text-white"
-                >
-                  Anterior
-                </button>
-                <span className="text-sm text-slate-200">
-                  Página {operadorPage} de {totalOperadorPages}
-                </span>
-                <button
-                  onClick={() => setOperadorPage(z => Math.min(totalOperadorPages, z + 1))}
-                  disabled={operadorPage >= totalOperadorPages}
-                  className="px-3 py-1 rounded border text-slate-200 disabled:opacity-50 hover:bg-slate-50 dark:text-white"
-                >
-                  Siguiente
-                </button>
-              </div>
-            )}
           </>
         )}
         
@@ -211,40 +172,19 @@ export default function Config() {
                 className="border border-slate-200 rounded-xl px-3 py-2 w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-purple-400"
                 placeholder="Buscar producto..."
                 value={searchProducto}
-                onChange={e => { setSearchProducto(e.target.value); setProductoPage(1); }}
+                onChange={e => { setSearchProducto(e.target.value); }}
               />
               <div className="text-sm text-slate-500">
                 {filteredProductos.length} producto{filteredProductos.length !== 1 ? 's' : ''} 
                 {searchProducto && ` (filtrado de ${productos.length})`}
               </div>
             </div>
+            {/* Mostrar todos los productos, no solo la página */}
             <ProductosSection
-              productos={pagedProductos}
+              productos={productos}
               setProductos={setProductos}
               operadores={operadores}
             />
-            {/* Paginación */}
-            {totalProductoPages > 1 && (
-              <div className="flex justify-end items-center gap-2 mt-4">
-                <button
-                  onClick={() => setProductoPage(z => Math.max(1, z - 1))}
-                  disabled={productoPage === 1}
-                  className="px-3 py-1 rounded border text-slate-600 disabled:opacity-50 hover:bg-slate-50"
-                >
-                  Anterior
-                </button>
-                <span className="text-sm text-slate-600">
-                  Página {productoPage} de {totalProductoPages}
-                </span>
-                <button
-                  onClick={() => setProductoPage(z => Math.min(totalProductoPages, z + 1))}
-                  disabled={productoPage >= totalProductoPages}
-                  className="px-3 py-1 rounded border text-slate-600 disabled:opacity-50 hover:bg-slate-50"
-                >
-                  Siguiente
-                </button>
-              </div>
-            )}
           </>
         )}
 
