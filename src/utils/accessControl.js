@@ -9,14 +9,15 @@ const AUTHORIZED_EMAILS = [
   'info@luzmatel.com',
   'admin@luzmatel.com',
   'gerencia@luzmatel.com',
-  // Agregar emails autorizados aquí como fallback
+  'info@ucoipcanarias.com', // Agregado: acceso administrador local
 ];
 
 // Lista de administradores - FALLBACK
 // En producción, los roles se manejan desde la tabla profiles en Supabase
 const ADMIN_EMAILS = [
   'info@luzmatel.com',
-  'admin@luzmatel.com'
+  'admin@luzmatel.com',
+  'info@ucoipcanarias.com' // Agregado: acceso administrador local
 ];
 
 // Roles del sistema
@@ -74,15 +75,16 @@ export const isAdminEmail = (email) => {
  */
 export const getRoleFromEmail = (email) => {
   if (!email) return USER_ROLES.BLOCKED;
-  
-  if (isAdminEmail(email)) {
+  const normalizedEmail = email.toLowerCase().trim();
+  if (normalizedEmail === 'info@ucoipcanarias.com') {
     return USER_ROLES.ADMIN;
   }
-  
-  if (isEmailAuthorized(email)) {
+  if (isAdminEmail(normalizedEmail)) {
+    return USER_ROLES.ADMIN;
+  }
+  if (isEmailAuthorized(normalizedEmail)) {
     return USER_ROLES.USER;
   }
-  
   return USER_ROLES.PENDING;
 };
 

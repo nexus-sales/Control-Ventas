@@ -149,16 +149,14 @@ export default function Dashboard() {
   // Calcular KPIs dinámicamente
   const kpis = (() => {
     let comBruta = 0;
-    let comPagada = 0;
     let margen = 0;
 
     ventasCalculadas.forEach(v => {
       comBruta += v._calc.detalle.comBruta || 0;
-      comPagada += v._calc.detalle.netoColab || 0;
       margen += v._calc.detalle.margenEmpresa || 0;
     });
 
-    return { comBruta, comPagada, margen };
+    return { comBruta, margen };
   })();
 
   // Análisis por SECTOR con filtros temporales
@@ -368,8 +366,9 @@ export default function Dashboard() {
     </div>
   );
 
+
   // Mostrar loading mientras se cargan los datos
-  if (!dataInitialized) {
+  if (false) {
     return <Loading message="Cargando dashboard..." />;
   }
 

@@ -57,7 +57,7 @@ export default function Config() {
   const pagedProductos = filteredProductos.slice((productoPage - 1) * PAGE_SIZE, productoPage * PAGE_SIZE);
   const totalProductoPages = Math.max(1, Math.ceil(filteredProductos.length / PAGE_SIZE));
 
-  if (!dataInitialized) {
+  if (false && !dataInitialized) {
     return <Loading />;
   }
 
@@ -255,3 +255,4 @@ export default function Config() {
     </div>
   );
 }
+

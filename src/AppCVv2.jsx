@@ -1,3 +1,4 @@
+import { useAuth } from "./hooks/useAuth";
 import React from "react";
 import ThemeProvider from './context/ThemeContext';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
@@ -8,7 +9,6 @@ import { LayoutShell } from "./components/layout/LayoutShell";
 import Loading from "./components/common/Loading";
 import { GuardedRoute } from "./components/auth/GuardedRoute";
 import OfflineStatus from "./components/widgets/OfflineStatus";
-import { useAuth } from "./hooks/useAuth";
 
 // ============================
 // Importaciones directas (sin lazy loading)

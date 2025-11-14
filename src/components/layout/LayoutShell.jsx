@@ -6,7 +6,6 @@ import {
   ChevronLeft, ChevronRight, Bell, Search, LogOut, Database, RefreshCw
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { useData } from "../../hooks/useData";
 import PWAUpdatePrompt from "../widgets/PWAUpdatePrompt";
 import DarkModeToggle from "../ui/DarkModeToggle";
 import { LS_KEYS } from "../../utils/constants";
@@ -15,10 +14,9 @@ import { loadLS, saveLS } from "../../utils/storage";
   export function LayoutShell({ children }) {
     const location = useLocation();
     const [collapsed, setCollapsed] = useState(() => loadLS(LS_KEYS.ui, { collapsed: false }).collapsed);
-    const [syncing, setSyncing] = useState(false);
-    const [syncFeedback, setSyncFeedback] = useState("");
+    // Eliminado: sincronización Supabase
     const { user, logout } = useAuth();
-    const { isSupabaseAvailable, syncAll } = useData();
+    // ...existing code...
 
     const toggle = () => {
       setCollapsed((c) => {
@@ -28,22 +26,7 @@ import { loadLS, saveLS } from "../../utils/storage";
       });
     };
 
-    const handleSync = async () => {
-      if (!isSupabaseAvailable || syncing) return;
-      setSyncing(true);
-      setSyncFeedback("");
-      try {
-        await syncAll();
-        setSyncFeedback("¡Sincronización completada!");
-        setTimeout(() => setSyncFeedback(""), 2000);
-      } catch (error) {
-        setSyncFeedback("Error al sincronizar");
-        setTimeout(() => setSyncFeedback(""), 3000);
-        console.error('Error en sincronización:', error);
-      } finally {
-        setSyncing(false);
-      }
-    };
+    // Eliminado: función de sincronización Supabase
 
     const nav = [
       { to: "/", icon: Home, label: "Inicio" },
@@ -91,25 +74,7 @@ import { loadLS, saveLS } from "../../utils/storage";
               ))}
             </nav>
 
-            {/* Botón de sincronización */}
-            {isSupabaseAvailable && !collapsed && (
-              <div className="p-3 border-t border-slate-200">
-                <button
-                  onClick={handleSync}
-                  disabled={syncing}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 disabled:opacity-50"
-                  aria-label="Sincronizar datos"
-                >
-                  <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                  {syncing ? 'Sincronizando...' : 'Sincronizar'}
-                </button>
-                {syncFeedback && (
-                  <div className="mt-2 text-xs text-green-600" role="status">
-                    {syncFeedback}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Eliminado botón y feedback de sincronización Supabase */}
 
             {/* Usuario y Logout */}
             {!collapsed && user && (
@@ -121,7 +86,7 @@ import { loadLS, saveLS } from "../../utils/storage";
                   onClick={logout}
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-700"
                   aria-label="Cerrar sesión"
-                  disabled={syncing}
+                  // Eliminado: syncing no existe
                 >
                   <LogOut className="w-4 h-4" />
                   Cerrar Sesión
@@ -131,8 +96,7 @@ import { loadLS, saveLS } from "../../utils/storage";
 
             <div className="p-3 text-xs text-slate-500 border-t border-slate-200">
               <div className="flex items-center gap-1">
-                <Database className="w-3 h-3" /> 
-                {isSupabaseAvailable ? 'Supabase + Local' : 'Solo Local'}
+                <Database className="w-3 h-3" /> Solo Local
               </div>
               <div>v2.3</div>
             </div>

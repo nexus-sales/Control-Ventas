@@ -1,7 +1,7 @@
 import React from "react";
 import { Users } from "lucide-react";
 function euro(n) { return (n ?? 0).toFixed(2) + " €"; }
-export default function TopColaboradoresPanel({ topColaboradores, hayDatos, periodoAnalisis }) {
+export default function TopColaboradoresPanel({ topColaboradores, hayDatos }) {
   return (
     <div className="space-y-3">
       {topColaboradores.length > 0 ? (

@@ -21,7 +21,7 @@ export default function ImportExcelMapperWrapper() {
     
     // ✅ NO hacer refreshData() - los datos ya están en localStorage
     // ✅ El DataContext los carga automáticamente
-    // ✅ La sincronización con Supabase ocurre en segundo plano
+    // Sincronización remota eliminada, solo local
     
     // Opcional: mostrar mensaje de éxito adicional
     if (result?.ventasCreadas > 0) {
@@ -29,7 +29,7 @@ export default function ImportExcelMapperWrapper() {
     }
   };
 
-  if (!dataInitialized) {
+  if (false && !dataInitialized) {
     return <Loading />;
   }
 

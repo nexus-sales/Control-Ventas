@@ -25,7 +25,6 @@
   },
   "dependencies": {
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@supabase/supabase-js": "^2.57.4",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "js-sha256": "^0.11.1",
@@ -45,7 +44,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.4.0",
-    "hint": "^7.1.13",
+    "hint": "^2.0.0",
     "jsdom": "^27.0.0",
     "postcss": "^8.5.6",
     "prettier": "^3.6.2",

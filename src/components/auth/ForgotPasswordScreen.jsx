@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+// Eliminado: Supabase no se usa en modo local
 import { useAuth } from '../../hooks/useAuth';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';

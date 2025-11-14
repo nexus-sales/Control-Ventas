@@ -1,5 +1,5 @@
 // src/components/layout/Header.jsx
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Search, Bell, Download, RefreshCw } from "lucide-react";
 import { DataCtx } from "../../context/contexts";
 import DarkModeToggle from "../ui/DarkModeToggle";
@@ -33,30 +33,7 @@ function usePWAInstall() {
 
 export function Header() {
   const { installable, promptInstall } = usePWAInstall();
-  const { refreshData, isSupabaseAvailable } = useContext(DataCtx);
-  const [syncing, setSyncing] = useState(false);
-
-  const handleSync = async () => {
-    if (!isSupabaseAvailable) {
-      alert('Supabase no está disponible');
-      return;
-    }
-    
-    setSyncing(true);
-    try {
-      const success = await refreshData();
-      if (success) {
-        alert('Datos sincronizados correctamente desde Supabase');
-      } else {
-        alert('No se pudieron sincronizar los datos');
-      }
-    } catch (error) {
-      console.error('Error en sincronización:', error);
-      alert('Error al sincronizar datos');
-    } finally {
-      setSyncing(false);
-    }
-  };
+  // ...existing code...
 
   return (
     <header className="sticky top-0 z-10 bg-white/70 dark:bg-gray-900/70 backdrop-blur border-b border-slate-200 dark:border-gray-700 transition-colors duration-300">
@@ -72,19 +49,7 @@ export function Header() {
         {/* Botón de dark mode */}
         <DarkModeToggle />
         
-        {/* Botón de sincronización */}
-        <button
-          onClick={handleSync}
-          disabled={!isSupabaseAvailable || syncing}
-          className={`p-2 rounded-xl transition-colors ${
-            isSupabaseAvailable && !syncing
-              ? 'hover:bg-green-100 dark:hover:bg-green-900 text-green-600 dark:text-green-400' 
-              : 'opacity-50 cursor-not-allowed'
-          }`}
-          title={isSupabaseAvailable ? 'Sincronizar con Supabase' : 'Supabase no disponible'}
-        >
-          <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-        </button>
+        {/* Eliminado botón de sincronización Supabase */}
         
         {installable && (
           <button

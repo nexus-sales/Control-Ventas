@@ -16,30 +16,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
   // Usar accessInfo si está disponible, sino usar el mensaje por defecto
   const accessMessage = accessInfo || getAccessDeniedMessage(email);
 
-  const handleRequestAccess = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const success = AccessRequestManager.addRequest(
-        requestData.email,
-        requestData.name,
-        requestData.reason
-      );
-
-      if (success) {
-        setRequestSent(true);
-        setShowRequestForm(false);
-      } else {
-        alert('Ya existe una solicitud para este email');
-      }
-    } catch (error) {
-      console.error('Error sending access request:', error);
-      alert('Error al enviar solicitud. Inténtalo de nuevo.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    // Removed request form logic as it is not used in local mode
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

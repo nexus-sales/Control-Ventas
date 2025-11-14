@@ -7,7 +7,6 @@ export function VentasActions({
   selectedIds,
   onNewVenta,
   onDeleteSelected,
-  isSupabaseAvailable,
   isAdmin = true,
   ventasSinPvp = 0
 }) {
@@ -37,11 +36,7 @@ export function VentasActions({
           <h3 className="text-lg font-semibold text-slate-800">
             Gestión de Ventas ({ventasCount})
           </h3>
-          {isSupabaseAvailable && (
-            <span className="text-green-600 text-sm flex items-center gap-1">
-              🟢 Supabase conectado
-            </span>
-          )}
+            {/* Eliminado texto de Supabase conectado */}
         </div>
         
         <div className="flex gap-2">

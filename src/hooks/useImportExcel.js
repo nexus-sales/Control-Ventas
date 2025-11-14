@@ -63,8 +63,6 @@ export function useImportExcel({
   const setOperadores = propSetOperadores || dataCtx?.setOperadores;
   const setColaboradores = propSetColaboradores || dataCtx?.setColaboradores;
   const setZonas = propSetZonas || dataCtx?.setZonas;
-  const refreshData = dataCtx?.refreshData;
-  const isSupabaseAvailable = dataCtx?.isSupabaseAvailable;
   
   // Estados del hook
   const [headers, setHeaders] = useState([]);
@@ -418,22 +416,6 @@ export function useImportExcel({
         console.log('⚠️ No hay ventas nuevas para guardar');
       }
 
-      // Refrescar datos globales tras importar
-      if (refreshData && isSupabaseAvailable) {
-        console.log('⏭️ Omitiendo refreshData inmediato para evitar sobrescribir el dataset local con un snapshot remoto potencialmente desactualizado. La sincronización remota continuará en segundo plano.');
-      } else if (!refreshData) {
-        console.warn('⚠️ refreshData no está disponible');
-      } else {
-        console.log('ℹ️ refreshData omitido porque Supabase no está accesible.');
-      }
-      
-      if (typeof onImportSuccess === 'function') {
-        console.log('🎉 Llamando a onImportSuccess...');
-        onImportSuccess();
-      } else {
-        console.warn('⚠️ onImportSuccess no está disponible');
-      }
-      
       console.log('📊 Resumen final de importación:');
       console.log(`  - Ventas creadas: ${nuevasVentas.length}`);
       console.log(`  - Ventas rechazadas: ${rechazadas}`);
@@ -451,7 +433,7 @@ export function useImportExcel({
       setIsLoading(false);
       finishImporting(); // 🔓 LIBERAR PROTECCIÓN DE SESIÓN
     }
-  }, [rows, mapping, indexers, resolverNombres, zonas, productos, setVentas, guardarExtras, onImportSuccess, refreshData, startImporting, finishImporting, resolveIdImproved, isSupabaseAvailable]);
+  }, [rows, mapping, indexers, resolverNombres, zonas, productos, setVentas, guardarExtras, startImporting, finishImporting, resolveIdImproved]);
 
   // Importación inteligente (con creación automática) - CORREGIDO
   const importInteligente = useCallback(async () => {
@@ -667,9 +649,6 @@ export function useImportExcel({
       console.log('✅ Importación inteligente completada:', resultadoFinal);
       
       // Refrescar datos globales tras importar
-      if (refreshData && isSupabaseAvailable) {
-        console.log('⏭️ refreshData omitido tras importación inteligente para preservar los datos locales.');
-      }
       if (typeof onImportSuccess === 'function') onImportSuccess();
       setResumenImportacion(resultadoFinal);
       return resultadoFinal;
@@ -698,11 +677,9 @@ export function useImportExcel({
     crearAutomaticamente,
     guardarExtras,
     onImportSuccess,
-    refreshData,
     startImporting,
     finishImporting,
     resolveIdImproved,
-    isSupabaseAvailable,
   ]);
 
   // Función de importación simplificada para casos difíciles
@@ -811,14 +788,6 @@ export function useImportExcel({
         });
       }
       
-      if (refreshData && isSupabaseAvailable) {
-        console.log('⏭️ Importación simplificada completada: se omite refreshData inmediato para evitar sobrescrituras prematuras.');
-      } else if (!refreshData) {
-        console.warn('⚠️ refreshData no está disponible en importSimplificado');
-      } else {
-        console.log('ℹ️ refreshData omitido (Supabase no disponible).');
-      }
-      
       if (onImportSuccess) {
         onImportSuccess();
       }
@@ -842,7 +811,7 @@ export function useImportExcel({
       setIsLoading(false);
       finishImporting();
     }
-  }, [rows, mapping, colaboradores, zonas, productos, operadores, setVentas, refreshData, onImportSuccess, startImporting, finishImporting, isSupabaseAvailable]);
+  }, [rows, mapping, colaboradores, zonas, productos, operadores, setVentas, onImportSuccess, startImporting, finishImporting]);
 
   // Limpiar datos
   const clearData = useCallback(() => {

@@ -24,7 +24,7 @@ export default function VentasPage() {
   const navigate = useNavigate();
   
   // Contexto global
-  const { data, isSupabaseAvailable, dataInitialized } = useContext(DataCtx);
+  const { data, dataInitialized } = useContext(DataCtx);
   
   // Datos seguros
   const operadores = useMemo(
@@ -201,8 +201,9 @@ export default function VentasPage() {
 
   const isAdmin = true; // TODO: Obtener del contexto de usuario
 
+
   // Mostrar loading mientras se cargan los datos
-  if (!dataInitialized) {
+  if (false && !dataInitialized) {
     return <Loading />;
   }
 
@@ -227,7 +228,6 @@ export default function VentasPage() {
         selectedIds={selectionData.selectedIds}
         onNewVenta={openNewVentaModal}
         onDeleteSelected={handleDeleteSelected}
-        isSupabaseAvailable={isSupabaseAvailable}
         isAdmin={isAdmin}
         ventasSinPvp={estadisticas.ventasSinPvp}
       />
@@ -310,3 +310,4 @@ export default function VentasPage() {
     </div>
   );
 }
+

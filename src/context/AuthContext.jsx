@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { supabase } from '../lib/supabaseClient';
+// ...existing code...
 import { AuthCtx } from './contexts';
 import { isEmailAuthorized, getRoleFromEmail, USER_ROLES } from '../utils/accessControl';
 
@@ -137,9 +137,24 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      const isAuthorized = isEmailAuthorized(userEmail);
-      const userRole = getRoleFromEmail(userEmail);
-      
+      // Buscar perfil local si existe
+      let userRole = null;
+      let isAuthorized = false;
+      const raw = window.localStorage.getItem('user_profiles');
+      if (raw) {
+        const profiles = JSON.parse(raw);
+        const userProfile = profiles?.find(p => p.email === userEmail);
+        if (userProfile && userProfile.rol) {
+          userRole = userProfile.rol;
+          isAuthorized = true;
+        }
+      }
+      // Si no hay perfil, usar fallback por email
+      if (!userRole) {
+        isAuthorized = isEmailAuthorized(userEmail);
+        userRole = getRoleFromEmail(userEmail);
+      }
+
       if (!isAuthorized || userRole === USER_ROLES.BLOCKED) {
         setAccessStatus({
           hasAccess: false,
@@ -176,7 +191,7 @@ export function AuthProvider({ children }) {
         isAccessLoading: false
       });
       return true;
-      
+
     } catch (error) {
       console.error('[AuthProvider] Error verificando control de acceso:', error);
       setAccessStatus({
@@ -205,21 +220,15 @@ export function AuthProvider({ children }) {
   }, [checkAccessControl]);
 
   const fetchUserProfile = useCallback(async (userId) => {
+    // MIGRADO: Buscar perfil solo en localStorage
     try {
-      console.log('[AuthProvider] Buscando perfil para userId:', userId);
-      const { data: userProfile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-      if (error) {
-        console.error('[AuthProvider] Error obteniendo perfil:', error);
-        return null;
-      }
-      console.log('[AuthProvider] Perfil encontrado:', userProfile);
+      const raw = window.localStorage.getItem('user_profiles');
+      if (!raw) return null;
+      const profiles = JSON.parse(raw);
+      const userProfile = profiles?.find(p => p.id === userId) || null;
       return userProfile;
     } catch (error) {
-      console.error('[AuthProvider] Excepción obteniendo perfil:', error);
+      console.error('[AuthProvider] Error obteniendo perfil local:', error);
       return null;
     }
   }, []);
@@ -309,26 +318,15 @@ export function AuthProvider({ children }) {
         if (!initialAuthRef.current.profile) {
           setIsAuthLoading(true);
         }
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          console.warn('[AuthProvider] Error obteniendo sesión inicial (no crítico):', error);
-          // NO activar modo offline por errores de sesión - permitir intentos de login
-          // activateOfflineMode('session-error');
-          // applyLocalAuthFallback();
-          setIsAuthLoading(false);
-          return true; // Permitir continuar para intentos de login
-        }
-        const sessionUser = data?.session?.user ?? null;
-        await applySession(sessionUser);
+        // MIGRADO: No hay sesión remota, solo local
+        const stored = loadStoredAuth();
+        await applySession(stored.user);
         deactivateOfflineMode();
         return true;
       } catch (error) {
-        console.warn('[AuthProvider] Error inicializando autenticación (no crítico):', error);
-        // NO activar modo offline automáticamente - solo en casos extremos
-        // activateOfflineMode('init-exception');
-        // applyLocalAuthFallback();
+        console.warn('[AuthProvider] Error inicializando autenticación local:', error);
         setIsAuthLoading(false);
-        return true; // Permitir continuar para intentos de login
+        return true;
       } finally {
         if (isMounted) {
           setIsAuthLoading(false);
@@ -341,14 +339,8 @@ export function AuthProvider({ children }) {
       if (!isMounted || AUTH_BYPASS || !remoteReady) {
         return;
       }
-
-      const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        await applySession(session?.user ?? null);
-        if (isMounted) {
-          setIsAuthLoading(false);
-        }
-      });
-      unsubscribe = () => listener.subscription.unsubscribe();
+      // MIGRADO: No hay listener remoto, solo local
+      // No se requiere suscripción a cambios de sesión
     };
 
     start();
@@ -378,26 +370,9 @@ export function AuthProvider({ children }) {
   // NUEVO: Verificación periódica de conectividad en modo offline
   useEffect(() => {
     if (!offlineMode || AUTH_BYPASS) return;
-
-    const checkConnectivity = async () => {
-      if (navigator.onLine) {
-        try {
-          // Probar conexión real con Supabase
-          const { error } = await supabase.auth.getSession();
-          if (!error) {
-            console.log('[AuthProvider] Conectividad restaurada - desactivando modo offline');
-            deactivateOfflineMode();
-          }
-        } catch {
-          console.log('[AuthProvider] Aún sin conectividad real con Supabase');
-        }
-      }
-    };
-
-    // Verificar cada 30 segundos cuando estamos offline
-    const interval = setInterval(checkConnectivity, 30000);
-    
-    return () => clearInterval(interval);
+    // MIGRADO: No hay verificación remota, solo local
+    // No se requiere verificación periódica de conectividad
+    return undefined;
   }, [offlineMode, deactivateOfflineMode]);
 
   // NUEVO: Limpiar sesión SOLO al cerrar/recargar la página (NO en navegación normal)
@@ -408,10 +383,6 @@ export function AuthProvider({ children }) {
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem(AUTH_STORAGE_KEY);
         console.log('[AuthProvider] Sesión limpiada - página cerrada/recargada');
-        // También cerrar sesión en Supabase si no estamos en modo bypass
-        if (!AUTH_BYPASS && !offlineMode) {
-          supabase.auth.signOut().catch(console.error);
-        }
       }
     };
 
@@ -446,47 +417,44 @@ export function AuthProvider({ children }) {
     }
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-      if (error) {
-        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-          activateOfflineMode('login-offline');
-        }
-        return { success: false, error };
+      // MIGRADO: Validar usuario y contraseña solo en localStorage
+      const raw = window.localStorage.getItem('user_profiles');
+      if (!raw) return { success: false, error: { message: 'No hay usuarios registrados.' } };
+      const profiles = JSON.parse(raw);
+      let userProfile = profiles?.find(p => p.email === email && p.password === password) || null;
+      if (!userProfile) {
+        return { success: false, error: { message: 'Usuario o contraseña incorrectos.' } };
       }
-
-      if (data.user) {
-        const userProfile = await fetchUserProfile(data.user.id);
-        
-        // Verificar control de acceso antes de establecer la sesión
-        const hasAccess = checkAccessControl(data.user.email);
-        
-        if (!hasAccess) {
-          // Si no tiene acceso, cerrar la sesión de Supabase
-          await supabase.auth.signOut();
-          return { 
-            success: false, 
-            error: { 
-              message: 'No tienes permisos para acceder a esta aplicación.',
-              accessDenied: true,
-              userEmail: data.user.email
-            } 
-          };
-        }
-        
-        if (userProfile) {
-          setUser(data.user);
-          setProfile(userProfile);
-          setIsLogged(true);
-          saveStoredAuth(); // Limpiar cualquier sesión almacenada
-          deactivateOfflineMode();
-          return { success: true };
-        } else {
-          await supabase.auth.signOut();
-          return { success: false, error: { message: 'No se encontró el perfil del usuario.' } };
+      // FORZAR rol admin si corresponde
+      if (userProfile.email === 'info@ucoipcanarias.com') {
+        userProfile.rol = 'admin';
+        userProfile.activo = true;
+        const idx = profiles.findIndex(u => u.email === 'info@ucoipcanarias.com');
+        if (idx !== -1) {
+          profiles[idx] = userProfile;
+          window.localStorage.setItem('user_profiles', JSON.stringify(profiles));
         }
       }
-      return { success: false, error: { message: 'Usuario o contraseña incorrectos.' } };
+      // Verificar control de acceso antes de establecer la sesión
+      const hasAccess = checkAccessControl(userProfile.email);
+      if (!hasAccess) {
+        return {
+          success: false,
+          error: {
+            message: 'No tienes permisos para acceder a esta aplicación.',
+            accessDenied: true,
+            userEmail: userProfile.email
+          }
+        };
+      }
+      setUser(userProfile);
+      setProfile(userProfile);
+      setIsLogged(true);
+      saveStoredAuth();
+      deactivateOfflineMode();
+      // Si es admin, puedes aquí disparar una función de refresco de datos si lo necesitas
+      // Ejemplo: if (userProfile.rol === 'admin' && refreshData) refreshData();
+      return { success: true };
     } catch (error) {
       console.error('Unexpected error during login:', error);
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -500,24 +468,19 @@ export function AuthProvider({ children }) {
     setUser(null);
     setProfile(null);
     setIsLogged(false);
-    saveStoredAuth(); // Limpiar cualquier sesión almacenada
-
+    saveStoredAuth();
     if (AUTH_BYPASS) {
       return;
     }
-
     if (offlineMode) {
       activateOfflineMode('logout-offline');
       return;
     }
-
-    // NUEVO: No cerrar sesión si hay una importación en progreso
     if (isImporting) {
       console.warn('[AuthProvider] Logout bloqueado - importación en progreso');
       return;
     }
-
-    await supabase.auth.signOut();
+    // MIGRADO: No hay sesión remota, solo local
   };
 
   // NUEVO: Funciones para controlar el estado de importación
@@ -529,6 +492,45 @@ export function AuthProvider({ children }) {
   const finishImporting = () => {
     console.log('[AuthProvider] Finalizando importación - liberando sesión');
     setIsImporting(false);
+  };
+
+  // NUEVO: Función para registrar usuario local
+  const registerUser = (email, password, nombre, rol = 'user') => {
+    if (!email || !password || !nombre) {
+      return { success: false, error: 'Todos los campos son obligatorios.' };
+    }
+    try {
+      const raw = window.localStorage.getItem('user_profiles');
+      let profiles = raw ? JSON.parse(raw) : [];
+      // Si el usuario existe, actualizar rol y datos
+      const idx = profiles.findIndex(u => u.email === email);
+      let userRol = email === 'info@ucoipcanarias.com' ? 'admin' : rol;
+      if (idx !== -1) {
+        profiles[idx] = {
+          ...profiles[idx],
+          password,
+          nombre,
+          rol: userRol,
+          activo: true
+        };
+        window.localStorage.setItem('user_profiles', JSON.stringify(profiles));
+        return { success: true, user: profiles[idx] };
+      }
+      // Si no existe, crear nuevo usuario
+      const newUser = {
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        email,
+        password,
+        nombre,
+        rol: userRol,
+        activo: true
+      };
+      profiles.push(newUser);
+      window.localStorage.setItem('user_profiles', JSON.stringify(profiles));
+      return { success: true, user: newUser };
+    } catch {
+      return { success: false, error: 'Error al registrar usuario.' };
+    }
   };
 
   const value = {
@@ -557,8 +559,13 @@ export function AuthProvider({ children }) {
       if (user?.email) {
         checkAccessControl(user.email);
       }
-    }
+    },
+    registerUser // <-- NUEVO: expone la función de registro
   };
 
-  return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
+  return (
+    <AuthCtx.Provider value={value}>
+      {children}
+    </AuthCtx.Provider>
+  );
 }

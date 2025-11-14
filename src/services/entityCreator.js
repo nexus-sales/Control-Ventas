@@ -691,8 +691,7 @@ export async function createMissingEntities(entidadesUnicas, entitiesExistentes,
       }
     }
 
-    // CRÍTICO: Esperar que los operadores se confirmen en Supabase
-    console.log('⏳ Esperando confirmación de operadores en Supabase...');
+      // Esperar que los operadores se confirmen en Supabase
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     // 4. CREAR PRODUCTOS (solo local)

@@ -61,7 +61,7 @@ export default function DataCleanupAdmin() {
   return (
     <div className="space-y-6">
       <SectionTitle>
-        🧹 Limpieza de Datos Supabase
+        🧹 Limpieza de Datos
       </SectionTitle>
 
       <Card>
@@ -72,7 +72,7 @@ export default function DataCleanupAdmin() {
             </h3>
             <p className="text-sm text-gray-600 mb-4">
               Estas herramientas eliminan duplicados y normalizan las mayúsculas/minúsculas 
-              en los datos de Supabase para mantener consistencia.
+              en los datos para mantener consistencia.
             </p>
           </div>
 
@@ -163,7 +163,7 @@ export default function DataCleanupAdmin() {
               <div>
                 <p className="text-yellow-800 font-semibold mb-1">Importante:</p>
                 <ul className="text-yellow-700 text-sm space-y-1">
-                  <li>• Esta acción elimina y recrea los registros en Supabase</li>
+                  <li>• Esta acción elimina y recrea los registros en la base local</li>
                   <li>• Se normalizarán las mayúsculas/minúsculas</li>
                   <li>• Se eliminarán duplicados automáticamente</li>
                   <li>• Asegúrate de tener backup antes de ejecutar</li>

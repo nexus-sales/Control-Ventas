@@ -164,7 +164,7 @@ export default function OfflineStatus() {
               <div className="text-xs space-y-1">
                 <div className="font-medium">Modo Offline Manual</div>
                 <div>• Operando solo con datos locales</div>
-                <div>• Supabase deshabilitado temporalmente</div>
+                <div>• Sincronización remota deshabilitada temporalmente</div>
                 {offlineReason && <div>• Causa: {offlineReason}</div>}
               </div>
             )}
@@ -177,7 +177,8 @@ export default function OfflineStatus() {
             )}
 
             {/* Controles de modo offline */}
-            <div className="grid grid-cols-1 gap-2">
+            {/* Botones de modo offline manual desactivados para evitar bucles y reinicialización */}
+            {/* <div className="grid grid-cols-1 gap-2">
               {!offlineMode && (
                 <button
                   onClick={handleForceOffline}
@@ -191,10 +192,10 @@ export default function OfflineStatus() {
                   onClick={handleResumeOnline}
                   className="w-full text-xs px-2 py-1 rounded bg-green-200 hover:bg-green-300 text-green-800"
                 >
-                  Reintentar conexión con Supabase
+                  Reintentar conexión remota
                 </button>
               )}
-            </div>
+            </div> */}
           </div>
         )}
       </div>

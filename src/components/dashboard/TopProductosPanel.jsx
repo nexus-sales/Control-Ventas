@@ -1,7 +1,7 @@
 import React from "react";
 import { Target } from "lucide-react";
 function euro(n) { return (n ?? 0).toFixed(2) + " €"; }
-export default function TopProductosPanel({ topProductos, hayDatos, periodoAnalisis }) {
+export default function TopProductosPanel({ topProductos, hayDatos }) {
   return (
     <div className="space-y-3">
       {topProductos.length > 0 ? (

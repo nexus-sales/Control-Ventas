@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+// Eliminado: Supabase no se usa en modo local
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
@@ -24,12 +24,8 @@ export default function ResetPasswordScreen() {
       setMessage('Enlace de recuperación inválido o expirado.');
       return;
     }
-
-    // Establecer la sesión con los tokens
-    supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken
-    });
+    // Eliminado: lógica de Supabase, solo mostrar mensaje de no disponible
+    setMessage('Funcionalidad de recuperación de contraseña no disponible en modo local.');
   }, [searchParams]);
 
   const handleSubmit = async (e) => {
@@ -49,25 +45,8 @@ export default function ResetPasswordScreen() {
     setMessage('');
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
-
-      if (error) {
-        setMessage(error.message);
-        setIsSuccess(false);
-      } else {
-        setMessage('Contraseña actualizada exitosamente. Serás redirigido al login.');
-        setIsSuccess(true);
-        
-        // Redirigir al login después de 3 segundos
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
-      }
-    } catch (error) {
-      console.error('Error updating password:', error);
-      setMessage('Error al actualizar la contraseña. Inténtalo de nuevo.');
+      // Eliminado: lógica de Supabase, solo mostrar mensaje de no disponible
+      setMessage('Funcionalidad de actualización de contraseña no disponible en modo local.');
       setIsSuccess(false);
     } finally {
       setIsSubmitting(false);

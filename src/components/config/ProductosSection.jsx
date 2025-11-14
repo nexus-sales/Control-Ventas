@@ -84,8 +84,14 @@ export default function ProductosSection({
   const [selectedOperador, setSelectedOperador] = useState("");
   const [selectedFamilia, setSelectedFamilia] = useState("");
   const [selectedComisionTipo, setSelectedComisionTipo] = useState("");
-  const [sortField, setSortField] = useState("operador_nombre");
+  const [sortField, setSortField] = useState("nombre");
   const [sortDirection, setSortDirection] = useState("asc");
+  // Opciones de orden
+  const sortOptions = [
+    { value: "nombre", label: "Nombre (A-Z)" },
+    { value: "familia", label: "Familia" },
+    { value: "operador_nombre", label: "Operador" }
+  ];
 
   // Función para obtener nombre del operador
   const getOperadorNombre = React.useCallback(
@@ -429,7 +435,7 @@ export default function ProductosSection({
 
 
       {/* Input de búsqueda */}
-      <div className="mb-6 flex items-center gap-3">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
         <div className="relative w-full max-w-xs">
           <input
             type="text"
@@ -439,6 +445,19 @@ export default function ProductosSection({
             className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-300 dark:border-indigo-700 bg-white dark:bg-indigo-900 text-slate-800 dark:text-indigo-100 placeholder-slate-400 dark:placeholder-indigo-300 focus:outline-none focus:ring-2 focus:ring-purple-400 dark:focus:ring-indigo-400 transition"
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-indigo-300 pointer-events-none" />
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="sortProductos" className="text-sm text-slate-600 dark:text-indigo-200">Ordenar por:</label>
+          <select
+            id="sortProductos"
+            value={sortField}
+            onChange={e => setSortField(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-slate-300 dark:border-indigo-700 bg-white dark:bg-indigo-900 text-slate-800 dark:text-indigo-100 text-sm"
+          >
+            {sortOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 

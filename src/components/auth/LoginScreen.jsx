@@ -23,7 +23,11 @@ export default function LoginScreen() {
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [showAccessDenied, setShowAccessDenied] = useState(false);
   const [accessDeniedInfo, setAccessDeniedInfo] = useState(null);
-  const { login } = useAuth();
+  const [showRegister, setShowRegister] = useState(false);
+  const [registerError, setRegisterError] = useState('');
+  const [registerSuccess, setRegisterSuccess] = useState(false);
+  const [nombre, setNombre] = useState('');
+  const { login, registerUser } = useAuth();
 
   // Verificar rate limiting y cargar email recordado al cargar el componente
   useEffect(() => {
@@ -71,72 +75,22 @@ export default function LoginScreen() {
     }, 1000);
   };
 
-  const handleSubmit = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    
-    // Verificar rate limiting
-    if (LoginRateLimit.isBlocked()) {
-      setError(`Demasiados intentos fallidos. Intenta de nuevo en ${formatTime(LoginRateLimit.getBlockedTimeRemaining())}.`);
+    setRegisterError('');
+    setRegisterSuccess(false);
+    if (!email || !password || !nombre) {
+      setRegisterError('Todos los campos son obligatorios.');
       return;
     }
-
-    setError('');
-    setIsSubmitting(true);
-    
-    const { error: authError } = await login(email, password);
-    
-    if (authError) {
-      // Si es error de acceso denegado, mostrar pantalla especial
-      if (authError.accessDenied) {
-        setAccessDeniedInfo({
-          email: authError.userEmail,
-          type: 'error',
-          title: 'Acceso Denegado',
-          message: authError.message
-        });
-        setShowAccessDenied(true);
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Registrar intento fallido
-      LoginRateLimit.recordAttempt();
-      checkRateLimit();
-      
-      setError(authError.message);
-      
-      // Si ahora está bloqueado, iniciar countdown
-      if (LoginRateLimit.isBlocked()) {
-        startBlockCountdown();
-        setError(`Demasiados intentos fallidos. Cuenta bloqueada por ${formatTime(LoginRateLimit.getBlockedTimeRemaining())}.`);
-      } else {
-        const remaining = LoginRateLimit.getRemainingAttempts();
-        if (remaining <= 2) {
-          setError(`${authError.message} (Te quedan ${remaining} intentos)`);
-        }
-      }
+    const res = registerUser(email, password, nombre);
+    if (res.success) {
+      setRegisterSuccess(true);
+      setShowRegister(false);
+      setError('Usuario registrado correctamente. Ahora puedes iniciar sesión.');
     } else {
-      // Login exitoso, resetear intentos
-      LoginRateLimit.resetAttempts();
-      setRemainingAttempts(5);
-      setLoginSuccess(true);
-      
-      // Guardar email si se seleccionó recordar
-      if (rememberMe) {
-        localStorage.setItem('rememberedEmail', email);
-        localStorage.setItem('rememberMe', 'true');
-      } else {
-        localStorage.removeItem('rememberedEmail');
-        localStorage.removeItem('rememberMe');
-      }
-      
-      // Pequeña animación de éxito antes de redirigir
-      setTimeout(() => {
-        setLoginSuccess(false);
-      }, 1500);
+      setRegisterError(res.error || 'Error al registrar usuario.');
     }
-    
-    setIsSubmitting(false);
   };
 
   const handleEmailChange = (e) => {
@@ -176,30 +130,33 @@ export default function LoginScreen() {
   }
 
   return (
-    <div className="min-h-screen grid place-items-center bg-gradient-to-br from-sky-50 via-indigo-50 to-emerald-50 dark:from-gray-900 dark:via-slate-900 dark:to-gray-800 animate-fadeIn relative overflow-hidden">
-      {/* Elementos decorativos de fondo */}
-      <div className="absolute inset-0 opacity-10 dark:opacity-5">
-        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-500 rounded-full blur-3xl animate-pulse-slow"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-emerald-500 rounded-full blur-3xl animate-pulse-slow animate-delay-300"></div>
-        <div className="absolute top-3/4 left-3/4 w-24 h-24 bg-indigo-500 rounded-full blur-3xl animate-pulse-slow animate-delay-500"></div>
-      </div>
-      <Card className="animate-slideUp card-shadow hover-lift smooth-transition">
-        <div className="text-center mb-6 form-field-enter">
-          <SectionTitle>Acceso</SectionTitle>
-          <p className="text-gray-600 dark:text-gray-400 text-sm mt-2 animate-fadeIn animate-delay-200">
-            Ingresa tus credenciales para acceder al sistema
-          </p>
-          <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 animate-slideUp animate-delay-300">
-            <div className="flex items-center justify-center text-xs text-blue-700 dark:text-blue-300">
-              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              Sesión segura - Login requerido en cada acceso
-            </div>
-          </div>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="grid gap-4 w-80">
+    <div className="login-bg min-h-screen flex items-center justify-center">
+      <Card className="w-full max-w-md mx-auto p-6 animate-fadeIn">
+        <SectionTitle>Acceso</SectionTitle>
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setIsSubmitting(true);
+            setError('');
+            setLoginSuccess(false);
+            const res = await login(email, password);
+            setIsSubmitting(false);
+            if (res.success) {
+              setLoginSuccess(true);
+            } else {
+              setError(res.error?.message || 'Error de acceso');
+              if (res.error?.accessDenied) {
+                setShowAccessDenied(true);
+                setAccessDeniedInfo(res.error);
+              }
+              // Si el error es usuario no encontrado, mostrar registro
+              if (res.error?.message === 'Usuario o contraseña incorrectos.') {
+                setShowRegister(true);
+              }
+            }
+          }}
+        >
           <div className="form-field-enter animate-delay-300">
             <EmailInput
               value={email}
@@ -356,6 +313,71 @@ export default function LoginScreen() {
               ¿Olvidaste tu contraseña?
             </button>
           </div>
+
+          {/* Botón para mostrar registro manual */}
+          {!showRegister && (
+            <button
+              type="button"
+              className="w-full mt-2 text-blue-600 hover:underline text-sm"
+              onClick={() => setShowRegister(true)}
+            >
+              ¿No tienes cuenta? Regístrate aquí
+            </button>
+          )}
+
+          {/* Formulario de registro */}
+          {showRegister && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 animate-fadeIn">
+              <h3 className="text-lg font-semibold mb-2">Registro de usuario</h3>
+              <div className="mb-2">
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded"
+                  placeholder="Nombre completo"
+                  value={nombre}
+                  onChange={e => setNombre(e.target.value)}
+                />
+              </div>
+              <div className="mb-2">
+                <input
+                  type="email"
+                  className="w-full p-2 border rounded"
+                  placeholder="Email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="mb-2">
+                <input
+                  type="password"
+                  className="w-full p-2 border rounded"
+                  placeholder="Contraseña"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                className="w-full bg-blue-600 text-white py-2 rounded mt-2 hover:bg-blue-700"
+                onClick={handleRegister}
+              >
+                Registrar usuario
+              </button>
+              {registerError && (
+                <div className="text-red-600 text-sm mt-2">{registerError}</div>
+              )}
+              {registerSuccess && (
+                <div className="text-green-600 text-sm mt-2">Usuario registrado correctamente.</div>
+              )}
+              <button
+                type="button"
+                className="w-full mt-2 text-gray-600 hover:underline text-xs"
+                onClick={() => setShowRegister(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
         </form>
       </Card>
     </div>

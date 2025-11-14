@@ -5,7 +5,7 @@ function euro(n) {
   return (n ?? 0).toFixed(2) + " €";
 }
 
-export default function GeoDistributionPanel({ byZona, hayDatos }) {
+export default function GeoDistributionPanel({ byZona }) {
   return (
     <div className="space-y-3">
       {byZona.length > 0 ? (

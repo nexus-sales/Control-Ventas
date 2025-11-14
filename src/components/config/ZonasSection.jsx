@@ -180,7 +180,7 @@ export default function ZonasSection({ zonas, setZonas }) {
     // Limpiar y preparar los datos
     const newZona = {
       ...zDraft,
-      id: Date.now().toString(), // Supabase usa texto para el id
+      id: Date.now().toString(), // id generado como texto
       nombre: zDraft.nombre.trim(),
       codigo: zDraft.codigo?.trim() || null,
       impuesto_tipo: zDraft.impuesto_tipo || null,

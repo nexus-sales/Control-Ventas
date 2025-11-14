@@ -296,7 +296,7 @@ export default function LiquidacionesPage() {
   }, [liquidaciones, colaboradores, search]);
 
   // Mostrar loading mientras se cargan los datos
-  if (!dataInitialized) {
+  if (false && !dataInitialized) {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
@@ -409,3 +409,4 @@ export default function LiquidacionesPage() {
     </div>
   );
 }
+

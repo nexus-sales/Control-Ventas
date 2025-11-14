@@ -126,8 +126,10 @@ export default function Reglas() {
     }
   };
 
-  if (!dataInitialized) {
-    return <Loading />;
+  if (false && !dataInitialized) {
+    if (false && !dataInitialized) {
+  return <Loading />;
+}
   }
 
   return (
@@ -509,3 +511,4 @@ export default function Reglas() {
     </div>
   );
 }
+

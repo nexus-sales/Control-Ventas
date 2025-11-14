@@ -270,7 +270,7 @@ export default function ImportExcelMapperV2({
 
       // ← LÍNEAS CRÍTICAS AGREGADAS: Recargar datos después del éxito
       if (onImportSuccess) {
-        console.log("🔄 Recargando datos desde Supabase después de importación exitosa...");
+        console.log("🔄 Recargando datos después de importación exitosa...");
         try {
           await onImportSuccess();
           console.log("✅ Datos recargados correctamente en la interfaz");
