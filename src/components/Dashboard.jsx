@@ -5,12 +5,23 @@ import { DataCtx } from "../context/contexts";
 import Loading from "./common/Loading";
 import Card from "./ui/Card";
 import SectionTitle from "./ui/SectionTitle";
+import KPIsPanel from "./dashboard/KPIsPanel";
+import SectorAnalysis from "./dashboard/SectorAnalysis";
+import FamiliaAnalysis from "./dashboard/FamiliaAnalysis";
+import GeoDistributionPanel from "./dashboard/GeoDistributionPanel";
+import EvolucionTemporalPanel from "./dashboard/EvolucionTemporalPanel";
 import QuickActions from "./widgets/QuickActions";
 import SmartAlerts from "./widgets/SmartAlerts";
 import QuickStats from "./widgets/QuickStats";
 import VentasEnProceso from "./widgets/VentasEnProceso";
 import AnalisisRendimiento from "./widgets/AnalisisRendimiento";
 import FiltrosPersonalizados from "./widgets/FiltrosPersonalizados";
+import TopColaboradoresPanel from "./dashboard/TopColaboradoresPanel";
+import TopProductosPanel from "./dashboard/TopProductosPanel";
+import ExtraMetricsPanel from "./dashboard/ExtraMetricsPanel";
+import PipelinePanel from "./dashboard/PipelinePanel";
+import TendenciasPanel from "./dashboard/TendenciasPanel";
+import ProductividadPanel from "./dashboard/ProductividadPanel";
 import {
   Euro,
   TrendingUp,
@@ -322,7 +333,7 @@ export default function Dashboard() {
     }
   })();
 
-  const { comBruta, comPagada, margen } = kpis;
+  const { comBruta, margen } = kpis;
   const crecimiento = comBruta > 0 ? ((comBruta - 10000) / 10000) * 100 : 0;
 
   // Iconos por sector
@@ -489,136 +500,16 @@ export default function Dashboard() {
         </select>
       </div>
 
-      {/* KPIs principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI: Comisión Bruta / Facturación Total */}
-        <Tooltip.Root delayDuration={200}>
-          <Tooltip.Trigger asChild>
-            <div className="bg-gradient-to-br from-sky-200 to-sky-300 dark:from-sky-700 dark:to-sky-800 rounded-2xl p-6 text-slate-700 dark:text-gray-200 cursor-help transition-colors duration-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-600 dark:text-gray-400 text-sm font-medium">
-                    {hayDatos ? "Comisión Bruta" : "Facturación Total"}
-                  </p>
-                  <p className="text-3xl font-bold">
-                    {hayDatos ? euro(comBruta) : euro(facturacionTotal)}
-                  </p>
-                  <p className="text-slate-600 dark:text-gray-400 text-xs mt-1">
-                    {hayDatos ? (
-                      `${crecimiento >= 0 ? "+" : ""}${crecimiento.toFixed(1)}% vs anterior`
-                    ) : (
-                      `${total} ventas registradas`
-                    )}
-                  </p>
-                </div>
-                <Euro className="w-8 h-8 text-slate-500 dark:text-gray-400" />
-              </div>
-            </div>
-          </Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Content side="top" align="center" className="z-50 px-3 py-2 rounded-lg bg-slate-900 text-white text-xs shadow-lg animate-fadeIn" style={{ pointerEvents: 'auto' }}>
-              {hayDatos
-                ? 'Suma total de comisiones brutas generadas por todas las ventas con cálculo correcto.'
-                : 'Facturación total de todas las ventas registradas, sin descontar comisiones.'}
-              <Tooltip.Arrow className="fill-slate-900" />
-            </Tooltip.Content>
-          </Tooltip.Portal>
-        </Tooltip.Root>
-
-        {/* KPI: Comisión Pagada / Ticket Medio */}
-        <Tooltip.Root delayDuration={200}>
-          <Tooltip.Trigger asChild>
-            <div className="bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-700 dark:to-emerald-800 rounded-2xl p-6 text-slate-700 dark:text-gray-200 cursor-help transition-colors duration-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-600 dark:text-gray-400 text-sm font-medium">
-                    {hayDatos ? "Comisión Pagada" : "Ticket Medio"}
-                  </p>
-                  <p className="text-3xl font-bold">
-                    {hayDatos ? euro(comPagada) : euro(ticketMedio)}
-                  </p>
-                  <p className="text-slate-600 dark:text-gray-400 text-xs mt-1">
-                    {hayDatos ? "A colaboradores (neto)" : "Por venta"}
-                  </p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-slate-500 dark:text-gray-400" />
-              </div>
-            </div>
-          </Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Content side="top" align="center" className="z-50 px-3 py-2 rounded-lg bg-slate-900 text-white text-xs shadow-lg animate-fadeIn" style={{ pointerEvents: 'auto' }}>
-              {hayDatos
-                ? 'Total neto pagado a colaboradores por comisiones de ventas.'
-                : 'Promedio de facturación por cada venta registrada.'}
-              <Tooltip.Arrow className="fill-slate-900" />
-            </Tooltip.Content>
-          </Tooltip.Portal>
-        </Tooltip.Root>
-
-        {/* KPI: Margen Empresa / Ventas Cerradas */}
-        <Tooltip.Root delayDuration={200}>
-          <Tooltip.Trigger asChild>
-            <div className="bg-gradient-to-br from-purple-200 to-purple-300 dark:from-purple-700 dark:to-purple-800 rounded-2xl p-6 text-slate-700 dark:text-gray-200 cursor-help transition-colors duration-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-600 dark:text-gray-400 text-sm font-medium">
-                    {hayDatos ? "Margen Empresa" : "Ventas Cerradas"}
-                  </p>
-                  <p className="text-3xl font-bold">
-                    {hayDatos ? euro(margen) : (byEstado.Cerrada || 0)}
-                  </p>
-                  <p className="text-slate-600 dark:text-gray-400 text-xs mt-1">
-                    {hayDatos ? (
-                      `${comBruta > 0 ? ((margen / comBruta) * 100).toFixed(0) : 0}% del total`
-                    ) : (
-                      `${total > 0 ? (((byEstado.Cerrada || 0) / total) * 100).toFixed(1) : 0}% del total`
-                    )}
-                  </p>
-                </div>
-                <Target className="w-8 h-8 text-slate-500 dark:text-gray-400" />
-              </div>
-            </div>
-          </Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Content side="top" align="center" className="z-50 px-3 py-2 rounded-lg bg-slate-900 text-white text-xs shadow-lg animate-fadeIn" style={{ pointerEvents: 'auto' }}>
-              {hayDatos
-                ? 'Margen neto que obtiene la empresa tras pagar comisiones a colaboradores.'
-                : 'Cantidad de ventas que han sido cerradas con éxito.'}
-              <Tooltip.Arrow className="fill-slate-900" />
-            </Tooltip.Content>
-          </Tooltip.Portal>
-        </Tooltip.Root>
-
-        {/* KPI: Ventas Totales / Ventas Liquidadas */}
-        <Tooltip.Root delayDuration={200}>
-          <Tooltip.Trigger asChild>
-            <div className="bg-gradient-to-br from-rose-200 to-rose-300 dark:from-rose-700 dark:to-rose-800 rounded-2xl p-6 text-slate-700 dark:text-gray-200 cursor-help transition-colors duration-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-600 dark:text-gray-400 text-sm font-medium">
-                    {hayDatos ? "Ventas Totales" : "Ventas Liquidadas"}
-                  </p>
-                  <p className="text-3xl font-bold">
-                    {hayDatos ? total : (byEstado.Liquidada || 0)}
-                  </p>
-                  <p className="text-slate-600 dark:text-gray-400 text-xs mt-1">
-                    {hayDatos ? `Ticket: ${euro(ticketMedio)}` : "Completamente procesadas"}
-                  </p>
-                </div>
-                <BarChart3 className="w-8 h-8 text-slate-500 dark:text-gray-400" />
-              </div>
-            </div>
-          </Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Content side="top" align="center" className="z-50 px-3 py-2 rounded-lg bg-slate-900 text-white text-xs shadow-lg animate-fadeIn" style={{ pointerEvents: 'auto' }}>
-              {hayDatos
-                ? 'Número total de ventas registradas en el sistema.'
-                : 'Ventas que han sido completamente liquidadas y procesadas.'}
-              <Tooltip.Arrow className="fill-slate-900" />
-            </Tooltip.Content>
-          </Tooltip.Portal>
-        </Tooltip.Root>
-      </div>
+      {/* KPIs principales - refactorizado */}
+      <KPIsPanel
+        kpis={kpis}
+        hayDatos={hayDatos}
+        total={total}
+        ticketMedio={ticketMedio}
+        facturacionTotal={facturacionTotal}
+        byEstado={byEstado}
+        crecimiento={crecimiento}
+      />
 
       {/* Análisis por Sector y Familia */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -694,37 +585,12 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Distribución Geográfica y Evolución */}
+      {/* Distribución Geográfica y Evolución - refactorizado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <SectionTitle>Distribución Geográfica</SectionTitle>
-          <div className="space-y-3">
-            {byZona.length > 0 ? (
-              byZona.map(([zona, data]) => (
-                <div key={zona} className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-xl transition-colors duration-300">
-                  <div className="flex items-center space-x-3">
-                    <MapPin className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 dark:text-gray-200">{zona}</p>
-                      <p className="text-xs text-slate-500 dark:text-gray-400">{data.ventas} ventas</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-slate-800 dark:text-gray-200">{euro(data.facturacion)}</p>
-                    <p className="text-xs text-slate-600 dark:text-gray-400">Impuestos: {euro(data.impuestos)}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <ConfigurationPrompt
-                icon={MapPin}
-                title="Sin datos geográficos"
-                description="Define zonas y asígnalas a tus ventas"
-              />
-            )}
-          </div>
+          <GeoDistributionPanel byZona={byZona} hayDatos={hayDatos} />
         </Card>
-
         <Card>
           <div className="flex items-center justify-between mb-4">
             <SectionTitle>Evolución Temporal</SectionTitle>
@@ -738,71 +604,11 @@ export default function Dashboard() {
               <option value="anual">Últimos 3 años</option>
             </select>
           </div>
-          
-          <div className="h-80 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 transition-colors duration-300">
-            {evolucionTemporal.length > 0 ? (
-              <div className="h-full flex flex-col">
-                <div className="text-xs text-slate-500 dark:text-gray-400 mb-4">
-                  {periodoEvolucion === 'anual' ? 'Por años' : 
-                   periodoEvolucion === 'trimestral' ? 'Por trimestres' : 'Por meses'} • 
-                  Total: {euro(evolucionTemporal.reduce((sum, [, data]) => sum + data.facturacion, 0))}
-                </div>
-                <div className="flex-1 space-y-2">
-                  {evolucionTemporal.map(([periodo, data]) => {
-                    const maxFacturacion = Math.max(...evolucionTemporal.map(([, d]) => d.facturacion));
-                    const percentage = maxFacturacion > 0 ? (data.facturacion / maxFacturacion) * 100 : 0;
-                    
-                    let displayName = periodo;
-                    if (periodoEvolucion === 'semestral') {
-                      displayName = new Date(periodo + '-01').toLocaleDateString('es-ES', { month: 'short', year: '2-digit' });
-                    } else if (periodoEvolucion === 'anual') {
-                      displayName = periodo;
-                    }
-
-                    return (
-                      <div key={periodo} className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600 dark:text-gray-400 font-medium">{displayName}</span>
-                          <div className="text-right">
-                            <span className="font-semibold text-slate-800 dark:text-gray-200">{data.ventas}</span>
-                            <span className="text-slate-500 dark:text-gray-400 ml-1">ventas</span>
-                          </div>
-                        </div>
-                        <div className="flex justify-between text-xs text-slate-500 dark:text-gray-400 mb-1">
-                          <span>Facturación: {euro(data.facturacion)}</span>
-                          {hayDatos && data.margen > 0 && (
-                            <span>Margen: {euro(data.margen)}</span>
-                          )}
-                        </div>
-                        <div className="w-full bg-slate-200 dark:bg-gray-600 rounded-full h-3">
-                          <div
-                            className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-3 rounded-full transition-all duration-700 flex items-center justify-end pr-2"
-                            style={{ width: `${Math.max(percentage, 8)}%` }}
-                          >
-                            {percentage > 25 && (
-                              <span className="text-xs text-white font-medium">
-                                {percentage.toFixed(0)}%
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <ConfigurationPrompt
-                icon={Calendar}
-                title="Sin datos temporales"
-                description="Registra ventas con fechas para ver la evolución"
-              />
-            )}
-          </div>
+          <EvolucionTemporalPanel evolucionTemporal={evolucionTemporal} periodoEvolucion={periodoEvolucion} hayDatos={hayDatos} />
         </Card>
       </div>
 
-      {/* Rankings mejorados */}
+      {/* Rankings mejorados - refactorizado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <SectionTitle>
@@ -813,44 +619,8 @@ export default function Dashboard() {
               </span>
             )}
           </SectionTitle>
-          <div className="space-y-3">
-            {topColaboradores.length > 0 ? (
-              topColaboradores.map((colab, index) => (
-                <div
-                  key={colab.id}
-                  className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-gray-700 dark:to-gray-600 rounded-xl transition-colors duration-300"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-slate-700 dark:text-gray-200 text-sm font-bold transition-colors duration-300 ${
-                      index === 0 ? "bg-gradient-to-br from-yellow-200 to-yellow-300 dark:from-yellow-600 dark:to-yellow-700" :
-                      index === 1 ? "bg-gradient-to-br from-slate-200 to-slate-300 dark:from-gray-500 dark:to-gray-600" :
-                      "bg-gradient-to-br from-orange-200 to-orange-300 dark:from-orange-600 dark:to-orange-700"
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 dark:text-gray-200">{colab.nombre}</p>
-                      <p className="text-xs text-slate-500 dark:text-gray-400">{colab.ventas} ventas</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-slate-800 dark:text-gray-200">{euro(colab.facturacion)}</p>
-                    {hayDatos && colab.neto > 0 && (
-                      <p className="text-xs text-slate-600 dark:text-gray-400">Neto: {euro(colab.neto)}</p>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <ConfigurationPrompt
-                icon={Users}
-                title="Sin datos de colaboradores"
-                description="Registra ventas asignadas a colaboradores"
-              />
-            )}
-          </div>
+          <TopColaboradoresPanel topColaboradores={topColaboradores} hayDatos={hayDatos} periodoAnalisis={periodoAnalisis} />
         </Card>
-
         <Card>
           <SectionTitle>
             Top Productos
@@ -860,245 +630,29 @@ export default function Dashboard() {
               </span>
             )}
           </SectionTitle>
-          <div className="space-y-3">
-            {topProductos.length > 0 ? (
-              topProductos.map((producto, index) => (
-                <div
-                  key={producto.id}
-                  className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-gray-700 dark:to-gray-600 rounded-xl transition-colors duration-300"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-slate-700 dark:text-gray-200 text-sm font-bold transition-colors duration-300 ${
-                      index === 0 ? "bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-600 dark:to-emerald-700" :
-                      index === 1 ? "bg-gradient-to-br from-sky-200 to-sky-300 dark:from-sky-600 dark:to-sky-700" :
-                      "bg-gradient-to-br from-purple-200 to-purple-300 dark:from-purple-600 dark:to-purple-700"
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 dark:text-gray-200">{producto.nombre}</p>
-                      <p className="text-xs text-slate-500 dark:text-gray-400">{producto.familia} • {producto.ventas} vendidos</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-slate-800 dark:text-gray-200">{euro(producto.facturacion)}</p>
-                    {hayDatos && producto.margen > 0 && (
-                      <p className="text-xs text-slate-600 dark:text-gray-400">Margen: {euro(producto.margen)}</p>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <ConfigurationPrompt
-                icon={Target}
-                title="Sin datos de productos"
-                description="Registra ventas de productos para ver el ranking"
-              />
-            )}
-          </div>
+          <TopProductosPanel topProductos={topProductos} hayDatos={hayDatos} periodoAnalisis={periodoAnalisis} />
         </Card>
       </div>
 
-      {/* Métricas adicionales mejoradas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/30 rounded-xl transition-colors duration-300">
-            <div>
-              <p className="text-sm font-medium text-slate-700 dark:text-gray-200">Ticket Medio</p>
-              <p className="text-xl font-bold text-slate-800 dark:text-gray-200">{euro(ticketMedio)}</p>
-              <p className="text-xs text-slate-500 dark:text-gray-400">Por venta</p>
-            </div>
-            <Euro className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-          </div>
-        </Card>
+      {/* Métricas adicionales mejoradas - refactorizado */}
+      <ExtraMetricsPanel ticketMedio={ticketMedio} irpfMedio={irpfMedio} total={total} byEstado={byEstado} margen={margen} facturacionTotal={facturacionTotal} hayDatos={hayDatos} />
 
-        <Card>
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/30 rounded-xl transition-colors duration-300">
-            <div>
-              <p className="text-sm font-medium text-slate-700 dark:text-gray-200">IRPF Medio</p>
-              <p className="text-xl font-bold text-slate-800 dark:text-gray-200">
-                {hayDatos ? `${irpfMedio.toFixed(1)}%` : "N/A"}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-gray-400">Retención fiscal</p>
-            </div>
-            <TrendingUp className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-          </div>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30 rounded-xl transition-colors duration-300">
-            <div>
-              <p className="text-sm font-medium text-slate-700 dark:text-gray-200">Tasa Cierre</p>
-              <p className="text-xl font-bold text-slate-800 dark:text-gray-200">
-                {total > 0 ? (((byEstado.Cerrada || 0) / total) * 100).toFixed(1) : 0}%
-              </p>
-              <p className="text-xs text-slate-500 dark:text-gray-400">Conversión a cerrado</p>
-            </div>
-            <Award className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-          </div>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-rose-50 to-rose-100 dark:from-rose-900/30 dark:to-rose-800/30 rounded-xl transition-colors duration-300">
-            <div>
-              <p className="text-sm font-medium text-slate-700 dark:text-gray-200">Rentabilidad</p>
-              <p className="text-xl font-bold text-slate-800 dark:text-gray-200">
-                {hayDatos && facturacionTotal > 0 ? 
-                  `${((margen / facturacionTotal) * 100).toFixed(1)}%` : 
-                  "N/A"
-                }
-              </p>
-              <p className="text-xs text-slate-500 dark:text-gray-400">Margen sobre ventas</p>
-            </div>
-            <PieChart className="w-6 h-6 text-rose-600 dark:text-rose-400" />
-          </div>
-        </Card>
-      </div>
-
-      {/* Nuevos KPIs de tendencias y productividad */}
+      {/* Nuevos KPIs de tendencias y productividad - refactorizado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <SectionTitle>Tendencias del Negocio</SectionTitle>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/30 p-4 rounded-xl transition-colors duration-300">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700 dark:text-gray-200">Promedio por Período</span>
-                <Calendar className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-              </div>
-              <p className="text-lg font-bold text-slate-800 dark:text-gray-200">
-                {evolucionTemporal.length > 0 
-                  ? (evolucionTemporal.reduce((sum, [, data]) => sum + data.ventas, 0) / evolucionTemporal.length).toFixed(1)
-                  : 0
-                } ventas
-              </p>
-              <p className="text-xs text-slate-500 dark:text-gray-400">
-                Por {periodoEvolucion === 'anual' ? 'año' : periodoEvolucion === 'trimestral' ? 'trimestre' : 'mes'}
-              </p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-800/30 p-4 rounded-xl transition-colors duration-300">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700 dark:text-gray-200">Mejor Período</span>
-                <TrendingUp className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-              </div>
-              <p className="text-lg font-bold text-slate-800 dark:text-gray-200">
-                {evolucionTemporal.length > 0 
-                  ? Math.max(...evolucionTemporal.map(([, data]) => data.ventas))
-                  : 0
-                } ventas
-              </p>
-              <p className="text-xs text-slate-500 dark:text-gray-400">
-                {evolucionTemporal.length > 0 
-                  ? (() => {
-                      const mejorPeriodo = evolucionTemporal.find(([, data]) => 
-                        data.ventas === Math.max(...evolucionTemporal.map(([, d]) => d.ventas))
-                      )?.[0];
-                      
-                      if (periodoEvolucion === 'semestral') {
-                        return new Date(mejorPeriodo + '-01')?.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' }) || '';
-                      } else if (periodoEvolucion === 'anual') {
-                        return mejorPeriodo;
-                      } else {
-                        return mejorPeriodo;
-                      }
-                    })()
-                  : 'N/A'
-                }
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-900/30 dark:to-violet-800/30 p-4 rounded-xl transition-colors duration-300">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700 dark:text-gray-200">Productos Activos</span>
-                <Target className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-              </div>
-              <p className="text-lg font-bold text-slate-800 dark:text-gray-200">
-                {topProductos.length}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-gray-400">Con ventas</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 p-4 rounded-xl transition-colors duration-300">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700 dark:text-gray-200">Colab. Activos</span>
-                <Users className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-              </div>
-              <p className="text-lg font-bold text-slate-800 dark:text-gray-200">
-                {topColaboradores.length}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-gray-400">Con ventas</p>
-            </div>
-          </div>
+          <TendenciasPanel evolucionTemporal={evolucionTemporal} periodoEvolucion={periodoEvolucion} topProductos={topProductos} topColaboradores={topColaboradores} />
         </Card>
-
         <Card>
           <SectionTitle>Análisis de Productividad</SectionTitle>
-          <div className="space-y-4">
-            <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-gray-700 dark:to-gray-600 p-4 rounded-xl transition-colors duration-300">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-semibold text-slate-700 dark:text-gray-200">Productividad por Colaborador</h4>
-                <BarChart3 className="w-4 h-4 text-slate-600 dark:text-gray-400" />
-              </div>
-              <div className="text-2xl font-bold text-slate-800 dark:text-gray-200 mb-1">
-                {colaboradores.length > 0 && total > 0 
-                  ? (total / topColaboradores.length || 1).toFixed(1)
-                  : 0
-                } ventas
-              </div>
-              <p className="text-xs text-slate-500 dark:text-gray-400">Promedio por colaborador activo</p>
-            </div>
-
-            <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-gray-700 dark:to-gray-600 p-4 rounded-xl transition-colors duration-300">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-semibold text-slate-700 dark:text-gray-200">Facturación por Producto</h4>
-                <PieChart className="w-4 h-4 text-slate-600 dark:text-gray-400" />
-              </div>
-              <div className="text-2xl font-bold text-slate-800 dark:text-gray-200 mb-1">
-                {topProductos.length > 0 
-                  ? euro(facturacionTotal / topProductos.length)
-                  : euro(0)
-                }
-              </div>
-              <p className="text-xs text-slate-500 dark:text-gray-400">Promedio por producto vendido</p>
-            </div>
-
-            {hayDatos && (
-              <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 p-4 rounded-xl transition-colors duration-300">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-slate-700 dark:text-gray-200">Eficiencia de Margen</h4>
-                  <Award className="w-4 h-4 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="text-2xl font-bold text-slate-800 dark:text-gray-200 mb-1">
-                  {comBruta > 0 ? ((margen / comBruta) * 100).toFixed(1) : 0}%
-                </div>
-                <p className="text-xs text-slate-500 dark:text-gray-400">Margen empresa vs comisión bruta</p>
-              </div>
-            )}
-          </div>
+          <ProductividadPanel colaboradores={colaboradores} total={total} topColaboradores={topColaboradores} topProductos={topProductos} facturacionTotal={facturacionTotal} margen={margen} comBruta={comBruta} hayDatos={hayDatos} />
         </Card>
       </div>
 
-      {/* Estados de ventas */}
+      {/* Estados de ventas - refactorizado */}
       <Card>
         <SectionTitle>Pipeline de Ventas</SectionTitle>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "Borradores", count: byEstado.Borrador || 0, color: "bg-amber-300 dark:bg-amber-600", textColor: "text-amber-800 dark:text-amber-200" },
-            { label: "Confirmadas", count: byEstado.Confirmada || 0, color: "bg-emerald-300 dark:bg-emerald-600", textColor: "text-emerald-800 dark:text-emerald-200" },
-            { label: "Cerradas", count: byEstado.Cerrada || 0, color: "bg-sky-300 dark:bg-sky-600", textColor: "text-sky-800 dark:text-sky-200" },
-            { label: "Liquidadas", count: byEstado.Liquidada || 0, color: "bg-purple-300 dark:bg-purple-600", textColor: "text-purple-800 dark:text-purple-200" },
-          ].map((item) => (
-            <div key={item.label} className="text-center p-4 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-700 dark:to-gray-800 rounded-xl transition-colors duration-300">
-              <div className={`w-12 h-12 mx-auto mb-2 rounded-full ${item.color} flex items-center justify-center transition-colors duration-300`}>
-                <span className={`text-lg font-bold ${item.textColor}`}>{item.count}</span>
-              </div>
-              <p className="text-sm font-medium text-slate-700 dark:text-gray-200">{item.label}</p>
-              <p className="text-xs text-slate-500 dark:text-gray-400">
-                {total > 0 ? ((item.count / total) * 100).toFixed(1) : 0}% del total
-              </p>
-            </div>
-          ))}
-        </div>
+        <PipelinePanel byEstado={byEstado} total={total} />
       </Card>
     </div>
   );
