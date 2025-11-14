@@ -124,7 +124,7 @@ export function VentasTable({
               <th className="px-2 md:px-4 py-2">
                 <input
                   type="checkbox"
-                  checked={isAllSelected}
+                  checked={Boolean(isAllSelected)}
                   onChange={onSelectAll}
                   aria-label="Seleccionar todas las ventas"
                   className="accent-sky-500"
@@ -155,7 +155,7 @@ export function VentasTable({
                   <td className="px-2 md:px-4 py-3 align-middle">
                     <input
                       type="checkbox"
-                      checked={selectedIds?.includes(venta.id)}
+                      checked={Boolean(selectedIds?.includes(venta.id))}
                       onChange={() => onSelect && onSelect(venta.id)}
                       aria-label={`Seleccionar venta ${venta.id}`}
                       className="accent-sky-500"

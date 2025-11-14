@@ -10,6 +10,7 @@ export function NewVentaModal({
   onSave,
   createInitialDraft,
   productos = [],
+  operadores = [],
   colaboradores = [],
   zonas = []
 }) {
@@ -36,9 +37,19 @@ export function NewVentaModal({
     setDraft(prev => ({
       ...prev,
       producto_id: productoId,
+      operador_id: prod?.operador_id || '',
       pvp: prod?.pvp || 0,
-      comision_base: prod?.comision_valor || 0,
+      comision_base: prod?.comision_valor || 15.0,
       comision_tipo: prod?.comision_tipo || 'porcentaje'
+    }));
+  };
+
+  const handleOperadorChange = (operadorId) => {
+    setDraft(prev => ({
+      ...prev,
+      operador_id: operadorId,
+      // Filtrar productos solo del operador seleccionado
+      producto_id: ''
     }));
   };
 
@@ -203,19 +214,42 @@ export function NewVentaModal({
                 </div>
 
                 <div>
+                  <label className="text-sm text-slate-500 dark:text-slate-400">Operador *</label>
+                  <select
+                    className="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText"
+                    value={draft.operador_id || ''}
+                    onChange={(e) => handleOperadorChange(e.target.value)}
+                    required
+                  >
+                    <option value="">Seleccionar operador</option>
+                    {operadores.map((op) => (
+                      <option key={op.id} value={op.id}>
+                        {op.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">Producto *</label>
                   <select
                     className="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText"
                     value={draft.producto_id || ''}
                     onChange={(e) => handleProductChange(e.target.value)}
                     required
+                    disabled={!draft.operador_id}
                   >
-                    <option value="">Seleccionar producto</option>
-                    {productos.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre} {(!p.pvp || p.pvp === 0) && "(Sin PVP)"}
-                      </option>
-                    ))}
+                    <option value="">
+                      {draft.operador_id ? "Seleccionar producto" : "Primero selecciona un operador"}
+                    </option>
+                    {productos
+                      .filter(p => !draft.operador_id || p.operador_id === draft.operador_id)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nombre} {(!p.pvp || p.pvp === 0) && "(Sin PVP)"}
+                        </option>
+                      ))
+                    }
                   </select>
                 </div>
 

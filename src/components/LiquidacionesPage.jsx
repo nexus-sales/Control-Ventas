@@ -118,21 +118,23 @@ export default function LiquidacionesPage() {
   const contextValue = useContext(DataCtx);
   const { data, dataInitialized } = contextValue;
   const setLiquidaciones = contextValue.setLiquidaciones;
+  const setDecomisiones = contextValue.setDecomisiones;
   
   const ventas = useMemo(() => Array.isArray(data?.ventas) ? data.ventas : [], [data?.ventas]);
   const colaboradores = useMemo(() => Array.isArray(data?.colaboradores) ? data.colaboradores : [], [data?.colaboradores]);
-    const clientes = useMemo(() => Array.isArray(data?.clientes) ? data.clientes : [], [data?.clientes]);
-    const operadores = useMemo(() => Array.isArray(data?.operadores) ? data.operadores : [], [data?.operadores]);
+  const clientes = useMemo(() => Array.isArray(data?.clientes) ? data.clientes : [], [data?.clientes]);
+  const operadores = useMemo(() => Array.isArray(data?.operadores) ? data.operadores : [], [data?.operadores]);
   const zonas = useMemo(() => Array.isArray(data?.zonas) ? data.zonas : [], [data?.zonas]);
   const liquidaciones = useMemo(() => Array.isArray(data?.liquidaciones) ? data.liquidaciones : [], [data?.liquidaciones]);
-  const decomisiones = useMemo(() => Array.isArray(data?.decomisiones) ? data.decomisiones : [], [data?.decomisiones]);
   
-  // Función temporal para decomisiones (no está en DataContext aún)
-  const setDecomisiones = useCallback((updateFn) => {
-    const newDecomisiones = typeof updateFn === 'function' ? updateFn(decomisiones) : updateFn;
-    // Guardar directamente en localStorage ya que no existe en el contexto
-    localStorage.setItem('appcv_decomisiones', JSON.stringify(newDecomisiones));
-  }, [decomisiones]);
+  // Persistir decomisiones mediante el DataContext
+  const persistDecomisiones = useCallback((updateFn) => {
+    if (typeof setDecomisiones !== 'function') {
+      console.warn('setDecomisiones no disponible en contexto');
+      return;
+    }
+    setDecomisiones(updateFn);
+  }, [setDecomisiones]);
 
   const [periodo, setPeriodo] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [toast, setToast] = useState({ message: "", type: "info" });
@@ -268,7 +270,7 @@ export default function LiquidacionesPage() {
 
     // Guardar decomisiones generadas
     if (decomisionesPeriodo.length > 0) {
-      setDecomisiones((arr) => [
+      persistDecomisiones((arr) => [
         ...decomisionesPeriodo.map(d => ({...d, id: `decomision_${Date.now()}_${d.venta_id}`, fecha_generacion: new Date().toISOString()})),
         ...arr
       ]);

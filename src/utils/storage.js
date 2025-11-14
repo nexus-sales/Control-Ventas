@@ -9,6 +9,7 @@ export const LS_KEYS = {
   zonas: "appcv_zonas",
   reglas: "appcv_reglas",
   liquidaciones: "appcv_liquidaciones",
+  decomisiones: "appcv_decomisiones",
   currentUser: "appcv_current_user",
   ui: "appcv_ui",
   seedVersion: "appcv_seed_version",

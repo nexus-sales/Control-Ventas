@@ -4,21 +4,12 @@ import Card from '../../ui/Card';
 import { SECTORES, FAMILIAS_POR_SECTOR } from '../../../utils/constants';
 
 const ESTADOS_VALIDOS = [
-  "ACTIVO",
-  "PENDIENTE",
-  "PENDIENTE VALIDAR",
-  "SCORING", 
-  "INCIDENCIA",
-  "INSTALACION",
-  "ENVIADA",
-  "PENDIENTE INSTALACION",
-  "CITADA",
-  "TRAMITACION",
-  "CANCELADA",
-  "BAJA",
-  "OFERTA FIRMADA",
-  "PDTE FIRMA",
-  "RECHAZADA",
+  "Confirmada",
+  "Pendiente",
+  "En Proceso", 
+  "Instalada",
+  "Cancelada",
+  "Rechazada",
 ];
 
 export function EditVentaModal({ 
@@ -27,6 +18,7 @@ export function EditVentaModal({
   onSave,
   venta,
   productos = [],
+  operadores = [],
   colaboradores = [],
   zonas = []
 }) {
@@ -50,8 +42,17 @@ export function EditVentaModal({
     setEdit(prev => ({
       ...prev,
       producto_id: productoId,
-      comision_base: prod?.comision_valor || prev.comision_base || 0,
+      operador_id: prod?.operador_id || prev.operador_id,
+      comision_base: prod?.comision_valor || prev.comision_base || 15.0,
       comision_tipo: prod?.comision_tipo || prev.comision_tipo || 'porcentaje'
+    }));
+  };
+
+  const handleOperadorChange = (operadorId) => {
+    setEdit(prev => ({
+      ...prev,
+      operador_id: operadorId,
+      // No limpiar producto_id ya que estamos editando
     }));
   };
 
@@ -67,6 +68,11 @@ export function EditVentaModal({
   // Calcular información del producto y colaborador seleccionados
   const productoSeleccionado = productos.find(p => p.id === edit.producto_id);
   const colaboradorSeleccionado = colaboradores.find(c => c.id === edit.colaborador_id);
+
+  // Filtrar productos por operador seleccionado
+  const productosFiltrados = edit.operador_id 
+    ? productos.filter(p => p.operador_id === edit.operador_id)
+    : productos;
   
   // Obtener familias disponibles según el sector
   const familiasDisponibles = edit.sector ? FAMILIAS_POR_SECTOR[edit.sector] || [] : [];
@@ -247,6 +253,23 @@ export function EditVentaModal({
                 </div>
 
                 <div>
+                  <label className="text-sm text-slate-500 dark:text-slate-400">Operador *</label>
+                  <select
+                    className="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-amber-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText"
+                    value={edit.operador_id || ''}
+                    onChange={(e) => handleOperadorChange(e.target.value)}
+                    required
+                  >
+                    <option value="">Seleccionar operador</option>
+                    {operadores.map((operador) => (
+                      <option key={operador.id} value={operador.id}>
+                        {operador.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">Producto *</label>
                   <select
                     className="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-amber-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText"
@@ -254,7 +277,8 @@ export function EditVentaModal({
                     onChange={(e) => handleProductChange(e.target.value)}
                     required
                   >
-                    {productos.map((p) => (
+                    <option value="">Seleccionar producto</option>
+                    {productosFiltrados.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.nombre} {(!p.pvp || p.pvp === 0) && "(Sin PVP)"}
                       </option>

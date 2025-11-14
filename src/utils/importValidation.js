@@ -236,13 +236,7 @@ export function validateRow(row, mapping, options = {}) {
 export function applyDefaults(venta, modoAutomatico = false) {
   const result = { ...venta };
 
-  // Valores por defecto básicos
-  if (!result.mes && result.fecha) {
-    result.mes = new Date(result.fecha).getMonth() + 1;
-  }
-  if (!result.año && result.fecha) {
-    result.año = new Date(result.fecha).getFullYear();
-  }
+  // Valores por defecto básicos - SOLO campos que existen en Supabase
   if (!result.estado) result.estado = "Confirmada";
   if (!result.cantidad) result.cantidad = 1;
   if (!result.cliente) result.cliente = "Cliente sin especificar";
@@ -253,6 +247,9 @@ export function applyDefaults(venta, modoAutomatico = false) {
     result.pvp = 50.0;
   }
 
+  // NO agregar mes/año - pueden ser campos calculados en Supabase
+  // NO agregar id - Supabase lo maneja automáticamente
+  
   return result;
 }
 

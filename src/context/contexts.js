@@ -22,7 +22,8 @@ export const DataCtx = createContext({
     productos: [],
     zonas: [],
     reglas: [],
-    liquidaciones: []
+    liquidaciones: [],
+    decomisiones: []
   },
   dataInitialized: false,
   isDataLoading: false,
@@ -39,6 +40,7 @@ export const DataCtx = createContext({
   setNiveles: () => {},
   setReglas: () => {},
   setLiquidaciones: () => {},
+  setDecomisiones: () => {},
   syncAll: async () => false,
   userRole: null,
   isSupabaseAvailable: true

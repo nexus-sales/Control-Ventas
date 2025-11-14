@@ -265,6 +265,7 @@ export default function VentasPage() {
           onSave={handleSaveVenta}
           createInitialDraft={ventasOps.createInitialDraft}
           productos={ventasOps.productos}
+          operadores={operadores}
           colaboradores={ventasOps.colaboradores}
           zonas={ventasOps.zonas}
         />
@@ -277,6 +278,7 @@ export default function VentasPage() {
           onSave={handleUpdateVenta}
           venta={selectedVenta}
           productos={ventasOps.productos}
+          operadores={operadores}
           colaboradores={ventasOps.colaboradores}
           zonas={ventasOps.zonas}
         />

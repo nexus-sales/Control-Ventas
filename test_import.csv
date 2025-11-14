@@ -1,6 +1,0 @@
-fecha,colaborador_id,cliente,cif,operador_id,producto_id,pvp,cantidad,estado,zona_id
-2024-11-10,Juan Perez,Cliente Test 1,12345678A,YOIGO,Fibra 300Mb,50.00,1,Confirmada,PENINSULA
-2024-11-10,Maria Garcia,Cliente Test 2,87654321B,MASMOVIL,Movil 20GB,30.00,2,Confirmada,peninsula
-2024-11-10,Pedro Lopez,Cliente Test 3,11111111C,ORANGE,Fibra 600Mb,70.00,1,Confirmada,PENINSULA
-2024-11-10,Ana Ruiz,Cliente Test 4,44444444D,YOIGO,Internet Casa,45.00,1,Pendiente,CANARIAS
-2024-11-10,Carlos Vega,Cliente Test 5,55555555E,Vodafone,Fibra Pro,85.00,1,Confirmada,canarias

@@ -8,7 +8,6 @@ import {
   autoguessMapping,
   validateRow,
   applyDefaults,
-  generateUniqueId,
   parseDate,
   parseNumber,
 } from "../utils/importValidation";
@@ -32,7 +31,12 @@ function detectSeparator(line) {
  */
 const normalizeNameSearch = (name) => {
   if (!name || typeof name !== 'string') return name;
-  return name.trim().toUpperCase();
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/['`´’]/g, '')
+    .trim()
+    .toUpperCase();
 };
 
 /**
@@ -60,6 +64,7 @@ export function useImportExcel({
   const setColaboradores = propSetColaboradores || dataCtx?.setColaboradores;
   const setZonas = propSetZonas || dataCtx?.setZonas;
   const refreshData = dataCtx?.refreshData;
+  const isSupabaseAvailable = dataCtx?.isSupabaseAvailable;
   
   // Estados del hook
   const [headers, setHeaders] = useState([]);
@@ -349,20 +354,20 @@ export function useImportExcel({
           continue;
         }
 
-        // ✅ CORRECCIÓN CRÍTICA: NO incluir 'sector' en ventas
+        // ✅ CORRECCIÓN CRÍTICA: Incluir ID temporal para sincronización
         let ventaCompleta = {
-          id: generateUniqueId("v", index),
+          id: `temp_venta_${Date.now()}_${index}`, // ID temporal necesario para DataContext
           fecha,
-          cliente,
-          cif,
+          cliente: cliente.slice(0, 255),
+          cif: cif.slice(0, 20),
           colaborador_id,
           zona_id,
           producto_id,
           operador_id,
-          pvp: parseNumber(get("pvp")) || 0,
-          cantidad: parseNumber(get("cantidad")) || 1,
-          estado: get("estado") || "Confirmada",
-          // ❌ NO incluir: sector: 'TELEFONIA', // La tabla ventas NO tiene esta columna
+          pvp: Number(parseNumber(get("pvp")) || 50.0),
+          cantidad: Number(parseNumber(get("cantidad")) || 1),
+          estado: (get("estado") || "Confirmada").slice(0, 50),
+          // ❌ NO incluir: sector (no existe en tabla ventas)
         };
 
         ventaCompleta = applyDefaults(ventaCompleta, false);
@@ -387,12 +392,23 @@ export function useImportExcel({
       if (nuevasVentas.length > 0) {
         console.log(`🔄 Guardando ${nuevasVentas.length} ventas en memoria (local)...`);
         console.log('Datos de ventas a guardar:', nuevasVentas);
+        console.log('Estado de setVentas:', !!setVentas);
         if (setVentas) {
           setVentas((prev) => {
+            console.log('📊 Estado anterior de ventas:', prev.length, 'ventas');
             // Evitar duplicados por id
             const idsNuevas = new Set(nuevasVentas.map(v => v.id));
             const prevFiltrado = prev.filter(v => !idsNuevas.has(v.id));
-            return [...nuevasVentas, ...prevFiltrado];
+            const resultado = [...nuevasVentas, ...prevFiltrado];
+            console.log('📊 Estado nuevo de ventas:', resultado.length, 'ventas');
+            
+            // Verificar que se guardó en localStorage también
+            setTimeout(() => {
+              const enLS = JSON.parse(localStorage.getItem('appcv_ventas') || '[]');
+              console.log('📊 Verificación localStorage:', enLS.length, 'ventas guardadas');
+            }, 100);
+            
+            return resultado;
           });
         } else {
           console.warn('⚠️ setVentas no está disponible - no se actualiza estado local');
@@ -403,8 +419,26 @@ export function useImportExcel({
       }
 
       // Refrescar datos globales tras importar
-      if (refreshData) await refreshData();
-      if (typeof onImportSuccess === 'function') onImportSuccess();
+      if (refreshData && isSupabaseAvailable) {
+        console.log('⏭️ Omitiendo refreshData inmediato para evitar sobrescribir el dataset local con un snapshot remoto potencialmente desactualizado. La sincronización remota continuará en segundo plano.');
+      } else if (!refreshData) {
+        console.warn('⚠️ refreshData no está disponible');
+      } else {
+        console.log('ℹ️ refreshData omitido porque Supabase no está accesible.');
+      }
+      
+      if (typeof onImportSuccess === 'function') {
+        console.log('🎉 Llamando a onImportSuccess...');
+        onImportSuccess();
+      } else {
+        console.warn('⚠️ onImportSuccess no está disponible');
+      }
+      
+      console.log('📊 Resumen final de importación:');
+      console.log(`  - Ventas creadas: ${nuevasVentas.length}`);
+      console.log(`  - Ventas rechazadas: ${rechazadas}`);
+      console.log(`  - Errores: ${erroresDetallados.length}`);
+      
       return {
         ventasCreadas: nuevasVentas.length,
         ventasRechazadas: rechazadas,
@@ -417,7 +451,7 @@ export function useImportExcel({
       setIsLoading(false);
       finishImporting(); // 🔓 LIBERAR PROTECCIÓN DE SESIÓN
     }
-  }, [rows, mapping, indexers, resolverNombres, zonas, productos, setVentas, guardarExtras, onImportSuccess, refreshData, startImporting, finishImporting, resolveIdImproved]);
+  }, [rows, mapping, indexers, resolverNombres, zonas, productos, setVentas, guardarExtras, onImportSuccess, refreshData, startImporting, finishImporting, resolveIdImproved, isSupabaseAvailable]);
 
   // Importación inteligente (con creación automática) - CORREGIDO
   const importInteligente = useCallback(async () => {
@@ -555,20 +589,20 @@ export function useImportExcel({
 
         console.log(`✅ Fila ${index + 1}: IDs resueltos - colaborador: ${colaborador_id}, zona: ${zona_id}, producto: ${producto_id || 'N/A'}, operador: ${operador_id || 'N/A'}`);
 
-        // ✅ CORRECCIÓN CRÍTICA: NO incluir 'sector' en ventas
+        // ✅ CORRECCIÓN CRÍTICA: Incluir ID temporal para sincronización
         let ventaCompleta = {
-          id: generateUniqueId("v", index),
+          id: `temp_venta_${Date.now()}_${index}`, // ID temporal necesario para DataContext
           fecha,
-          cliente,
-          cif: get("cif") || "",
+          cliente: cliente.slice(0, 255),
+          cif: (get("cif") || "").slice(0, 20),
           colaborador_id,
           zona_id,
           producto_id,
           operador_id,
-          pvp: parseNumber(get("pvp")) || 50.0,
-          cantidad: parseNumber(get("cantidad")) || 1,
-          estado: get("estado") || "Confirmada",
-          // ❌ NO incluir sector - la tabla ventas NO tiene esta columna
+          pvp: Number(parseNumber(get("pvp")) || 50.0),
+          cantidad: Number(parseNumber(get("cantidad")) || 1),
+          estado: (get("estado") || "Confirmada").slice(0, 50),
+          // ❌ NO incluir: sector (no existe en tabla ventas)
         };
 
         ventaCompleta = applyDefaults(ventaCompleta, true);
@@ -633,7 +667,9 @@ export function useImportExcel({
       console.log('✅ Importación inteligente completada:', resultadoFinal);
       
       // Refrescar datos globales tras importar
-      if (refreshData) await refreshData();
+      if (refreshData && isSupabaseAvailable) {
+        console.log('⏭️ refreshData omitido tras importación inteligente para preservar los datos locales.');
+      }
       if (typeof onImportSuccess === 'function') onImportSuccess();
       setResumenImportacion(resultadoFinal);
       return resultadoFinal;
@@ -666,7 +702,147 @@ export function useImportExcel({
     startImporting,
     finishImporting,
     resolveIdImproved,
+    isSupabaseAvailable,
   ]);
+
+  // Función de importación simplificada para casos difíciles
+  const importSimplificado = useCallback(async () => {
+    if (!rows.length) throw new Error("No hay datos para importar");
+
+  console.log('🚀 INICIANDO IMPORTACIÓN SIMPLIFICADA');
+    startImporting();
+    setIsLoading(true);
+    
+    try {
+      const nuevasVentas = [];
+      let ventasCreadas = 0;
+      
+      for (let index = 0; index < rows.length; index++) {
+        const row = rows[index];
+        
+        const get = (key) => {
+          const value = row[mapping[key]];
+          return value ? String(value).trim() : null;
+        };
+
+        // Buscar valores en múltiples posibles nombres de columna
+        const findValue = (possibleKeys) => {
+          for (const key of possibleKeys) {
+            if (row[key] && String(row[key]).trim()) {
+              return String(row[key]).trim();
+            }
+          }
+          return null;
+        };
+        
+        // Datos básicos
+        const fecha = parseDate(get("fecha") || findValue(['fecha', 'Fecha', 'FECHA', 'date'])) || 
+                     new Date().toISOString().slice(0, 10);
+        
+        const cliente = get("cliente") || findValue(['cliente', 'Cliente', 'CLIENTE']) || 
+                       `Cliente ${index + 1}`;
+        
+        // Buscar colaborador por nombre
+        const colaboradorNombre = get("colaborador_id") || 
+                                 findValue(['colaborador', 'Colaborador', 'vendedor']);
+        
+        let colaborador_id = null;
+        if (colaboradorNombre) {
+          const colaboradorEncontrado = colaboradores.find(c => 
+            normalizeNameSearch(c.nombre) === normalizeNameSearch(colaboradorNombre) ||
+            normalizeNameSearch(c.nombre).includes(normalizeNameSearch(colaboradorNombre))
+          );
+          colaborador_id = colaboradorEncontrado?.id;
+        }
+        
+        // Si no se encuentra colaborador, usar el primero disponible o error
+        if (!colaborador_id && colaboradores.length > 0) {
+          colaborador_id = colaboradores[0].id;
+        }
+        
+        // Si aún no hay colaborador, es un error crítico
+        if (!colaborador_id) {
+          console.error(`❌ Error: No hay colaboradores disponibles para la venta ${index + 1}`);
+          continue; // Saltar esta venta
+        }
+        
+        // Zona - debe existir obligatoriamente
+        let zona_id = null;
+        if (zonas.length > 0) {
+          zona_id = zonas[0].id;
+        } else {
+          console.error(`❌ Error: No hay zonas disponibles para la venta ${index + 1}`);
+          continue; // Saltar esta venta
+        }
+        
+        // Producto por defecto  
+        const producto_id = productos.length > 0 ? productos[0].id : null;
+        
+        // PVP
+        const pvpValue = get("pvp") || findValue(['pvp', 'PVP', 'precio', 'Precio']) || '50';
+        const pvp = parseNumber(pvpValue) || 50.0;
+        
+        // Crear venta con ID temporal para sincronización
+        const ventaLimpia = {
+          id: `temp_venta_${Date.now()}_${index}`, // ID temporal para DataContext
+          fecha,
+          cliente: cliente.slice(0, 255), // Limitar longitud
+          cif: (get("cif") || '').slice(0, 20), // Limitar longitud
+          colaborador_id,
+          zona_id,
+          producto_id,
+          operador_id: operadores.length > 0 ? operadores[0].id : null,
+          pvp: Number(pvp) || 50.0, // Asegurar que sea número
+          cantidad: Number(parseNumber(get("cantidad")) || 1), // Asegurar que sea número
+          estado: (get("estado") || "Confirmada").slice(0, 50) // Limitar longitud
+        };
+
+        // Aplicar defaults y limpiar para Supabase
+        const ventaFinal = applyDefaults(ventaLimpia, true);
+        
+        nuevasVentas.push(ventaFinal);
+        ventasCreadas++;
+      }      // Guardar ventas usando el DataContext normal
+      if (setVentas && nuevasVentas.length > 0) {
+        setVentas((prev) => {
+          const idsNuevas = new Set(nuevasVentas.map(v => v.id));
+          const prevFiltrado = prev.filter(v => !idsNuevas.has(v.id));
+          return [...nuevasVentas, ...prevFiltrado];
+        });
+      }
+      
+      if (refreshData && isSupabaseAvailable) {
+        console.log('⏭️ Importación simplificada completada: se omite refreshData inmediato para evitar sobrescrituras prematuras.');
+      } else if (!refreshData) {
+        console.warn('⚠️ refreshData no está disponible en importSimplificado');
+      } else {
+        console.log('ℹ️ refreshData omitido (Supabase no disponible).');
+      }
+      
+      if (onImportSuccess) {
+        onImportSuccess();
+      }
+      
+      setResumenImportacion({
+        ventasCreadas,
+        ventasRechazadas: 0,
+        errores: []
+      });
+      
+      return {
+        ventasCreadas,
+        ventasRechazadas: 0,
+        errores: []
+      };
+      
+    } catch (error) {
+      console.error('Error en importación simplificada:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+      finishImporting();
+    }
+  }, [rows, mapping, colaboradores, zonas, productos, operadores, setVentas, refreshData, onImportSuccess, startImporting, finishImporting, isSupabaseAvailable]);
 
   // Limpiar datos
   const clearData = useCallback(() => {
@@ -694,6 +870,7 @@ export function useImportExcel({
     validateSingleRow,
     importNormal,
     importInteligente,
+    importSimplificado,
     clearData,
     onImportSuccess,
   };

@@ -8,7 +8,12 @@
  */
 const normalizeNameSearch = (name) => {
   if (!name || typeof name !== 'string') return '';
-  return name.trim().toUpperCase();
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/['`´’]/g, '')
+    .trim()
+    .toUpperCase();
 };
 
 /**
@@ -60,21 +65,16 @@ export async function createOperadorLocal(nombre) {
 // Función para normalizar zonas a solo PENÍNSULA o CANARIAS
 function normalizeZoneName(nombre) {
   if (!nombre || typeof nombre !== 'string') return null;
-  
-  const normalized = nombre.trim().toUpperCase();
-  
-  // Si contiene "CANARIA" (en cualquier variación), es CANARIAS
-  if (normalized.includes('CANARIA')) {
-    return 'CANARIAS';
-  }
-  
-  // Si contiene "PENINSULA" o es cualquier otra cosa, es PENÍNSULA
-  if (normalized.includes('PENINSULA') || normalized.includes('PENINSULAR')) {
-    return 'PENÍNSULA';
-  }
-  
-  // Por defecto, todo lo demás es PENÍNSULA (Madrid, Barcelona, Valencia, etc.)
-  return 'PENÍNSULA';
+
+  const normalized = normalizeNameSearch(nombre);
+
+  if (normalized.includes('CANARI')) return 'Canarias';
+  if (normalized.includes('BALEAR')) return 'Baleares';
+  if (normalized.includes('CEUTA')) return 'Ceuta';
+  if (normalized.includes('MELILLA')) return 'Melilla';
+
+  // Todo lo demás se considera Península
+  return 'Península';
 }
 
 export async function createZonaLocal(nombre, datosExtras = {}) {
@@ -82,26 +82,62 @@ export async function createZonaLocal(nombre, datosExtras = {}) {
     throw new Error("El nombre de la zona es obligatorio");
   }
 
-  // Normalizar nombre a PENÍNSULA o CANARIAS
-  const nombreNormalizado = normalizeZoneName(nombre);
-  const isCanarias = nombreNormalizado === 'CANARIAS';
+  const canonicalName = normalizeZoneName(nombre);
+  const canonicalKey = normalizeNameSearch(canonicalName);
 
-  const zona = {
-    id: `zona-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    nombre: nombreNormalizado,
-    codigo: nombreNormalizado.replace(/\s+/g, '_'),
-    // Datos específicos según la zona
-    iva: isCanarias ? 0 : (datosExtras.iva || 0.21),
-    irpf: datosExtras.irpf || 0.07,
-    igic: isCanarias ? (datosExtras.igic || 0.07) : 0,
-    impuesto_tipo: isCanarias ? 'IGIC' : 'IVA',
-    impuesto_pct: isCanarias ? 0.07 : 0.21,
-    descripcion: `Zona creada automáticamente: ${nombreNormalizado} (de "${nombre.trim()}")`,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+  const zoneMeta = {
+    CANARIAS: {
+      codigo: 'CAN',
+      impuesto_tipo: 'IGIC',
+      impuesto_pct: datosExtras.impuesto_pct ?? 0.07,
+      iva: 0,
+      igic: datosExtras.igic ?? 0.07,
+    },
+    BALEARES: {
+      codigo: 'BAL',
+      impuesto_tipo: 'IVA',
+      impuesto_pct: datosExtras.impuesto_pct ?? datosExtras.iva ?? 0.21,
+      iva: datosExtras.iva ?? 0.21,
+      igic: 0,
+    },
+    CEUTA: {
+      codigo: 'CEU',
+      impuesto_tipo: 'IPSI',
+      impuesto_pct: datosExtras.impuesto_pct ?? 0.07,
+      iva: 0,
+      igic: 0,
+    },
+    MELILLA: {
+      codigo: 'MEL',
+      impuesto_tipo: 'IPSI',
+      impuesto_pct: datosExtras.impuesto_pct ?? 0.07,
+      iva: 0,
+      igic: 0,
+    },
+    PENINSULA: {
+      codigo: 'PEN',
+      impuesto_tipo: 'IVA',
+      impuesto_pct: datosExtras.impuesto_pct ?? datosExtras.iva ?? 0.21,
+      iva: datosExtras.iva ?? 0.21,
+      igic: 0,
+    },
   };
 
-  return zona;
+  const meta = zoneMeta[canonicalKey] || zoneMeta.PENINSULA;
+
+  return {
+    id: `zona-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    nombre: canonicalName,
+    codigo: meta.codigo,
+    iva: meta.iva,
+    irpf: datosExtras.irpf ?? 0.07,
+    igic: meta.igic,
+    impuesto_tipo: meta.impuesto_tipo,
+    impuesto_pct: meta.impuesto_pct,
+    descripcion: `Zona creada automáticamente: ${canonicalName} (de "${nombre.trim()}")`,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
 }
 
 export async function createColaboradorLocal(nombre) {
@@ -211,10 +247,12 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
       if (zonaExistente) {
         // Usar zona existente - mapear múltiples variaciones
         const nombreOriginal = zonaObj.nombre;
-        const nombreNormalizado = zonaObj.nombre_normalizado || nombreOriginal.toUpperCase();
+        const claveOriginal = normalizeNameSearch(nombreOriginal);
+        const claveExistente = normalizeNameSearch(zonaExistente.nombre);
         
         mapeos.zonas[nombreOriginal] = zonaExistente.id;
-        mapeos.zonas[nombreNormalizado] = zonaExistente.id;
+        mapeos.zonas[claveOriginal] = zonaExistente.id;
+        mapeos.zonas[claveExistente] = zonaExistente.id;
         mapeos.zonas[zonaExistente.nombre] = zonaExistente.id;
         
         console.log(`♻️ Usando zona existente: "${nombreOriginal}" → ${zonaExistente.nombre} (${zonaExistente.id})`);
@@ -237,9 +275,12 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
           resumen.zonasCreadas++;
           
           // Mapear múltiples variaciones
+          const claveOriginal = normalizeNameSearch(zonaObj.nombre);
+          const claveResultado = normalizeNameSearch(zona.nombre);
           mapeos.zonas[zonaObj.nombre] = zona.id;
-          mapeos.zonas[zonaObj.nombre.toUpperCase()] = zona.id;
+          mapeos.zonas[claveOriginal] = zona.id;
           mapeos.zonas[zona.nombre] = zona.id;
+          mapeos.zonas[claveResultado] = zona.id;
           
           zonasCreadas.push(zona.id);
           console.log(`✅ Nueva zona creada: ${zonaObj.nombre} → ${zona.nombre} (${zona.id})`);
@@ -263,9 +304,12 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
       
       if (colaboradorExistente) {
         // Mapear múltiples variaciones del nombre
-        mapeos.colaboradores[nombre] = colaboradorExistente.id;
-        mapeos.colaboradores[nombre.toUpperCase()] = colaboradorExistente.id;
-        mapeos.colaboradores[colaboradorExistente.nombre] = colaboradorExistente.id;
+  const claveOriginal = normalizeNameSearch(nombre);
+  const claveExistente = normalizeNameSearch(colaboradorExistente.nombre);
+  mapeos.colaboradores[nombre] = colaboradorExistente.id;
+  mapeos.colaboradores[claveOriginal] = colaboradorExistente.id;
+  mapeos.colaboradores[colaboradorExistente.nombre] = colaboradorExistente.id;
+  mapeos.colaboradores[claveExistente] = colaboradorExistente.id;
         
         console.log(`♻️ Usando colaborador existente: "${nombre}" → ${colaboradorExistente.nombre} (${colaboradorExistente.id})`);
       } else {
@@ -292,9 +336,12 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
           resumen.colaboradoresCreados++;
           
           // Mapear múltiples variaciones
+          const claveOriginal = normalizeNameSearch(nombre);
+          const claveResultado = normalizeNameSearch(colaborador.nombre);
           mapeos.colaboradores[nombre] = colaborador.id;
-          mapeos.colaboradores[nombre.toUpperCase()] = colaborador.id;
+          mapeos.colaboradores[claveOriginal] = colaborador.id;
           mapeos.colaboradores[colaborador.nombre] = colaborador.id;
+          mapeos.colaboradores[claveResultado] = colaborador.id;
           
           colaboradoresCreados.push(colaborador.id);
           console.log(`✅ Nuevo colaborador creado: ${nombreOriginal} (${colaborador.id})`);
@@ -319,11 +366,15 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
       
       if (operadorExistente) {
         // Mapear múltiples variaciones
+        const claveOriginal = normalizeNameSearch(nombre);
+        const claveExistente = normalizeNameSearch(operadorExistente.nombre);
         mapeos.operadores[nombre] = operadorExistente.id;
-        mapeos.operadores[nombre.toUpperCase()] = operadorExistente.id;
+        mapeos.operadores[claveOriginal] = operadorExistente.id;
         mapeos.operadores[operadorExistente.nombre] = operadorExistente.id;
+        mapeos.operadores[claveExistente] = operadorExistente.id;
         if (operadorExistente.codigo) {
           mapeos.operadores[operadorExistente.codigo] = operadorExistente.id;
+          mapeos.operadores[normalizeNameSearch(operadorExistente.codigo)] = operadorExistente.id;
         }
         
         console.log(`♻️ Usando operador existente: "${nombre}" → ${operadorExistente.nombre} (${operadorExistente.id})`);
@@ -352,10 +403,17 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
           resumen.operadoresCreados++;
           
           // Mapear múltiples variaciones
+          const claveOriginal = normalizeNameSearch(nombre);
+          const claveResultado = normalizeNameSearch(operador.nombre);
+          const claveCodigo = operador.codigo ? normalizeNameSearch(operador.codigo) : null;
           mapeos.operadores[nombre] = operador.id;
-          mapeos.operadores[nombre.toUpperCase()] = operador.id;
+          mapeos.operadores[claveOriginal] = operador.id;
           mapeos.operadores[operador.nombre] = operador.id;
-          mapeos.operadores[operador.codigo] = operador.id;
+          mapeos.operadores[claveResultado] = operador.id;
+          if (operador.codigo) {
+            mapeos.operadores[operador.codigo] = operador.id;
+            if (claveCodigo) mapeos.operadores[claveCodigo] = operador.id;
+          }
           
           operadoresCreados.push(operador.id);
           console.log(`✅ Nuevo operador creado: ${nombreOriginal} (${operador.id})`);
@@ -369,9 +427,10 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
   // ✅ 4. PRODUCTOS (UPSERT mejorado con constraint operador_id + nombre)
   if (setters.setProductos) {
     for (const [nombreNormalizado, datos] of entidadesUnicas.productos) {
-      const operadorId = mapeos.operadores[datos.operador] || 
-                        mapeos.operadores[datos.operador?.toUpperCase()] || 
-                        null;
+  const operadorKey = normalizeNameSearch(datos.operador);
+  const operadorId = mapeos.operadores[datos.operador] || 
+        (operadorKey ? mapeos.operadores[operadorKey] : undefined) || 
+        null;
       
       // ✅ BÚSQUEDA CRÍTICA: Verificar constraint único operador_id + nombre
       let productoExistente = null;
@@ -395,9 +454,13 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
       
       if (productoExistente) {
         // Mapear múltiples variaciones
-        mapeos.productos[datos.nombre] = productoExistente.id;
-        mapeos.productos[nombreNormalizado] = productoExistente.id;
-        mapeos.productos[productoExistente.nombre] = productoExistente.id;
+    const claveOriginal = normalizeNameSearch(datos.nombre);
+    const claveExistente = normalizeNameSearch(productoExistente.nombre);
+    mapeos.productos[datos.nombre] = productoExistente.id;
+    mapeos.productos[nombreNormalizado] = productoExistente.id;
+    mapeos.productos[productoExistente.nombre] = productoExistente.id;
+    mapeos.productos[claveOriginal] = productoExistente.id;
+    mapeos.productos[claveExistente] = productoExistente.id;
         
         console.log(`♻️ Usando producto existente: "${datos.nombre}" → ${productoExistente.nombre} (${productoExistente.id})`);
       } else {
@@ -428,8 +491,10 @@ export async function createMissingEntitiesLocal(entidadesUnicas, entitiesExiste
           resumen.productosCreados++;
           
           // Mapear múltiples variaciones
+          const claveOriginal = normalizeNameSearch(datos.nombre);
           mapeos.productos[datos.nombre] = producto.id;
           mapeos.productos[nombreNormalizado] = producto.id;
+          mapeos.productos[claveOriginal] = producto.id;
           
           console.log(`✅ Nuevo producto creado: ${datos.nombre} (${producto.id}) para operador ${operadorId}`);
         } catch (error) {
@@ -491,16 +556,22 @@ export function recopilarEntidadesUnicas(rows, mapping) {
 
     const zona = get("zona_id");
     if (zona) {
-      // Normalizar zona a PENÍNSULA o CANARIAS
       const zonaNormalizada = normalizeZoneName(zona);
-      
+      const claveZona = normalizeNameSearch(zonaNormalizada);
+
       zonas.add(
         JSON.stringify({
-          nombre: zonaNormalizada, // Usar nombre normalizado
-          original: zona.trim(),   // Mantener referencia al original
-          nombre_normalizado: zonaNormalizada.toUpperCase(),
-          impuesto_tipo: zonaNormalizada === 'CANARIAS' ? 'IGIC' : 'IVA',
-          impuesto_pct: zonaNormalizada === 'CANARIAS' ? 0.07 : 0.21,
+          nombre: zonaNormalizada,
+          original: zona.trim(),
+          nombre_normalizado: claveZona,
+          impuesto_tipo:
+            zonaNormalizada === 'Canarias' ? 'IGIC' :
+            zonaNormalizada === 'Ceuta' || zonaNormalizada === 'Melilla' ? 'IPSI' :
+            'IVA',
+          impuesto_pct:
+            zonaNormalizada === 'Canarias' ? 0.07 :
+            zonaNormalizada === 'Ceuta' || zonaNormalizada === 'Melilla' ? 0.07 :
+            0.21,
         }),
       );
     }
