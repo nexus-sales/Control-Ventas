@@ -31,40 +31,36 @@ export function DataProvider({ children }) {
   const supabaseAvailableRef = useRef(supabaseConfigured);
   const remoteEnabled = supabaseConfigured && isLogged && !offlineMode;
   
-  // ✅ FIX CRÍTICO: Inicializar estado con datos de localStorage INMEDIATAMENTE
-  const [data, setData] = useState(() => {
-    console.log('🔄 Inicializando estado con datos de localStorage...');
-    
-    // Ejecutar seeds si son necesarios ANTES de cargar datos
-    runSeedIfNeeded();
-    
-    const initialData = {
-      ventas: loadFromStorage('appcv_ventas', []),
-      colaboradores: loadFromStorage('appcv_colaboradores', []),
-      niveles: loadFromStorage('appcv_niveles', []),
-      operadores: loadFromStorage('appcv_operadores', []),
-      productos: loadFromStorage('appcv_productos', []),
-      zonas: loadFromStorage('appcv_zonas', []),
-      reglas: loadFromStorage('appcv_reglas', []),
-      liquidaciones: loadFromStorage('appcv_liquidaciones', []),
-      decomisiones: loadFromStorage('appcv_decomisiones', []),
-    };
-    
-    console.log('📊 Estado inicial cargado:', {
-      ventas: initialData.ventas.length,
-      colaboradores: initialData.colaboradores.length,
-      niveles: initialData.niveles.length,
-      operadores: initialData.operadores.length,
-      productos: initialData.productos.length,
-      zonas: initialData.zonas.length,
-    });
-    
-    return initialData;
+  const [data, setData] = useState({
+    ventas: [],
+    colaboradores: [],
+    niveles: [],
+    operadores: [],
+    productos: [],
+    zonas: [],
+    reglas: [],
+    liquidaciones: [],
+    decomisiones: [],
   });
   
-  // ✅ FIX CRÍTICO: Marcar como inicializado INMEDIATAMENTE porque ya tenemos datos
-  const [dataInitialized] = useState(true);
+  const [dataInitialized, setDataInitialized] = useState(() => {
+    const debugFlag = localStorage.getItem("__app_force_initialized") === "true";
+    return debugFlag || false;
+  });
   const [isSupabaseAvailable, setIsSupabaseAvailable] = useState(remoteEnabled);
+
+  // BYPASS TEMPORAL: Cargar solo desde localStorage, NO desde Supabase
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const debugEnabled = localStorage.getItem("__app_debug_enabled") === "true";
+      if (debugEnabled && !window.__APP_DEBUG__) {
+        window.__APP_DEBUG__ = { dataInitEvents: [] };
+      }
+    } catch (error) {
+      console.warn("[DataProvider] No se pudo inicializar debug dashboard", error);
+    }
+  }, []);
 
   const recordDebugEvent = useCallback((label, payload = {}) => {
     if (typeof window === "undefined") return;
@@ -106,15 +102,29 @@ export function DataProvider({ children }) {
 
     try {
       if (upserts.length) {
-        const { error } = await upsert(tableName, upserts);
+        const { data: insertedData, error } = await upsert(tableName, upserts);
         if (error) throw error;
         
-        console.log(`✅ Sincronizados ${upserts.length} registros de ${collectionKey} con Supabase`);
+        // ✅ NUEVA LÓGICA: Actualizar IDs locales con los IDs reales de Supabase
+        if (insertedData && insertedData.length > 0 && collectionKey === 'ventas') {
+          console.log('🔄 Actualizando IDs locales con IDs reales de Supabase:', insertedData.length);
+          // Programar recarga después de un delay para evitar dependencia circular
+          setTimeout(() => {
+            // Forzar recarga solo de ventas desde Supabase
+            fetchAllData().then(({ data: remoteData }) => {
+              if (remoteData?.ventas) {
+                setData(prev => ({ ...prev, ventas: remoteData.ventas }));
+                saveToStorage('appcv_ventas', remoteData.ventas);
+              }
+            }).catch(error => {
+              console.warn('Error recargando ventas tras inserción:', error);
+            });
+          }, 500);
+        }
       }
       if (deletions.length) {
         const { error } = await removeByIds(tableName, deletions);
         if (error) throw error;
-        console.log(`🗑️ Eliminados ${deletions.length} registros de ${collectionKey} de Supabase`);
       }
       setIsSupabaseAvailable(true);
       supabaseAvailableRef.current = true;
@@ -122,13 +132,13 @@ export function DataProvider({ children }) {
       console.error(`[DataProvider] Error sincronizando ${collectionKey}:`, error);
       
       // Solo activar modo offline para errores de conectividad, no de validación
-      const isConnectivityError = error.code === 'PGRST301' || 
-                error.code === 'SUPABASE_OFFLINE' ||
-                error.code === 'FETCH_TIMEOUT' ||
-                error.message?.includes('network') || 
-                error.message?.includes('fetch') ||
-                error.message?.includes('timeout') ||
-                error.message?.includes('connection');
+  const isConnectivityError = error.code === 'PGRST301' || 
+              error.code === 'SUPABASE_OFFLINE' ||
+              error.code === 'FETCH_TIMEOUT' ||
+              error.message?.includes('network') || 
+              error.message?.includes('fetch') ||
+              error.message?.includes('timeout') ||
+              error.message?.includes('connection');
       
       if (isConnectivityError) {
         setIsSupabaseAvailable(false);
@@ -151,75 +161,126 @@ export function DataProvider({ children }) {
     });
   }, [persistCollection, remoteEnabled]);
 
-  // ✅ FIX: Función simplificada de sincronización con Supabase (OPCIONAL)
-  const syncWithSupabase = useCallback(async () => {
-    if (!remoteEnabled || !supabaseAvailableRef.current) {
-      console.log('❌ Sincronización con Supabase no disponible');
-      return false;
-    }
+  const loadAllData = useCallback(async ({ forceRemote = false } = {}) => {
+    recordDebugEvent("load:start", { forceRemote, supabaseConfigured, remoteEnabled, offlineMode, supabaseAvailable: supabaseAvailableRef.current });
 
-    recordDebugEvent("sync:start", { remoteEnabled, supabaseAvailable: supabaseAvailableRef.current });
+    let loadedData = null;
 
-    try {
-      const { data: remoteData, errors } = await fetchAllData();
-      if (!errors.length && remoteData) {
-        console.log('✅ Datos sincronizados desde Supabase:', {
-          ventas: remoteData.ventas?.length ?? 0,
-          colaboradores: remoteData.colaboradores?.length ?? 0,
-          niveles: remoteData.niveles?.length ?? 0,
-          operadores: remoteData.operadores?.length ?? 0,
-          productos: remoteData.productos?.length ?? 0,
-          zonas: remoteData.zonas?.length ?? 0,
-        });
+    const canAttemptRemote = remoteEnabled && (forceRemote || supabaseAvailableRef.current);
 
-        // Actualizar estado Y localStorage
-        setData(prev => ({ ...prev, ...remoteData }));
-        Object.entries(remoteData).forEach(([key, value]) => {
-          saveToStorage(`appcv_${key}`, value);
-        });
-
-        setIsSupabaseAvailable(true);
-        supabaseAvailableRef.current = true;
-        recordDebugEvent("sync:success", { synced: Object.keys(remoteData) });
-        return true;
-      } else {
-        recordDebugEvent("sync:error", { errors });
-        return false;
-      }
-    } catch (error) {
-      recordDebugEvent("sync:exception", { message: error.message });
-      console.error('[DataProvider] Error en sincronización con Supabase:', error);
-      
-      const isConnectivityError = error.code === 'PGRST301' || 
+    if (canAttemptRemote) {
+      try {
+        const { data: remoteData, errors } = await fetchAllData();
+        if (!errors.length) {
+          loadedData = remoteData;
+          setIsSupabaseAvailable(true);
+          supabaseAvailableRef.current = true;
+          Object.entries(remoteData).forEach(([key, value]) => {
+            saveToStorage(`appcv_${key}`, value);
+          });
+          recordDebugEvent("load:remote-success", {
+            ventas: remoteData.ventas?.length ?? 0,
+            colaboradores: remoteData.colaboradores?.length ?? 0,
+            productos: remoteData.productos?.length ?? 0,
+          });
+        } else {
+          recordDebugEvent("load:remote-error", { errors });
+          
+          // Solo activar modo offline si hay errores de conectividad
+          const hasConnectivityErrors = errors.some(({ error }) => {
+            const err = error || {};
+            return err.code === 'PGRST301' ||
+                   err.code === 'SUPABASE_OFFLINE' ||
+                   err.code === 'FETCH_TIMEOUT' ||
+                   err.message?.includes('network') ||
+                   err.message?.includes('fetch') ||
+                   err.message?.includes('timeout') ||
+                   err.message?.includes('connection');
+          });
+          
+          if (hasConnectivityErrors) {
+            setIsSupabaseAvailable(false);
+            supabaseAvailableRef.current = false;
+            if (typeof activateOfflineMode === 'function') {
+              activateOfflineMode('data-remote-error');
+            }
+          } else {
+            console.warn('[DataProvider] Errores de validación detectados, manteniendo conexión:', errors);
+          }
+        }
+      } catch (error) {
+        recordDebugEvent("load:remote-exception", { message: error.message });
+        
+        // Solo activar modo offline para errores de conectividad
+  const isConnectivityError = error.code === 'PGRST301' || 
                                     error.code === 'SUPABASE_OFFLINE' ||
             error.code === 'FETCH_TIMEOUT' ||
                                     error.message?.includes('network') || 
                                     error.message?.includes('fetch') ||
                                     error.message?.includes('timeout') ||
                                     error.message?.includes('connection');
-      
-      if (isConnectivityError) {
-        setIsSupabaseAvailable(false);
-        supabaseAvailableRef.current = false;
-        if (typeof activateOfflineMode === 'function') {
-          activateOfflineMode('sync-exception');
+        
+        if (isConnectivityError) {
+          setIsSupabaseAvailable(false);
+          supabaseAvailableRef.current = false;
+          if (typeof activateOfflineMode === 'function') {
+            activateOfflineMode('data-remote-exception');
+          }
+        } else {
+          console.warn('[DataProvider] Error de validación/constraint, manteniendo conexión:', error.message);
         }
       }
-      return false;
     }
-  }, [recordDebugEvent, remoteEnabled, activateOfflineMode]);
 
-  // ✅ Efecto para sincronizar con Supabase DESPUÉS de que los datos locales estén cargados
+    if (!loadedData) {
+      const localData = {
+        ventas: loadFromStorage('appcv_ventas', []),
+        colaboradores: loadFromStorage('appcv_colaboradores', []),
+        niveles: loadFromStorage('appcv_niveles', []),
+        operadores: loadFromStorage('appcv_operadores', []),
+        productos: loadFromStorage('appcv_productos', []),
+        zonas: loadFromStorage('appcv_zonas', []),
+        reglas: loadFromStorage('appcv_reglas', []),
+        liquidaciones: loadFromStorage('appcv_liquidaciones', []),
+        decomisiones: loadFromStorage('appcv_decomisiones', []),
+      };
+      loadedData = localData;
+      recordDebugEvent("load:local", {
+        ventas: localData.ventas.length,
+        colaboradores: localData.colaboradores.length,
+        productos: localData.productos.length,
+      });
+    }
+
+    setData(prev => ({ ...prev, ...loadedData }));
+    setDataInitialized(true);
+    localStorage.removeItem("__app_force_initialized");
+    recordDebugEvent("load:end", { initialized: true, keys: Object.keys(loadedData || {}) });
+    return loadedData;
+  }, [recordDebugEvent, supabaseConfigured, remoteEnabled, offlineMode, activateOfflineMode]);
+
+  // Cargar datos cuando el componente se monta
   useEffect(() => {
-    if (remoteEnabled && dataInitialized) {
-      console.log('🔗 Intentando sincronizar con Supabase...');
-      syncWithSupabase();
-    }
-  }, [remoteEnabled, dataInitialized, syncWithSupabase]);
+    console.log('DataProvider - Iniciando carga de datos...');
+    // Cargar datos de semilla si son necesarios
+    runSeedIfNeeded();
+    loadAllData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // loadAllData se define con useCallback y es estable
 
-  // Guardar datos en localStorage Y sincronizar con Supabase
+  useEffect(() => {
+    if (remoteEnabled) {
+      supabaseAvailableRef.current = true;
+      setIsSupabaseAvailable(true);
+      loadAllData({ forceRemote: true });
+    } else {
+      setIsSupabaseAvailable(false);
+    }
+  }, [remoteEnabled, loadAllData]);
+
+  // Guardar datos solo en localStorage (SIN SUPABASE)
   const saveData = useCallback(async (newData) => {
-    console.log('💾 Guardando datos:', newData);
+    console.log('DataProvider - Guardando dataset completo:', newData);
     setData(prev => {
       const next = { ...prev, ...newData };
       Object.entries(newData).forEach(([key, value]) => {
@@ -233,11 +294,11 @@ export function DataProvider({ children }) {
 
   // Función para recargar datos
   const refreshData = useCallback(async () => {
-    const success = await syncWithSupabase();
-    return success;
-  }, [syncWithSupabase]);
+    await loadAllData({ forceRemote: true });
+    return true;
+  }, [loadAllData]);
 
-  // Funciones específicas por entidad para actualizar estado local Y sincronizar
+  // Funciones específicas por entidad para actualizar estado local Y Sincronizar
   const createCollectionSetter = useCallback((collectionKey) => {
     const storageKey = `appcv_${collectionKey}`;
     return (update) => {
@@ -265,7 +326,7 @@ export function DataProvider({ children }) {
   const setLiquidaciones = useMemo(() => createCollectionSetter('liquidaciones'), [createCollectionSetter]);
   const setDecomisiones = useMemo(() => createCollectionSetter('decomisiones'), [createCollectionSetter]);
 
-  // Insertar ventas
+  // Insertar ventas solo en localStorage y supabase cuando aplique
   const insertVentas = useCallback(async (ventas) => {
     if (!Array.isArray(ventas) || ventas.length === 0) {
       console.warn('insertVentas: datos inválidos');
@@ -286,7 +347,7 @@ export function DataProvider({ children }) {
     saveData,
     refreshData,
     insertVentas,
-    syncWithSupabase,
+    loadAllData,
     syncAll: refreshData,
     // Funciones específicas por entidad
     setVentas,
@@ -307,7 +368,7 @@ export function DataProvider({ children }) {
     saveData, 
     refreshData, 
     insertVentas, 
-    syncWithSupabase,
+    loadAllData,
     setVentas,
     setProductos,
     setOperadores,
