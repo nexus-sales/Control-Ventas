@@ -143,7 +143,7 @@ const TABLE_ALLOWED_FIELDS = {
   ],
 };
 
-const DEFAULT_FETCH_TIMEOUT = 15000;
+const DEFAULT_FETCH_TIMEOUT = 45000;
 
 const withTimeout = (promise, ms, tableName) => new Promise((resolve) => {
   const timer = setTimeout(() => {

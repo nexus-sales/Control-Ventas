@@ -6,7 +6,6 @@ import Loading from './common/Loading';
 export default function ImportExcelMapperWrapper() {
   const { 
     data, 
-    refreshData, 
     dataInitialized,
     setVentas,
     setProductos,
@@ -15,14 +14,18 @@ export default function ImportExcelMapperWrapper() {
     setZonas
   } = useContext(DataCtx);
   
-  // Función para recargar datos después del éxito
-  const onImportSuccess = async () => {
-    console.log('🔄 Recargando datos después de importación exitosa...');
-    try {
-      await refreshData();
-      console.log('✅ Datos recargados correctamente');
-    } catch (error) {
-      console.error('❌ Error recargando datos:', error);
+  // ✅ FIX CRÍTICO: Función de éxito SIN refreshData para evitar bucles infinitos
+  const onImportSuccess = async (result) => {
+    console.log('✅ Importación completada exitosamente');
+    console.log('📊 Resumen:', result);
+    
+    // ✅ NO hacer refreshData() - los datos ya están en localStorage
+    // ✅ El DataContext los carga automáticamente
+    // ✅ La sincronización con Supabase ocurre en segundo plano
+    
+    // Opcional: mostrar mensaje de éxito adicional
+    if (result?.ventasCreadas > 0) {
+      console.log(`🎉 ${result.ventasCreadas} ventas importadas y visibles inmediatamente`);
     }
   };
 
@@ -45,7 +48,7 @@ export default function ImportExcelMapperWrapper() {
       setColaboradores={setColaboradores}
       setZonas={setZonas}
       
-      // Callback de éxito
+      // Callback de éxito SIN refreshData
       onImportSuccess={onImportSuccess}
     />
   );

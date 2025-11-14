@@ -151,7 +151,7 @@ export function DataProvider({ children }) {
     });
   }, [persistCollection, remoteEnabled]);
 
-  // ✅ FIX: Función simplificada de sincronización con Supabase (OPCIONAL)
+  // ✅ FIX CRÍTICO: Sincronización inteligente que preserva datos locales
   const syncWithSupabase = useCallback(async () => {
     if (!remoteEnabled || !supabaseAvailableRef.current) {
       console.log('❌ Sincronización con Supabase no disponible');
@@ -163,7 +163,7 @@ export function DataProvider({ children }) {
     try {
       const { data: remoteData, errors } = await fetchAllData();
       if (!errors.length && remoteData) {
-        console.log('✅ Datos sincronizados desde Supabase:', {
+        console.log('📥 Datos recibidos desde Supabase:', {
           ventas: remoteData.ventas?.length ?? 0,
           colaboradores: remoteData.colaboradores?.length ?? 0,
           niveles: remoteData.niveles?.length ?? 0,
@@ -172,15 +172,36 @@ export function DataProvider({ children }) {
           zonas: remoteData.zonas?.length ?? 0,
         });
 
-        // Actualizar estado Y localStorage
-        setData(prev => ({ ...prev, ...remoteData }));
-        Object.entries(remoteData).forEach(([key, value]) => {
-          saveToStorage(`appcv_${key}`, value);
+        // ✅ LÓGICA INTELIGENTE: Comparar contra localStorage REAL, no estado React
+        const mergedData = {};
+        Object.entries(remoteData).forEach(([key, remoteValue]) => {
+          // Leer directamente desde localStorage
+          const currentLocalArray = loadFromStorage(`appcv_${key}`, []);
+          
+          if (Array.isArray(remoteValue) && Array.isArray(currentLocalArray)) {
+            if (remoteValue.length > currentLocalArray.length) {
+              console.log(`🔄 Actualizando ${key}: ${currentLocalArray.length} → ${remoteValue.length} registros (más datos en Supabase)`);
+              mergedData[key] = remoteValue;
+              saveToStorage(`appcv_${key}`, remoteValue);
+            } else {
+              console.log(`💾 Preservando ${key} local: ${currentLocalArray.length} registros (remoto: ${remoteValue.length} - manteniendo local)`);
+              mergedData[key] = currentLocalArray; // Conservar datos locales
+            }
+          } else {
+            // Para datos no-array, usar remoto si existe
+            mergedData[key] = remoteValue || currentLocalArray;
+            if (remoteValue) {
+              saveToStorage(`appcv_${key}`, remoteValue);
+            }
+          }
         });
+
+        // Solo actualizar estado con los datos mejorados
+        setData(prev => ({ ...prev, ...mergedData }));
 
         setIsSupabaseAvailable(true);
         supabaseAvailableRef.current = true;
-        recordDebugEvent("sync:success", { synced: Object.keys(remoteData) });
+        recordDebugEvent("sync:success", { merged: Object.keys(mergedData) });
         return true;
       } else {
         recordDebugEvent("sync:error", { errors });
@@ -207,7 +228,7 @@ export function DataProvider({ children }) {
       }
       return false;
     }
-  }, [recordDebugEvent, remoteEnabled, activateOfflineMode]);
+  }, [recordDebugEvent, remoteEnabled, activateOfflineMode]); // ✅ REMOVIDO 'data' de dependencias
 
   // ✅ Efecto para sincronizar con Supabase DESPUÉS de que los datos locales estén cargados
   useEffect(() => {
