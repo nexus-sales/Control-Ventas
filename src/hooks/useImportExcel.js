@@ -2,7 +2,7 @@
 // Hook personalizado para toda la lógica de importación Excel/CSV - CORREGIDO
 
 import { useState, useMemo, useCallback, useContext } from "react";
-import { DataCtx } from "../context/contexts";
+import { DataContext } from "../context/DataContextDef";
 import { useAuth } from "./useAuth";
 import {
   autoguessMapping,
@@ -56,7 +56,7 @@ export function useImportExcel({
   onImportSuccess,
 }) {
   // Permite usar setters del contexto si no se pasan por props
-  const dataCtx = useContext(DataCtx);
+  const dataCtx = useContext(DataContext);
   const { startImporting, finishImporting } = useAuth();
   const setVentas = propSetVentas || dataCtx?.setVentas;
   const setProductos = propSetProductos || dataCtx?.setProductos;

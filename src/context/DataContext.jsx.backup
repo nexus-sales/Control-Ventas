@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useContext, useRef } from 'react';
 import { AuthCtx } from './contexts';
-import { DataCtx } from './contexts';
+import { DataContext } from './DataContextDef';
 import { fetchAllData, TABLES, upsert, removeByIds } from '../services/supabaseService';
 import { isSupabaseConfigured } from '../config/env';
 import { runSeedIfNeeded } from '../data/seeds';
@@ -383,8 +383,8 @@ export function DataProvider({ children }) {
   ]);
 
   return (
-    <DataCtx.Provider value={value}>
+    <DataContext.Provider value={value}>
       {children}
-    </DataCtx.Provider>
+    </DataContext.Provider>
   );
 }

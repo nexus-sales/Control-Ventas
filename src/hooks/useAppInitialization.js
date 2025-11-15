@@ -1,7 +1,7 @@
 import { useContext } from 'react';
-import { DataCtx } from '../context/contexts';
+import { DataContext } from '../context/DataContextDef';
 
 export function useAppInitialization() {
-  const context = useContext(DataCtx);
+  const context = useContext(DataContext);
   return { dataInitialized: context?.dataInitialized || false };
 }

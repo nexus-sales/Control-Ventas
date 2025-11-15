@@ -80,4 +80,4 @@ export default function AppCVv2() {
 }
 
 // Exportar contextos para compatibilidad
-export { AuthCtx, DataCtx } from './context/contexts';
+export { AuthCtx } from './context/contexts';

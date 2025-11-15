@@ -1,0 +1,101 @@
+
+��� AUDITORÍA COMPLETA DEL PROYECTO CONTROL VENTAS
+Fecha: sá., 15 de nov. de 2025 11:52:50
+=================================================
+
+��� 1. ESTRUCTURA DEL PROYECTO:
+------------------------------
+✅ package.json encontrado
+   Nombre del proyecto: control-ventas
+✅ Directorio src/ encontrado
+   Componentes encontrados: 132
+
+��� 2. ANÁLISIS DE DEPENDENCIAS:
+------------------------------
+✅ @supabase/supabase-js eliminado correctamente
+   Dependencias principales:
+     "dependencies": {
+     "@radix-ui/react-tooltip": "^1.2.8",
+     "exceljs": "^4.4.0",
+     "file-saver": "^2.0.5",
+     "js-sha256": "^0.11.1",
+     "lucide-react": "^0.544.0",
+     "papaparse": "^5.5.3",
+     "react": "^19.1.1",
+     "react-dom": "^19.1.1",
+     "react-router-dom": "^6.30.1"
+     "devDependencies": {
+     "@eslint/js": "^9.35.0",
+     "@testing-library/jest-dom": "^6.9.1",
+     "@testing-library/react": "^16.3.0",
+     "@vitejs/plugin-react": "^5.0.2",
+     "autoprefixer": "^10.4.21",
+     "eslint": "^9.35.0",
+     "eslint-plugin-react-hooks": "^5.2.0",
+     "eslint-plugin-react-refresh": "^0.4.20",
+     "globals": "^16.4.0",
+
+��� 3. RASTROS DE SUPABASE EN EL CÓDIGO:
+--------------------------------------
+❌ PROBLEMA: Archivos con rastros de Supabase:
+     ./src/components/auth/ForgotPasswordScreen.jsx
+       50:      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+     ./src/services/entityCreator.js
+       42:// Versiones locales (sin supabase) para crear entidades y mapearlas en memoria
+     ./dist/assets/index-A8UYcKeu.js
+       118:          `,...h}),t.jsx("button",{type:"button",onClick:E,className:"absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",children:b?t.jsx("svg",{className:"w-5 h-5",fill:"none",stroke:"currentColor",viewBox:"0 0 24 24",children:t.jsx("path",{strokeLinecap:"round",strokeLinejoin:"round",strokeWidth:2,d:"M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"})}):t.jsxs("svg",{className:"w-5 h-5",fill:"none",stroke:"currentColor",viewBox:"0 0 24 24",children:[t.jsx("path",{strokeLinecap:"round",strokeLinejoin:"round",strokeWidth:2,d:"M15 12a3 3 0 11-6 0 3 3 0 016 0z"}),t.jsx("path",{strokeLinecap:"round",strokeLinejoin:"round",strokeWidth:2,d:"M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"})]})})]}),d&&p&&l&&t.jsxs("div",{className:"space-y-2",children:[t.jsx("div",{className:"w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700",children:t.jsx("div",{className:`h-2 rounded-full transition-all duration-300 ${_(x.score)}`,style:{width:`${x.score}%`}})}),t.jsxs("div",{className:"flex justify-between items-center",children:[t.jsx("span",{className:`text-sm font-medium ${k(x.score)}`,children:x.message}),t.jsxs("span",{className:"text-xs text-gray-500 dark:text-gray-400",children:[x.score,"%"]})]}),x.suggestions.length>0&&x.score<70&&t.jsxs("div",{className:"bg-gray-50 dark:bg-gray-800 rounded-lg p-3",children:[t.jsx("p",{className:"text-xs text-gray-600 dark:text-gray-400 mb-1",children:"Para mejorar tu contraseña:"}),t.jsx("ul",{className:"text-xs text-gray-500 dark:text-gray-500 space-y-1",children:x.suggestions.slice(0,3).map((O,w)=>t.jsxs("li",{className:"flex items-center",children:[t.jsx("span",{className:"w-1 h-1 bg-gray-400 rounded-full mr-2"}),O]},w))})]})]})]})}function o4({onBackToLogin:l}){const[r,i]=y.useState(""),[o,d]=y.useState(!1),[m,h]=y.useState(!1),[b,f]=y.useState(""),[x,g]=y.useState(!1),{offlineMode:p}=Ws();y.useEffect(()=>{p&&f("La recuperación de contraseña no está disponible en modo offline. Conéctate a internet para continuar.")},[p]);const v=async E=>{if(E.preventDefault(),!o){f("Por favor, ingresa un email válido.");return}if(p){f("La recuperación de contraseña no está disponible en modo offline. Conéctate a internet para continuar.");return}h(!0),f("");try{if(typeof navigator<"u"&&navigator.onLine===!1){f("No hay conexión a internet. Verifica tu conectividad."),g(!1);return}console.log("Attempting to send reset email to:",r);const{data:_,error:k}=await supabase.auth.resetPasswordForEmail(r,{redirectTo:`${window.location.origin}/reset-password`});console.log("Reset password response:",{data:_,error:k}),k?(console.error("Supabase reset password error:",k),k.message.includes("fetch")?f("Error de conexión. Verifica tu internet y que Supabase esté configurado correctamente."):k.message.includes("Invalid email")?f("El email ingresado no es válido."):k.message.includes("Email not confirmed")?f("El email no está confirmado. Contacta al administrador."):k.message.includes("User not found")?f("No existe una cuenta con ese email."):f(`Error: ${k.message}`),g(!1)):(console.log("Reset email sent successfully"),f("Se ha enviado un enlace de recuperación a tu email. Revisa tu bandeja de entrada y la carpeta de spam."),g(!0))}catch(_){console.error("Unexpected error sending reset email:",_),_.name==="TypeError"&&_.message.includes("fetch")?f("Error de conexión. Verifica tu internet y que el servidor esté disponible."):_.name==="AbortError"?f("La solicitud tardó demasiado. Inténtalo de nuevo."):f(`Error inesperado: ${_.message||"Problema de conexión"}`),g(!1)}finally{h(!1)}},N=E=>{i(E.target.value),f("")};return t.jsxs("div",{className:"min-h-screen grid place-items-center bg-gradient-to-br from-sky-50 via-indigo-50 to-emerald-50 dark:from-gray-900 dark:via-slate-900 dark:to-gray-800 animate-fadeIn relative overflow-hidden",children:[t.jsxs("div",{className:"absolute inset-0 opacity-10 dark:opacity-5",children:[t.jsx("div",{className:"absolute top-1/4 left-1/4 w-32 h-32 bg-blue-500 rounded-full blur-3xl animate-pulse-slow"}),t.jsx("div",{className:"absolute bottom-1/4 right-1/4 w-40 h-40 bg-emerald-500 rounded-full blur-3xl animate-pulse-slow animate-delay-300"}),t.jsx("div",{className:"absolute top-3/4 left-3/4 w-24 h-24 bg-indigo-500 rounded-full blur-3xl animate-pulse-slow animate-delay-500"})]}),t.jsxs(ge,{className:"animate-slideUp card-shadow hover-lift smooth-transition relative z-10",children:[t.jsxs("div",{className:"text-center mb-6",children:[t.jsx($e,{children:"Recuperar Contraseña"}),t.jsx("p",{className:"text-gray-600 dark:text-gray-400 text-sm mt-2",children:"Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña"})]}),x?t.jsxs("div",{className:"w-80 text-center space-y-4",children:[t.jsxs("div",{className:"bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800",children:[t.jsx("div",{className:"flex items-center justify-center mb-2",children:t.jsx("svg",{className:"w-8 h-8 text-green-500",fill:"none",stroke:"currentColor",viewBox:"0 0 24 24",children:t.jsx("path",{strokeLinecap:"round",strokeLinejoin:"round",strokeWidth:2,d:"M5 13l4 4L19 7"})})}),t.jsx("p",{className:"text-green-700 dark:text-green-300 text-sm",children:b})]}),t.jsxs("div",{className:"text-gray-600 dark:text-gray-400 text-sm space-y-2",children:[t.jsx("p",{children:"Si no recibes el email en unos minutos:"}),t.jsxs("ul",{className:"text-xs space-y-1",children:[t.jsx("li",{children:"• Revisa tu carpeta de spam"}),t.jsx("li",{children:"• Verifica que el email sea correcto"}),t.jsx("li",{children:"• Contacta al administrador si persiste el problema"})]})]}),t.jsx("button",{onClick:l,className:"w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl transition-colors duration-200",children:"Volver al login"})]}):t.jsxs("form",{onSubmit:v,className:"grid gap-4 w-80",children:[t.jsxs("div",{className:"text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded",children:[t.jsxs("p",{children:["Estado: ",navigator.onLine?"🟢 Online":"🔴 Offline"]}),t.jsxs("p",{children:["Modo: ",p?"🔴 Offline Mode":"🟢 Online Mode"]}),t.jsxs("p",{children:["Supabase: ","🟢 Configurado"]})]}),t.jsx(Sp,{value:r,onChange:N,onValidationChange:d,placeholder:"Tu email",required:!0}),b&&!x&&t.jsx("div",{className:"text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800",children:t.jsxs("div",{className:"flex items-center",children:[t.jsx("svg",{className:"w-4 h-4 mr-2",fill:"none",stroke:"currentColor",viewBox:"0 0 24 24",children:t.jsx("path",{strokeLinecap:"round",strokeLinejoin:"round",strokeWidth:2,d:"M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"})}),b]})}),t.jsx("button",{type:"submit",disabled:!o||m,className:`
+       121:              `,children:m?t.jsxs("div",{className:"flex items-center justify-center",children:[t.jsxs("svg",{className:"animate-spin -ml-1 mr-3 h-4 w-4 text-white",xmlns:"http://www.w3.org/2000/svg",fill:"none",viewBox:"0 0 24 24",children:[t.jsx("circle",{className:"opacity-25",cx:"12",cy:"12",r:"10",stroke:"currentColor",strokeWidth:"4"}),t.jsx("path",{className:"opacity-75",fill:"currentColor",d:"M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"})]}),"Enviando..."]}):"Enviar enlace de recuperación"}),t.jsxs("div",{className:"flex flex-col gap-2",children:[t.jsx("button",{type:"button",onClick:async()=>{try{const E=await fetch("https://uplfdvojvtnbzajncojc.supabase.co/rest/v1/",{method:"GET",headers:{apikey:"***REMOVED-SUPABASE-ANON-KEY-OLD***",Authorization:"Bearer ***REMOVED-SUPABASE-ANON-KEY-OLD***"}});E.ok?f("✅ Conexión con Supabase exitosa"):f(`❌ Error de conexión: ${E.status}`)}catch(E){f(`❌ Error de red: ${E.message}`)}},className:"text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-2 py-1 rounded transition-colors duration-200",children:"🔧 Probar conexión"}),t.jsx("button",{type:"button",onClick:l,className:"text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm transition-colors duration-200",children:"← Volver al login"})]})]})]})]})}function i4(){const[l,r]=y.useState(""),[i,o]=y.useState(""),[d,m]=y.useState(!1),[h,b]=y.useState(""),[f,x]=y.useState(!1),[g,p]=y.useState(!1),[v,N]=y.useState(!1),[E,_]=y.useState(0),[k,O]=y.useState(5),[w,A]=y.useState(!1),[T,z]=y.useState(!1),[X,U]=y.useState(!1),[W,de]=y.useState(null),[ie,re]=y.useState(!1),[ue,ae]=y.useState(""),[te,le]=y.useState(!1),[M,V]=y.useState(""),{login:Y,registerUser:ce}=Ws();y.useEffect(()=>{C(),ar.isBlocked()&&R();const G=localStorage.getItem("rememberedEmail"),H=localStorage.getItem("rememberMe")==="true";G&&H&&(r(G),A(!0),G.includes("@")&&G.includes(".")&&m(!0))},[]);const C=()=>{const G=ar.isBlocked(),H=ar.getBlockedTimeRemaining(),se=ar.getRemainingAttempts();N(G),_(H),O(se)},R=()=>{const G=setInterval(()=>{const H=ar.getBlockedTimeRemaining();_(H),H<=0&&(N(!1),O(5),clearInterval(G))},1e3)},q=async G=>{if(G.preventDefault(),ae(""),le(!1),!l||!i||!M){ae("Todos los campos son obligatorios.");return}const H=ce(l,i,M);H.success?(le(!0),re(!1),b("Usuario registrado correctamente. Ahora puedes iniciar sesión.")):ae(H.error||"Error al registrar usuario.")},Z=G=>{r(G.target.value),b("")},oe=G=>{o(G.target.value),b("")},Q=()=>{p(!0)},ne=()=>{p(!1),U(!1),de(null)};return g?t.jsx(o4,{onBackToLogin:ne}):X&&W?t.jsx(Ro,{email:W.email,accessInfo:W,onRetry:ne}):t.jsx("div",{className:"login-bg min-h-screen flex items-center justify-center",children:t.jsxs(ge,{className:"w-full max-w-md mx-auto p-6 animate-fadeIn",children:[t.jsx($e,{children:"Acceso"}),t.jsxs("form",{className:"space-y-4",onSubmit:async G=>{G.preventDefault(),x(!0),b(""),z(!1);const H=await Y(l,i);x(!1),H.success?z(!0):(b(H.error?.message||"Error de acceso"),H.error?.accessDenied&&(U(!0),de(H.error)),H.error?.message==="Usuario o contraseña incorrectos."&&re(!0))},children:[t.jsx("div",{className:"form-field-enter animate-delay-300",children:t.jsx(Sp,{value:l,onChange:Z,onValidationChange:m,placeholder:"Email",disabled:v,required:!0,className:"smooth-transition focus-ring"})}),t.jsx("div",{className:"form-field-enter animate-delay-400",children:t.jsx(_p,{value:i,onChange:oe,placeholder:"Contraseña",disabled:v,showStrengthMeter:!1,required:!0,className:"smooth-transition focus-ring"})}),t.jsxs("div",{className:"flex items-center space-x-2 form-field-enter animate-delay-500",children:[t.jsx("input",{id:"remember-me",type:"checkbox",checked:w,onChange:G=>A(G.target.checked),disabled:v,className:"w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 transition-colors duration-200"}),t.jsx("label",{htmlFor:"remember-me",className:"text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none transition-colors duration-200 hover:text-gray-800 dark:hover:text-gray-200",children:"Recordar mi email"})]}),k<5&&k>0&&!v&&t.jsx("div",{className:"text-orange-600 dark:text-orange-400 text-sm bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg border border-orange-200 dark:border-orange-800 animate-slideUp animate-pulse-slow",children:t.jsxs("div",{className:"flex items-center",children:[t.jsx("svg",{className:"w-4 h-4 mr-2 text-orange-500",fill:"none",stroke:"currentColor",viewBox:"0 0 24 24",children:t.jsx("path",{strokeLinecap:"round",strokeLinejoin:"round",strokeWidth:2,d:"M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"})}),"Te quedan ",k," intentos"]})}),v&&t.jsxs("div",{className:"text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800 animate-slideUp animate-shake",children:[t.jsxs("div",{className:"flex items-center mb-2",children:[t.jsx("svg",{className:"w-4 h-4 mr-2 text-red-500 animate-pulse",fill:"none",stroke:"currentColor",viewBox:"0 0 24 24",children:t.jsx("path",{strokeLinecap:"round",strokeLinejoin:"round",strokeWidth:2,d:"M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"})}),"Cuenta temporalmente bloqueada"]}),t.jsxs("p",{className:"text-xs",children:["Tiempo restante: ",fh(E)]})]}),h&&t.jsxs("div",{className:"text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800 animate-shake animate-slideUp",children:[t.jsxs("div",{className:"flex items-center",children:[t.jsx("svg",{className:"w-4 h-4 mr-2 text-red-500",fill:"none",stroke:"currentColor",viewBox:"0 0 24 24",children:t.jsx("path",{strokeLinecap:"round",strokeLinejoin:"round",strokeWidth:2,d:"M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"})}),h]}),h.includes("modo offline")&&t.jsxs("div",{className:"mt-3 pt-2 border-t border-red-200 dark:border-red-700",children:[t.jsx("button",{type:"button",onClick:()=>{try{localStorage.removeItem("__app_offline_mode"),console.log("🔧 Flag offline eliminado"),window.location.reload()}catch(G){console.error("Error en fix de emergencia:",G),alert("Error al intentar restaurar conectividad. Intenta recargar la página manualmente.")}},className:"w-full px-3 py-2 text-xs bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-colors duration-200 font-medium",children:"🔧 Forzar Reconexión (Emergency Fix)"}),t.jsx("p",{className:"text-xs text-red-500 mt-1 text-center",children:"Si el problema persiste, verifica tu conexión a internet"})]})]}),t.jsx("button",{type:"submit",disabled:f||v||!d||!i.trim(),className:`
+     ./fix-offline-emergency.js
+       19:    const url = 'https://uplfdvojvtnbzajncojc.supabase.co';
+
+��� 4. ANÁLISIS DE CONTEXTOS:
+---------------------------
+✅ DataContext.jsx encontrado
+✅ Funciones setter implementadas correctamente
+   Uso de localStorage: 35 referencias
+✅ AuthContext.jsx encontrado
+   AUTH_BYPASS configurado: 6:const AUTH_BYPASS = import.meta.env.VITE_AUTH_BYPASS === 'true';
+   Protección de importación: 4 funciones
+
+��� 5. COMPONENTES CON VERIFICACIONES PROBLEMÁTICAS:
+-------------------------------------------------
+
+⚙️  6. CONFIGURACIÓN DE ENTORNO:
+--------------------------------
+✅ .env encontrado
+❌ VITE_AUTH_BYPASS no configurado en .env
+❌ PROBLEMA: 2 variables de Supabase en .env
+       VITE_SUPABASE_URL=https://uplfdvojvtnbzajncojc.supabase.co
+       VITE_SUPABASE_ANON_KEY=***REMOVED-SUPABASE-ANON-KEY-OLD***
+
+��� 7. ANÁLISIS DE IMPORTS:
+-------------------------
+✅ No se detectaron imports faltantes evidentes
+
+��� 8. ARCHIVOS CRÍTICOS:
+------------------------
+✅ src/main.jsx encontrado
+❌ src/App.jsx NO encontrado
+✅ src/context/contexts.js encontrado
+❌ src/context/DataContextDef.jsx NO encontrado
+✅ vite.config.js encontrado
+✅ index.html encontrado
+
+��� 9. RESUMEN DE PROBLEMAS CRÍTICOS:
+-----------------------------------
+❌ CRÍTICO: Rastros de Supabase en el código
+❌ CRÍTICO: 89 componentes con verificaciones sin arreglar
+
+⚠️  SE ENCONTRARON 2 PROBLEMAS CRÍTICOS
+   Se recomienda ejecutar el script de Full Fix.
+
+��� ESTADÍSTICAS FINALES:
+------------------------
+- Archivos analizados: 144
+- Componentes React: 132
+- Archivos con Supabase: 4
+- Componentes problemáticos: 89
+- Problemas críticos: 2
+
+✅ AUDITORÍA COMPLETADA
+Reporte guardado en: audit-reports/audit-report-20251115_115248.txt

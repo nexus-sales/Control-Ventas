@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-// Eliminado: Supabase no se usa en modo local
+import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
@@ -14,12 +13,6 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
   const [isSuccess, setIsSuccess] = useState(false);
   const { offlineMode } = useAuth();
 
-  useEffect(() => {
-    if (offlineMode) {
-      setMessage('La recuperación de contraseña no está disponible en modo offline. Conéctate a internet para continuar.');
-    }
-  }, [offlineMode]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -28,72 +21,20 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
       return;
     }
 
-    // Verificar modo offline primero
-    if (offlineMode) {
-      setMessage('La recuperación de contraseña no está disponible en modo offline. Conéctate a internet para continuar.');
-      return;
-    }
-
     setIsSubmitting(true);
     setMessage('');
 
-    try {
-      // Verificar conectividad primero
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        setMessage('No hay conexión a internet. Verifica tu conectividad.');
-        setIsSuccess(false);
-        return;
-      }
-
-      console.log('Attempting to send reset email to:', email);
-      
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      console.log('Reset password response:', { data, error });
-
-      if (error) {
-        console.error('Supabase reset password error:', error);
-        
-        // Manejar errores específicos de Supabase
-        if (error.message.includes('fetch')) {
-          setMessage('Error de conexión. Verifica tu internet y que Supabase esté configurado correctamente.');
-        } else if (error.message.includes('Invalid email')) {
-          setMessage('El email ingresado no es válido.');
-        } else if (error.message.includes('Email not confirmed')) {
-          setMessage('El email no está confirmado. Contacta al administrador.');
-        } else if (error.message.includes('User not found')) {
-          setMessage('No existe una cuenta con ese email.');
-        } else {
-          setMessage(`Error: ${error.message}`);
-        }
-        setIsSuccess(false);
-      } else {
-        console.log('Reset email sent successfully');
-        setMessage('Se ha enviado un enlace de recuperación a tu email. Revisa tu bandeja de entrada y la carpeta de spam.');
-        setIsSuccess(true);
-      }
-    } catch (error) {
-      console.error('Unexpected error sending reset email:', error);
-      
-      // Manejar errores de red
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        setMessage('Error de conexión. Verifica tu internet y que el servidor esté disponible.');
-      } else if (error.name === 'AbortError') {
-        setMessage('La solicitud tardó demasiado. Inténtalo de nuevo.');
-      } else {
-        setMessage(`Error inesperado: ${error.message || 'Problema de conexión'}`);
-      }
-      setIsSuccess(false);
-    } finally {
+    // Modo localStorage local - sin servicios externos
+    setTimeout(() => {
+      setMessage('En modo local, contacta al administrador para restablecer tu contraseña.');
+      setIsSuccess(true);
       setIsSubmitting(false);
-    }
+    }, 1000);
   };
 
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
-    setMessage(''); // Limpiar mensaje al cambiar email
+    setMessage('');
   };
 
   return (
@@ -109,17 +50,16 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
         <div className="text-center mb-6">
           <SectionTitle>Recuperar Contraseña</SectionTitle>
           <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
-            Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña
+            En modo local, contacta al administrador para restablecer tu contraseña
           </p>
         </div>
 
         {!isSuccess ? (
           <form onSubmit={handleSubmit} className="grid gap-4 w-80">
-            {/* Información de diagnóstico */}
+            {/* Información de modo local */}
             <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded">
               <p>Estado: {navigator.onLine ? '🟢 Online' : '🔴 Offline'}</p>
-              <p>Modo: {offlineMode ? '🔴 Offline Mode' : '🟢 Online Mode'}</p>
-              <p>Supabase: {import.meta.env.VITE_SUPABASE_URL ? '🟢 Configurado' : '🔴 No configurado'}</p>
+              <p>Modo: Solo Local - Sin servicios externos</p>
             </div>
             
             <EmailInput
@@ -161,64 +101,37 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
                   Enviando...
                 </div>
               ) : (
-                'Enviar enlace de recuperación'
+                'Continuar'
               )}
             </button>
 
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const response = await fetch(import.meta.env.VITE_SUPABASE_URL + '/rest/v1/', {
-                      method: 'GET',
-                      headers: {
-                        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-                      }
-                    });
-                    if (response.ok) {
-                      setMessage('✅ Conexión con Supabase exitosa');
-                    } else {
-                      setMessage(`❌ Error de conexión: ${response.status}`);
-                    }
-                  } catch (error) {
-                    setMessage(`❌ Error de red: ${error.message}`);
-                  }
-                }}
-                className="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-2 py-1 rounded transition-colors duration-200"
-              >
-                🔧 Probar conexión
-              </button>
-              
-              <button
-                type="button"
-                onClick={onBackToLogin}
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm transition-colors duration-200"
-              >
-                ← Volver al login
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onBackToLogin}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm transition-colors duration-200"
+            >
+              ← Volver al login
+            </button>
           </form>
         ) : (
           <div className="w-80 text-center space-y-4">
-            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
               <div className="flex items-center justify-center mb-2">
-                <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <p className="text-green-700 dark:text-green-300 text-sm">
+              <p className="text-blue-700 dark:text-blue-300 text-sm">
                 {message}
               </p>
             </div>
 
             <div className="text-gray-600 dark:text-gray-400 text-sm space-y-2">
-              <p>Si no recibes el email en unos minutos:</p>
+              <p>Para restablecer tu contraseña:</p>
               <ul className="text-xs space-y-1">
-                <li>• Revisa tu carpeta de spam</li>
-                <li>• Verifica que el email sea correcto</li>
-                <li>• Contacta al administrador si persiste el problema</li>
+                <li>• Contacta al administrador del sistema</li>
+                <li>• Proporciona tu email: {email}</li>
+                <li>• El administrador creará una nueva contraseña</li>
               </ul>
             </div>
 

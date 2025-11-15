@@ -111,6 +111,17 @@ export function AuthProvider({ children }) {
 
   // Función para verificar control de acceso
   const checkAccessControl = useCallback((userEmail) => {
+    // 🚫 NO hacer ninguna verificación ni logout si está importando
+    if (isImporting) {
+      setAccessStatus({
+        hasAccess: true,
+        userRole: USER_ROLES.ADMIN,
+        accessMessage: null,
+        isAccessLoading: false
+      });
+      return true;
+    }
+    // ...existing code original...
     if (!userEmail) {
       setAccessStatus({
         hasAccess: false,
@@ -124,8 +135,6 @@ export function AuthProvider({ children }) {
       });
       return false;
     }
-
-    // En modo bypass, permitir acceso total
     if (AUTH_BYPASS) {
       setAccessStatus({
         hasAccess: true,
@@ -135,9 +144,7 @@ export function AuthProvider({ children }) {
       });
       return true;
     }
-
     try {
-      // Buscar perfil local si existe
       let userRole = null;
       let isAuthorized = false;
       const raw = window.localStorage.getItem('user_profiles');
@@ -149,12 +156,10 @@ export function AuthProvider({ children }) {
           isAuthorized = true;
         }
       }
-      // Si no hay perfil, usar fallback por email
       if (!userRole) {
         isAuthorized = isEmailAuthorized(userEmail);
         userRole = getRoleFromEmail(userEmail);
       }
-
       if (!isAuthorized || userRole === USER_ROLES.BLOCKED) {
         setAccessStatus({
           hasAccess: false,
@@ -168,7 +173,6 @@ export function AuthProvider({ children }) {
         });
         return false;
       }
-
       if (userRole === USER_ROLES.PENDING) {
         setAccessStatus({
           hasAccess: false,
@@ -182,8 +186,6 @@ export function AuthProvider({ children }) {
         });
         return false;
       }
-
-      // Usuario autorizado
       setAccessStatus({
         hasAccess: true,
         userRole,
@@ -191,7 +193,6 @@ export function AuthProvider({ children }) {
         isAccessLoading: false
       });
       return true;
-
     } catch (error) {
       console.error('[AuthProvider] Error verificando control de acceso:', error);
       setAccessStatus({
@@ -206,7 +207,7 @@ export function AuthProvider({ children }) {
       });
       return false;
     }
-  }, []);
+  }, [isImporting]);
 
   const applyLocalAuthFallback = useCallback(() => {
     const stored = loadStoredAuth();

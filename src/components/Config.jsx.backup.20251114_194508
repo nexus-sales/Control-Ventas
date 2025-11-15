@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect } from "react";
 import Loading from "./common/Loading";
 import { useLocation } from "react-router-dom";
 import { MapPin, Building, Package, Settings, SlidersHorizontal } from "lucide-react";
-import { DataCtx } from "../context/contexts";
+import { DataContext } from "../context/DataContextDef";
 import ProductosSection from "./config/ProductosSection";
 import OperadoresSection from "./config/OperadoresSection";
 import ZonasSection from "./config/ZonasSection";
@@ -24,7 +24,7 @@ export default function Config() {
   }, [location.search]);
   
     // Usar el contexto de datos
-  const { data, setZonas, setOperadores, setProductos, dataInitialized } = useContext(DataCtx);
+  const { data, setZonas, setOperadores, setProductos, dataInitialized } = useContext(DataContext);
   const zonas = Array.isArray(data?.zonas) ? data.zonas : [];
   const operadores = Array.isArray(data?.operadores) ? data.operadores : [];
   const productos = Array.isArray(data?.productos) ? data.productos : [];

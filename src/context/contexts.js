@@ -13,35 +13,3 @@ export const AuthCtx = createContext({
   deactivateOfflineMode: () => {},
 });
 
-export const DataCtx = createContext({
-  data: {
-    ventas: [],
-    colaboradores: [],
-    niveles: [],
-    operadores: [],
-    productos: [],
-    zonas: [],
-    reglas: [],
-    liquidaciones: [],
-    decomisiones: []
-  },
-  dataInitialized: false,
-  isDataLoading: false,
-  lastError: null,
-  saveData: async () => ({ success: false }),
-  refreshData: async () => false,
-  loadAllData: async () => ({ success: false }),
-  insertVentas: async () => ({ success: false }),
-  setVentas: () => {},
-  setProductos: () => {},
-  setOperadores: () => {},
-  setColaboradores: () => {},
-  setZonas: () => {},
-  setNiveles: () => {},
-  setReglas: () => {},
-  setLiquidaciones: () => {},
-  setDecomisiones: () => {},
-  syncAll: async () => false,
-  userRole: null,
-  isSupabaseAvailable: true
-});

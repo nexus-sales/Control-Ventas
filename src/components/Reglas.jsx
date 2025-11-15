@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Card from "./ui/Card";
 import SectionTitle from "./ui/SectionTitle";
-import { DataCtx } from "../context/contexts";
+import { DataContext } from "../context/DataContextDef";
 
 import { NivelEditModal, ReglaEditModal } from "./reglas/index.js";
 
@@ -23,7 +23,7 @@ export default function Reglas() {
     setNiveles: contextSetNiveles, 
     setReglas: contextSetReglas,
     dataInitialized
-  } = useContext(DataCtx);
+  } = useContext(DataContext);
   
   // DEBUG: Añadir console.logs para verificar
   console.log('Data from context:', data);

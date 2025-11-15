@@ -167,7 +167,7 @@ export default function OperadoresSection({ operadores, setOperadores }) {
     // Crear nuevo operador
     const newOperador = { 
       ...oDraft, 
-      id: `op_${Date.now()}`,
+      id: `op_${Date.now()}_${Math.floor(Math.random()*10000)}`,
       nombre: oDraft.nombre.trim(),
       codigo: oDraft.codigo.trim().toUpperCase(),
       contacto: oDraft.contacto.trim(),
@@ -184,8 +184,8 @@ export default function OperadoresSection({ operadores, setOperadores }) {
     };
 
     setOperadores(prev => [...prev, newOperador]);
-    
-    // Resetear formulario
+
+    // Resetear formulario y cerrar automáticamente
     setODraft({
       nombre: "",
       sector: "telefonia",
@@ -196,7 +196,6 @@ export default function OperadoresSection({ operadores, setOperadores }) {
       fecha_alta: "",
       fecha_baja: "",
       observaciones: "",
-      // NUEVO: Resetear reglas de decomisión
       reglas_decomision: {
         antes_6_meses: 100,
         despues_6_meses: 50,
@@ -205,7 +204,7 @@ export default function OperadoresSection({ operadores, setOperadores }) {
       historial: [],
     });
     setError("");
-    setShowOperadorForm(false);
+    setShowOperadorForm(false); // Cerrar el formulario al guardar
   };
 
   const handleModalOperadorSave = (operador, shouldClose) => {

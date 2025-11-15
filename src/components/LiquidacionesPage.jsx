@@ -8,7 +8,7 @@ import Toast from "./ui/Toast";
 import Card from "./ui/Card";
 import SectionTitle from "./ui/SectionTitle";
 import Pill from "./ui/Pill";
-import { DataCtx } from "../context/contexts";
+import { DataContext } from "../context/DataContextDef";
 
 
 
@@ -115,7 +115,7 @@ function generarInformePDF(liquidaciones, porColab, periodo, colaboradores) {
 
 export default function LiquidacionesPage() {
   // Usar el contexto de datos
-  const contextValue = useContext(DataCtx);
+  const contextValue = useContext(DataContext);
   const { data, dataInitialized } = contextValue;
   const setLiquidaciones = contextValue.setLiquidaciones;
   const setDecomisiones = contextValue.setDecomisiones;

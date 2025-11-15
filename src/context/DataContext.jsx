@@ -154,7 +154,7 @@ export function DataProvider({ children }) {
 
   // Función para validar relaciones y limpiar duplicados
   const validateAllRelations = useCallback(() => {
-    // Eliminar duplicados por id en cada entidad
+    // Eliminar duplicados por id en cada entidad, pero NO filtrar por relaciones
     function uniqueById(arr) {
       const seen = new Set();
       return arr.filter(item => {
@@ -163,23 +163,12 @@ export function DataProvider({ children }) {
         return true;
       });
     }
-    // Limpiar operadores
-    let operadores = uniqueById(data.operadores).filter(op => op.nombre && op.id);
-    // Limpiar zonas
-    let zonas = uniqueById(data.zonas).filter(z => z.nombre && z.id);
-    // Limpiar colaboradores
-    let colaboradores = uniqueById(data.colaboradores).filter(c => c.nombre && c.id);
-    // Limpiar productos y validar operador
-    let productos = uniqueById(data.productos).filter(p => p.nombre && p.id && operadores.some(op => op.id === p.operador_id));
-    // Limpiar ventas y validar relaciones
-    let ventas = uniqueById(data.ventas).filter(v =>
-      v.id &&
-      productos.some(p => p.id === v.producto_id) &&
-      operadores.some(op => op.id === v.operador_id) &&
-      colaboradores.some(c => c.id === v.colaborador_id) &&
-      zonas.some(z => z.id === v.zona_id)
-    );
-    // Limpiar niveles, reglas, liquidaciones
+    // Solo limpiar duplicados y campos vacíos
+    let operadores = uniqueById(data.operadores).filter(op => op.id);
+    let zonas = uniqueById(data.zonas).filter(z => z.id);
+    let colaboradores = uniqueById(data.colaboradores).filter(c => c.id);
+    let productos = uniqueById(data.productos).filter(p => p.id);
+    let ventas = uniqueById(data.ventas).filter(v => v.id);
     let niveles = uniqueById(data.niveles);
     let reglas = uniqueById(data.reglas);
     let liquidaciones = uniqueById(data.liquidaciones);

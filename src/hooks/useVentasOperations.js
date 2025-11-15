@@ -1,8 +1,8 @@
 import { useContext, useCallback, useMemo } from 'react';
-import { DataCtx } from '../context/contexts';
+import { DataContext } from '../context/DataContextDef';
 
 export function useVentasOperations() {
-  const { data, setVentas, setProductos } = useContext(DataCtx);
+  const { data, setVentas, setProductos } = useContext(DataContext);
   
   const ventas = useMemo(() => Array.isArray(data?.ventas) ? data.ventas : [], [data?.ventas]);
   const productos = useMemo(() => Array.isArray(data?.productos) ? data.productos : [], [data?.productos]);

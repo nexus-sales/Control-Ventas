@@ -51,8 +51,15 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
       return;
     }
 
+    // Si no existe id, asignar uno único
+    let operadorId = draft.id;
+    if (!operadorId) {
+      operadorId = `op_${Date.now()}_${Math.floor(Math.random()*10000)}`;
+    }
+
     const cleanedData = {
       ...draft,
+      id: operadorId,
       nombre: draft.nombre.trim(),
       codigo: draft.codigo?.trim().toUpperCase() || "",
       contacto: draft.contacto?.trim() || "",

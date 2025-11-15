@@ -1,7 +1,7 @@
 import { useContext, useState, useEffect } from "react";
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useNavigate } from "react-router-dom";
-import { DataCtx } from "../context/contexts";
+import { DataContext } from "../context/DataContextDef";
 import Loading from "./common/Loading";
 import Card from "./ui/Card";
 import SectionTitle from "./ui/SectionTitle";
@@ -84,7 +84,7 @@ export default function Dashboard() {
   };
   
   // Usar el contexto de datos
-  const { data, dataInitialized } = useContext(DataCtx);
+  const { data, dataInitialized } = useContext(DataContext);
   useEffect(() => {
     console.log('[Dashboard] dataInitialized changed:', dataInitialized);
   }, [dataInitialized]);

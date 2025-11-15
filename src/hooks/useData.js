@@ -1,8 +1,8 @@
 import { useContext } from 'react';
-import { DataCtx } from '../context/contexts';
+import { DataContext } from '../context/DataContextDef';
 
 export function useData() {
-  const context = useContext(DataCtx);
+  const context = useContext(DataContext);
   if (!context) {
     throw new Error('useData must be used within a DataProvider');
   }

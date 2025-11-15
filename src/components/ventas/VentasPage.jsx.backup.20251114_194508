@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { DataCtx } from '../../context/contexts';
+import { DataContext } from '../../context/DataContextDef';
 import { computeVenta } from '../../utils/calculos';
 import { useVentasOperations } from '../../hooks/useVentasOperations';
 import { useVentasFilters } from '../../hooks/useVentasFilters';
@@ -24,7 +24,7 @@ export default function VentasPage() {
   const navigate = useNavigate();
   
   // Contexto global
-  const { data, dataInitialized } = useContext(DataCtx);
+  const { data, dataInitialized } = useContext(DataContext);
   
   // Datos seguros
   const operadores = useMemo(

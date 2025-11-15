@@ -8,6 +8,7 @@ import Card from "./ui/Card";
 import SectionTitle from "./ui/SectionTitle";
 import { useImportExcel } from "../hooks/useImportExcel";
 import { MAPEO_CAMPOS, parseDate } from "../utils/importValidation";
+import { useAuth } from "../hooks/useAuth";
 
 // Modal simple para mostrar errores
 function Modal({ open, onClose, title, children }) {
@@ -76,6 +77,8 @@ export default function ImportExcelMapperV2({
     setZonas,
     onImportSuccess, // ← PASAR onImportSuccess al hook
   });
+
+  const { startImporting, finishImporting } = useAuth();
 
   // Verificar si la funcionalidad de auto-creación está disponible
   const autoCreacionDisponible = !!(setProductos && setOperadores && setColaboradores && setZonas);
@@ -207,126 +210,136 @@ export default function ImportExcelMapperV2({
 
   // Manejar importación - FUNCIÓN OPTIMIZADA
   const handleImport = async () => {
-    console.log('🔍 INICIANDO IMPORTACIÓN OPTIMIZADA');
-    
-    // Mostrar progreso visual
-    setToast({ 
-      message: "Iniciando importación... Por favor espera.", 
-      type: "info" 
-    });
-    
-    console.log('Estado actual:', {
-      crearAutomaticamente,
-      validationStats,
-      autoCreacionDisponible,
-      settersDisponibles: {
-        setProductos: !!setProductos,
-        setOperadores: !!setOperadores,
-        setColaboradores: !!setColaboradores,
-        setZonas: !!setZonas,
-      }
-    });
-
-    // Validaciones previas
-    if (!mapping || Object.keys(mapping).length === 0) {
-      setToast({ message: "Por favor, mapea al menos un campo", type: "error" });
-      return;
-    }
-
-    if (validationStats.valid === 0) {
-      setToast({
-        message: "No hay filas válidas para importar",
-        type: "error",
-      });
-      return;
-    }
-
+    startImporting();
     try {
-      // Actualizar progreso
+      console.log('🔍 INICIANDO IMPORTACIÓN OPTIMIZADA');
+      
+      // Mostrar progreso visual
       setToast({ 
-        message: `Procesando ${validationStats.valid} filas válidas...`, 
+        message: "Iniciando importación... Por favor espera.", 
         type: "info" 
       });
-
-      // Ejecutar importación
-      const resultado = crearAutomaticamente && autoCreacionDisponible
-        ? await importInteligente()
-        : await importNormal();
-
-      console.log('✅ RESULTADO IMPORTACIÓN:', resultado);
-
-      // Mensaje de éxito mejorado con detalles
-      const detalles = [];
-      if (resultado.operadoresCreados > 0) detalles.push(`${resultado.operadoresCreados} operadores`);
-      if (resultado.productosCreados > 0) detalles.push(`${resultado.productosCreados} productos`);
-      if (resultado.colaboradoresCreados > 0) detalles.push(`${resultado.colaboradoresCreados} colaboradores`);
-      if (resultado.zonasCreadas > 0) detalles.push(`${resultado.zonasCreadas} zonas`);
-
-      const mensaje = crearAutomaticamente && autoCreacionDisponible
-        ? `🚀 Importación inteligente completada: ${resultado.ventasCreadas} ventas ${detalles.length > 0 ? '+ ' + detalles.join(', ') + ' creados' : ''}`
-        : `✅ Importación exitosa: ${resultado.ventasCreadas} ventas guardadas`;
-
-      setToast({ message: mensaje, type: "success" });
-
-      // ← LÍNEAS CRÍTICAS AGREGADAS: Recargar datos después del éxito
-      if (onImportSuccess) {
-        console.log("🔄 Recargando datos después de importación exitosa...");
-        try {
-          await onImportSuccess();
-          console.log("✅ Datos recargados correctamente en la interfaz");
-        } catch (reloadError) {
-          console.error("❌ Error recargando datos:", reloadError);
-          setToast({ 
-            message: "Importación exitosa, pero error recargando interfaz. Recarga la página.", 
-            type: "warning" 
-          });
-        }
-      } else {
-        console.warn("⚠️ onImportSuccess no está definido - los datos no se recargarán automáticamente");
-      }
       
-      // No limpiar datos inmediatamente para permitir ver el resumen
-      // clearData();
-    } catch (error) {
-      console.error('❌ ERROR IMPORTACIÓN:', error);
-      setToast({ message: `❌ Error: ${error.message}`, type: "error" });
+      console.log('Estado actual:', {
+        crearAutomaticamente,
+        validationStats,
+        autoCreacionDisponible,
+        settersDisponibles: {
+          setProductos: !!setProductos,
+          setOperadores: !!setOperadores,
+          setColaboradores: !!setColaboradores,
+          setZonas: !!setZonas,
+        }
+      });
+
+      // Validaciones previas
+      if (!mapping || Object.keys(mapping).length === 0) {
+        setToast({ message: "Por favor, mapea al menos un campo", type: "error" });
+        return;
+      }
+
+      if (validationStats.valid === 0) {
+        setToast({
+          message: "No hay filas válidas para importar",
+          type: "error",
+        });
+        return;
+      }
+
+      try {
+        // Actualizar progreso
+        setToast({ 
+          message: `Procesando ${validationStats.valid} filas válidas...`, 
+          type: "info" 
+        });
+
+        // Ejecutar importación
+        const resultado = crearAutomaticamente && autoCreacionDisponible
+          ? await importInteligente()
+          : await importNormal();
+
+        console.log('✅ RESULTADO IMPORTACIÓN:', resultado);
+
+        // Mensaje de éxito mejorado con detalles
+        const detalles = [];
+        if (resultado.operadoresCreados > 0) detalles.push(`${resultado.operadoresCreados} operadores`);
+        if (resultado.productosCreados > 0) detalles.push(`${resultado.productosCreados} productos`);
+        if (resultado.colaboradoresCreados > 0) detalles.push(`${resultado.colaboradoresCreados} colaboradores`);
+        if (resultado.zonasCreadas > 0) detalles.push(`${resultado.zonasCreadas} zonas`);
+
+        const mensaje = crearAutomaticamente && autoCreacionDisponible
+          ? `🚀 Importación inteligente completada: ${resultado.ventasCreadas} ventas ${detalles.length > 0 ? '+ ' + detalles.join(', ') + ' creados' : ''}`
+          : `✅ Importación exitosa: ${resultado.ventasCreadas} ventas guardadas`;
+
+        setToast({ message: mensaje, type: "success" });
+
+        // ← LÍNEAS CRÍTICAS AGREGADAS: Recargar datos después del éxito
+        if (onImportSuccess) {
+          console.log("🔄 Recargando datos después de importación exitosa...");
+          try {
+            await onImportSuccess();
+            console.log("✅ Datos recargados correctamente en la interfaz");
+          } catch (reloadError) {
+            console.error("❌ Error recargando datos:", reloadError);
+            setToast({ 
+              message: "Importación exitosa, pero error recargando interfaz. Recarga la página.", 
+              type: "warning" 
+            });
+          }
+        } else {
+          console.warn("⚠️ onImportSuccess no está definido - los datos no se recargarán automáticamente");
+        }
+        
+        // No limpiar datos inmediatamente para permitir ver el resumen
+        // clearData();
+      } catch (error) {
+        console.error('❌ ERROR IMPORTACIÓN:', error);
+        setToast({ message: `❌ Error: ${error.message}`, type: "error" });
+      }
+    } finally {
+      finishImporting();
     }
   };
 
   // Importación simplificada para casos difíciles
   const handleImportSimplificado = async () => {
-    if (!rows.length) {
-      setToast({ message: "No hay datos para importar", type: "error" });
-      return;
-    }
-
+    startImporting();
     try {
-      console.log('🔧 EJECUTANDO IMPORTACIÓN SIMPLIFICADA...');
-      setToast({ message: "🔧 Ejecutando importación simplificada...", type: "info" });
-
-      const resultado = await importSimplificado();
-      
-      console.log('🔧 RESULTADO SIMPLIFICADO:', resultado);
-
-      setToast({ 
-        message: `✅ IMPORTACIÓN COMPLETADA: ${resultado.ventasCreadas} ventas creadas`, 
-        type: "success" 
-      });
-
-      // Recargar datos
-      if (onImportSuccess) {
-        console.log("🔧 Recargando datos después de importación simplificada...");
-        try {
-          await onImportSuccess();
-          console.log("🔧 Datos recargados correctamente");
-        } catch (reloadError) {
-          console.error("🔧 Error recargando datos:", reloadError);
-        }
+      if (!rows.length) {
+        setToast({ message: "No hay datos para importar", type: "error" });
+        return;
       }
 
-    } catch (error) {
-      console.error('🔧 ERROR IMPORTACIÓN SIMPLIFICADA:', error);
-      setToast({ message: `❌ Error: ${error.message}`, type: "error" });
+      try {
+        console.log('🔧 EJECUTANDO IMPORTACIÓN SIMPLIFICADA...');
+        setToast({ message: "🔧 Ejecutando importación simplificada...", type: "info" });
+
+        const resultado = await importSimplificado();
+        
+        console.log('🔧 RESULTADO SIMPLIFICADO:', resultado);
+
+        setToast({ 
+          message: `✅ IMPORTACIÓN COMPLETADA: ${resultado.ventasCreadas} ventas creadas`, 
+          type: "success" 
+        });
+
+        // Recargar datos
+        if (onImportSuccess) {
+          console.log("🔧 Recargando datos después de importación simplificada...");
+          try {
+            await onImportSuccess();
+            console.log("🔧 Datos recargados correctamente");
+          } catch (reloadError) {
+            console.error("🔧 Error recargando datos:", reloadError);
+          }
+        }
+
+      } catch (error) {
+        console.error('🔧 ERROR IMPORTACIÓN SIMPLIFICADA:', error);
+        setToast({ message: `❌ Error: ${error.message}`, type: "error" });
+      }
+    } finally {
+      finishImporting();
     }
   };
 
