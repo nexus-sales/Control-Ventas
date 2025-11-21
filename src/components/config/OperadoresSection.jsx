@@ -1,298 +1,466 @@
-import React, { useState } from "react";
-import { useCustomFields } from "../../hooks/useCustomFields";
+import React, { useState, useMemo } from "react";
 import { saveAs } from "file-saver";
-
-  // Hook de campos personalizados para operadores (dentro del componente)
-
-  function exportarOperadoresCSV(operadores, customFields) {
-    if (!operadores.length) return;
-    const baseHeaders = [
-      "ID", "Nombre", "Sector", "Código", "Contacto", "Teléfono", "Email"
-    ];
-    const customHeaders = customFields.map(f => f.nombre);
-    const headers = [...baseHeaders, ...customHeaders];
-    const rows = operadores.map(o => [
-      o.id,
-      o.nombre,
-      o.sector,
-      o.codigo,
-      o.contacto,
-      o.telefono,
-      o.email,
-      ...customFields.map(f => o.customFields?.[f.id] ?? "")
-    ]);
-    const csv = [headers.join(",")].concat(rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))).join("\r\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    saveAs(blob, `operadores_${new Date().toISOString().slice(0,10)}.csv`);
-  }
 import Card from "../ui/Card";
-import {
-  Building,
-  Plus,
-  Edit3,
-  X,
-  Trash2,
-  Phone,
-  DollarSign,
-  Tag,
-  AlertCircle,
-  Zap,
-  Shield,
-  Briefcase,
-  Home,
-  Users,
-  Settings,
-  Percent,
-} from "lucide-react";
-import OperadorEditModal from "../OperadorEditModal";
-import OperadoresTable from "./OperadoresTable";
+import { Building, Plus, Edit3, X, Trash2, Phone, Zap, Shield, Briefcase, Home, Save, Download } from "lucide-react";
+import { getSectorIcon, getSectorColor } from "../../utils/operadores.jsx";
 
-export default function OperadoresSection({ operadores, setOperadores }) {
-  const customFields = useCustomFields('operadores');
-  const [showOperadorForm, setShowOperadorForm] = useState(false);
-  const [oDraft, setODraft] = useState({
-    nombre: "",
-    sector: "telefonia",
-    codigo: "",
-    contacto: "",
-    telefono: "",
-    email: "",
-    fecha_alta: "",
-    fecha_baja: "",
-    observaciones: "",
-    // NUEVO: Reglas de decomisión
-    reglas_decomision: {
-      antes_6_meses: 100,
-      despues_6_meses: 50,
-      limite_meses: 6
-    },
-    historial: [],
-  });
-  const [modalOperador, setModalOperador] = useState(null);
-  const [error, setError] = useState("");
-
-  // Normalizar texto para comparaciones (sin acentos, mayúsculas, espacios extra)
-  const normalizeText = (text) => {
-    return text
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim()
-      .replace(/\s+/g, " ");
-  };
-
-  // Verificar si ya existe un operador con el mismo nombre
-  const operadorExists = (nombre, excludeId = null) => {
-    const normalizedNombre = normalizeText(nombre);
-    return operadores.some(o => 
-      o.id !== excludeId &&
-      normalizeText(o.nombre) === normalizedNombre
-    );
-  };
-
-  // Obtener icono según el sector
-  const getSectorIcon = (sector) => {
-    switch(sector.toLowerCase()) {
-      case 'telefonia': return <Phone className="w-4 h-4" />;
-      case 'energia': return <Zap className="w-4 h-4" />;
-      case 'seguridad': return <Shield className="w-4 h-4" />;
-      case 'internet': return <Briefcase className="w-4 h-4" />;
-      case 'seguros': return <Home className="w-4 h-4" />;
-      default: return <Building className="w-4 h-4" />;
-    }
-  };
-
-  // Obtener color según el sector
-  const getSectorColor = (sector) => {
-    switch(sector.toLowerCase()) {
-      case 'telefonia': return 'bg-blue-100 text-blue-700';
-      case 'energia': return 'bg-yellow-100 text-yellow-700';
-      case 'seguridad': return 'bg-red-100 text-red-700';
-      case 'internet': return 'bg-purple-100 text-purple-700';
-      case 'seguros': return 'bg-green-100 text-green-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  // Obtener nombre legible del sector
-  const getSectorName = (sector) => {
-    switch(sector.toLowerCase()) {
-      case 'telefonia': return 'Telefonía';
-      case 'energia': return 'Energía';
-      case 'seguridad': return 'Seguridad';
-      case 'internet': return 'Internet';
-      case 'seguros': return 'Seguros';
-      default: return sector.charAt(0).toUpperCase() + sector.slice(1);
-    }
-  };
-
-  // Estadísticas por sector
-  const sectorStats = {
-    telefonia: operadores.filter(o => o.sector === 'telefonia').length,
-    energia: operadores.filter(o => o.sector === 'energia').length,
-    seguridad: operadores.filter(o => o.sector === 'seguridad').length,
-    internet: operadores.filter(o => o.sector === 'internet').length,
-    seguros: operadores.filter(o => o.sector === 'seguros').length,
-    otros: operadores.filter(o => !['telefonia', 'energia', 'seguridad', 'internet', 'seguros'].includes(o.sector)).length,
-  };
-
-  const addOperador = () => {
-    // Validaciones
-    if (!oDraft.nombre.trim()) {
-      setError("El nombre del operador es obligatorio");
-      return;
-    }
-
-    // Verificar duplicados
-    if (operadorExists(oDraft.nombre)) {
-      setError(`Ya existe un operador con el nombre "${oDraft.nombre}"`);
-      return;
-    }
-
-    // NUEVO: Validar reglas de decomisión
-    const { antes_6_meses, despues_6_meses, limite_meses } = oDraft.reglas_decomision;
-    if (antes_6_meses < 0 || antes_6_meses > 100) {
-      setError("El porcentaje antes del límite debe estar entre 0 y 100");
-      return;
-    }
-    if (despues_6_meses < 0 || despues_6_meses > 100) {
-      setError("El porcentaje después del límite debe estar entre 0 y 100");
-      return;
-    }
-    if (limite_meses < 1 || limite_meses > 24) {
-      setError("El límite de meses debe estar entre 1 y 24");
-      return;
-    }
-
-    // Crear nuevo operador
-    const newOperador = { 
-      ...oDraft, 
-      id: `op_${Date.now()}_${Math.floor(Math.random()*10000)}`,
-      nombre: oDraft.nombre.trim(),
-      codigo: oDraft.codigo.trim().toUpperCase(),
-      contacto: oDraft.contacto.trim(),
-      email: oDraft.email.trim(),
-      telefono: oDraft.telefono.trim(),
-      fecha_alta: oDraft.fecha_alta || new Date().toISOString().slice(0, 10),
-      // NUEVO: Incluir reglas de decomisión
+// Modal consolidado para operadores
+function OperadorModal({ operador, onSave, onClose }) {
+  const [form, setForm] = useState(
+    operador ? {
+      ...operador,
       reglas_decomision: {
-        antes_6_meses: Number(oDraft.reglas_decomision.antes_6_meses) || 100,
-        despues_6_meses: Number(oDraft.reglas_decomision.despues_6_meses) || 50,
-        limite_meses: Number(oDraft.reglas_decomision.limite_meses) || 6
-      },
-      historial: [] 
-    };
-
-    setOperadores(prev => [...prev, newOperador]);
-
-    // Resetear formulario y cerrar automáticamente
-    setODraft({
+        antes_6_meses: 100,
+        despues_6_meses: 50,
+        limite_meses: 6,
+        ...operador.reglas_decomision
+      }
+    } : {
       nombre: "",
-      sector: "telefonia",
       codigo: "",
+      sector: "",
       contacto: "",
-      telefono: "",
       email: "",
-      fecha_alta: "",
-      fecha_baja: "",
-      observaciones: "",
+      telefono: "",
+      fecha_alta: new Date().toISOString().slice(0, 10),
       reglas_decomision: {
         antes_6_meses: 100,
         despues_6_meses: 50,
         limite_meses: 6
-      },
-      historial: [],
-    });
-    setError("");
-    setShowOperadorForm(false); // Cerrar el formulario al guardar
+      }
+    }
+  );
+
+  const [errors, setErrors] = useState({});
+
+  const validate = () => {
+    const newErrors = {};
+    
+    if (!form.nombre?.trim()) newErrors.nombre = "Nombre es obligatorio";
+    if (form.reglas_decomision.antes_6_meses < 0 || form.reglas_decomision.antes_6_meses > 100) {
+      newErrors.antes_6_meses = "Debe estar entre 0 y 100";
+    }
+    if (form.reglas_decomision.despues_6_meses < 0 || form.reglas_decomision.despues_6_meses > 100) {
+      newErrors.despues_6_meses = "Debe estar entre 0 y 100";
+    }
+    if (form.reglas_decomision.limite_meses < 1 || form.reglas_decomision.limite_meses > 24) {
+      newErrors.limite_meses = "Debe estar entre 1 y 24";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleModalOperadorSave = (operador, shouldClose) => {
-    // Verificar duplicados al editar
-    if (operadorExists(operador.nombre, operador.id)) {
-      alert(`Ya existe un operador con el nombre "${operador.nombre}"`);
+  const handleSave = () => {
+    if (!validate()) return;
+    
+    const cleanForm = {
+      ...form,
+      id: form.id || `op_${Date.now()}`,
+      nombre: form.nombre.trim(),
+      codigo: form.codigo?.trim().toUpperCase() || '',
+      reglas_decomision: {
+        antes_6_meses: Number(form.reglas_decomision.antes_6_meses),
+        despues_6_meses: Number(form.reglas_decomision.despues_6_meses),
+        limite_meses: Number(form.reglas_decomision.limite_meses)
+      }
+    };
+    
+    onSave(cleanForm);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Building className="w-6 h-6 text-purple-500" />
+            {operador ? 'Editar Operador' : 'Nuevo Operador'}
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          {/* Datos básicos */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nombre *</label>
+              <input
+                type="text"
+                className={`w-full border rounded-xl px-3 py-2 ${errors.nombre ? 'border-red-300' : 'border-slate-200'}`}
+                value={form.nombre}
+                onChange={e => setForm(prev => ({...prev, nombre: e.target.value}))}
+              />
+              {errors.nombre && <p className="text-xs text-red-600">{errors.nombre}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Código</label>
+              <input
+                type="text"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                value={form.codigo}
+                onChange={e => setForm(prev => ({...prev, codigo: e.target.value}))}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Sector</label>
+              <select
+                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                value={form.sector}
+                onChange={e => setForm(prev => ({...prev, sector: e.target.value}))}
+              >
+                <option value="">Seleccionar sector</option>
+                <option value="telefonia">Telefonía</option>
+                <option value="energia">Energía</option>
+                <option value="seguridad">Seguridad/Alarmas</option>
+                <option value="internet">Internet</option>
+                <option value="seguros">Seguros</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Contacto</label>
+              <input
+                type="text"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                value={form.contacto}
+                onChange={e => setForm(prev => ({...prev, contacto: e.target.value}))}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Email</label>
+              <input
+                type="email"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                value={form.email}
+                onChange={e => setForm(prev => ({...prev, email: e.target.value}))}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Teléfono</label>
+              <input
+                type="tel"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                value={form.telefono}
+                onChange={e => setForm(prev => ({...prev, telefono: e.target.value}))}
+              />
+            </div>
+          </div>
+
+          {/* Reglas de decomisión */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">Reglas de Decomisión</h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Antes 6M (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  className={`w-full border rounded-xl px-3 py-2 ${errors.antes_6_meses ? 'border-red-300' : 'border-slate-200'}`}
+                  value={form.reglas_decomision.antes_6_meses}
+                  onChange={e => setForm(prev => ({
+                    ...prev,
+                    reglas_decomision: {...prev.reglas_decomision, antes_6_meses: e.target.value}
+                  }))}
+                />
+                {errors.antes_6_meses && <p className="text-xs text-red-600">{errors.antes_6_meses}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Después 6M (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  className={`w-full border rounded-xl px-3 py-2 ${errors.despues_6_meses ? 'border-red-300' : 'border-slate-200'}`}
+                  value={form.reglas_decomision.despues_6_meses}
+                  onChange={e => setForm(prev => ({
+                    ...prev,
+                    reglas_decomision: {...prev.reglas_decomision, despues_6_meses: e.target.value}
+                  }))}
+                />
+                {errors.despues_6_meses && <p className="text-xs text-red-600">{errors.despues_6_meses}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Límite (meses)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="24"
+                  className={`w-full border rounded-xl px-3 py-2 ${errors.limite_meses ? 'border-red-300' : 'border-slate-200'}`}
+                  value={form.reglas_decomision.limite_meses}
+                  onChange={e => setForm(prev => ({
+                    ...prev,
+                    reglas_decomision: {...prev.reglas_decomision, limite_meses: e.target.value}
+                  }))}
+                />
+                {errors.limite_meses && <p className="text-xs text-red-600">{errors.limite_meses}</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 hover:bg-slate-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
+          >
+            <Save className="w-4 h-4" />
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Componente principal consolidado
+export default function OperadoresSection({ operadores, setOperadores }) {
+  const [showModal, setShowModal] = useState(false);
+  const [editingOperador, setEditingOperador] = useState(null);
+  const [error, setError] = useState("");
+
+  // Verificar duplicados
+  const operadorExists = (nombre, excludeId = null) => {
+    return operadores.some(o => 
+      o.id !== excludeId && 
+      o.nombre?.toLowerCase().trim() === nombre?.toLowerCase().trim()
+    );
+  };
+
+  // Estadísticas por sector
+  const sectorStats = useMemo(() => ({
+    telefonia: operadores.filter(o => o.sector === 'telefonia').length,
+    energia: operadores.filter(o => o.sector === 'energia').length,
+    seguridad: operadores.filter(o => o.sector === 'seguridad').length,
+    otros: operadores.filter(o => !['telefonia', 'energia', 'seguridad'].includes(o.sector)).length,
+  }), [operadores]);
+
+  // Guardar operador
+  const handleSave = (operadorData) => {
+    if (operadorExists(operadorData.nombre, operadorData.id)) {
+      setError(`Ya existe un operador con el nombre "${operadorData.nombre}"`);
       return;
     }
 
-    setOperadores(prev => prev.map((o) => (o.id === operador.id ? {
-      ...operador,
-      nombre: operador.nombre.trim(),
-      codigo: operador.codigo?.trim().toUpperCase(),
-      contacto: operador.contacto?.trim(),
-      email: operador.email?.trim(),
-      telefono: operador.telefono?.trim()
-    } : o)));
-    
-    if (shouldClose) setModalOperador(null);
+    if (operadorData.id) {
+      // Actualizar
+      setOperadores(prev => prev.map(o => o.id === operadorData.id ? operadorData : o));
+    } else {
+      // Crear nuevo
+      setOperadores(prev => [...prev, operadorData]);
+    }
+
+    setError("");
   };
 
-  const rmOper = (id) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar este operador? Esta acción no se puede deshacer.")) {
-      setOperadores(prev => prev.filter((o) => o.id !== id));
+  // Eliminar operador
+  const handleDelete = (id) => {
+    if (window.confirm("¿Seguro que quieres eliminar este operador?")) {
+      setOperadores(prev => prev.filter(o => o.id !== id));
     }
   };
 
-  // Definir handleExportCSV
-  const handleExportCSV = () => exportarOperadoresCSV(operadores, customFields);
+  // Exportar CSV
+  const exportCSV = () => {
+    if (!operadores.length) return;
+    
+    const headers = ["ID", "Nombre", "Sector", "Código", "Contacto", "Teléfono", "Email"];
+    const rows = operadores.map(o => [
+      o.id, o.nombre, o.sector, o.codigo, o.contacto, o.telefono, o.email
+    ]);
+    
+    const csv = [headers.join(",")]
+      .concat(rows.map(r => r.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(",")))
+      .join("\r\n");
+    
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    saveAs(blob, `operadores_${new Date().toISOString().slice(0,10)}.csv`);
+  };
 
   return (
-  <section className="max-w-4xl mx-auto bg-gradient-to-br from-white via-slate-50 to-purple-50 dark:from-green-950 dark:via-green-900 dark:to-green-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-green-800 p-8 space-y-8 transition-colors">
-  <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Operadores</h2>
-  <p className="text-base text-purple-700 dark:text-green-200 font-semibold mb-6">Gestiona operadores y campos personalizados.</p>
+    <div className="space-y-6">
+      {/* Estadísticas */}
+      <div className="grid md:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-600 text-sm font-medium">Telefonía</p>
+              <p className="text-2xl font-bold text-blue-800">{sectorStats.telefonia}</p>
+            </div>
+            <Phone className="w-8 h-8 text-blue-600" />
+          </div>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-yellow-600 text-sm font-medium">Energía</p>
+              <p className="text-2xl font-bold text-yellow-800">{sectorStats.energia}</p>
+            </div>
+            <Zap className="w-8 h-8 text-yellow-600" />
+          </div>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-red-600 text-sm font-medium">Seguridad</p>
+              <p className="text-2xl font-bold text-red-800">{sectorStats.seguridad}</p>
+            </div>
+            <Shield className="w-8 h-8 text-red-600" />
+          </div>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-600 text-sm font-medium">Total</p>
+              <p className="text-2xl font-bold text-slate-800">{operadores.length}</p>
+            </div>
+            <Building className="w-8 h-8 text-slate-600" />
+          </div>
+        </Card>
+      </div>
 
-      {/* Mostrar error global */}
+      {/* Error */}
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl text-red-700 dark:text-red-300 text-sm" role="alert">
-          {error}
-        </div>
+        <Card className="border-red-200 bg-red-50">
+          <div className="text-red-700 font-medium">{error}</div>
+        </Card>
       )}
 
-      {/* Botón para mostrar formulario de nuevo operador */}
-      <div className="mb-4 flex justify-end">
-        <button
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 dark:bg-green-700 hover:bg-green-700 dark:hover:bg-green-800 text-white rounded-xl shadow transition"
-          onClick={() => setShowOperadorForm(true)}
-        >
-          <Plus className="w-4 h-4" /> Nuevo operador
-        </button>
-      </div>
-
-      {/* Formulario de nuevo operador */}
-      {showOperadorForm && (
-        <OperadorEditModal
-          operador={null}
-          onSave={addOperador}
-          onClose={() => setShowOperadorForm(false)}
-        />
-      )}
-
-      {/* Modal de edición de operador */}
-      {modalOperador && (
-        <OperadorEditModal
-          operador={modalOperador}
-          onSave={handleModalOperadorSave}
-          onClose={() => setModalOperador(null)}
-        />
-      )}
-
-      <div className="divide-y divide-slate-200 dark:divide-darkAccent/20 space-y-8">
-        <div className="pt-0">
-          {/* Tabla de operadores */}
-          <OperadoresTable
-            operadores={operadores}
-            customFields={customFields}
-            getSectorIcon={getSectorIcon}
-            getSectorColor={getSectorColor}
-            getSectorName={getSectorName}
-            onEdit={o => setModalOperador(o)}
-            onDelete={rmOper}
-            sectorStats={sectorStats}
-          />
+      {/* Acciones */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Operadores</h3>
+        <div className="flex gap-2">
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700"
+          >
+            <Download className="w-4 h-4" />
+            CSV
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
+          >
+            <Plus className="w-4 h-4" />
+            Nuevo Operador
+          </button>
         </div>
       </div>
-      <button className="mt-8 px-4 py-2 bg-purple-600 dark:bg-green-700 hover:bg-purple-700 dark:hover:bg-green-800 text-white rounded-xl shadow transition" onClick={handleExportCSV}>
-        Exportar CSV
-      </button>
-    </section>
+
+      {/* Tabla */}
+      <Card>
+        <div className="overflow-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="text-left text-slate-500 bg-slate-50">
+                <th className="py-4 px-4 font-medium">Operador</th>
+                <th className="py-4 px-4 font-medium">Sector</th>
+                <th className="py-4 px-4 font-medium">Contacto</th>
+                <th className="py-4 px-4 font-medium">Reglas</th>
+                <th className="py-4 px-4 font-medium">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {operadores.map((op, index) => (
+                <tr key={op.id} className={`border-t ${index % 2 === 0 ? 'bg-slate-25' : 'bg-white'} hover:bg-purple-50`}>
+                  <td className="py-4 px-4">
+                    <div className="font-medium text-slate-700">{op.nombre}</div>
+                    {op.codigo && <div className="text-xs text-slate-500">{op.codigo}</div>}
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-2">
+                      {getSectorIcon(op.sector)}
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSectorColor(op.sector)}`}>
+                        {op.sector || 'Sin sector'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="text-sm text-slate-600">
+                      <div>{op.contacto}</div>
+                      <div className="text-xs">{op.telefono}</div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="text-xs text-slate-600">
+                      {op.reglas_decomision?.antes_6_meses || 100}% → {op.reglas_decomision?.despues_6_meses || 50}%
+                      <br />
+                      <span className="text-slate-400">({op.reglas_decomision?.limite_meses || 6} meses)</span>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingOperador(op);
+                          setShowModal(true);
+                        }}
+                        className="p-2 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(op.id)}
+                        className="p-2 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {operadores.length === 0 && (
+            <div className="text-center py-12">
+              <Building className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+              <h3 className="text-lg font-medium text-slate-600 mb-2">No hay operadores</h3>
+              <button
+                onClick={() => setShowModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
+              >
+                <Plus className="w-4 h-4" />
+                Agregar Operador
+              </button>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Modal */}
+      {showModal && (
+        <OperadorModal
+          operador={editingOperador}
+          onSave={handleSave}
+          onClose={() => {
+            setShowModal(false);
+            setEditingOperador(null);
+            setError("");
+          }}
+        />
+      )}
+    </div>
   );
 }

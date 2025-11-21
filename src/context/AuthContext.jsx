@@ -1,30 +1,29 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-// ...existing code...
-import { AuthCtx } from './contexts';
 import { isEmailAuthorized, getRoleFromEmail, USER_ROLES } from '../utils/accessControl';
+import AuthCtx from './AuthCtx';
 
 const AUTH_BYPASS = import.meta.env.VITE_AUTH_BYPASS === 'true';
 const AUTH_STORAGE_KEY = '__app_auth_state';
 const OFFLINE_FLAG = '__app_offline_mode';
 
 const loadStoredAuth = () => {
-  // MODIFICADO: Siempre retornar null para forzar login en cada acceso
-  // if (typeof window === 'undefined') return { user: null, profile: null };
-  // try {
-  //   const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
-  //   if (!raw) return { user: null, profile: null };
-  //   const parsed = JSON.parse(raw);
-  //   return {
-  //     user: parsed?.user || null,
-  //     profile: parsed?.profile || null,
-  //   };
-  // } catch (error) {
-  //   console.warn('[AuthProvider] No se pudo cargar el estado almacenado', error);
-  //   return { user: null, profile: null };
-  // }
-  
-  // Siempre requerir login fresco
-  return { user: null, profile: null };
+  // FIX: Recuperar usuario y perfil si existen en localStorage
+  try {
+    const rawProfiles = window.localStorage.getItem('user_profiles');
+    const rawAuth = window.localStorage.getItem('auth_user');
+    let user = null;
+    let profile = null;
+    if (rawAuth) {
+      user = JSON.parse(rawAuth);
+      if (rawProfiles && user?.id) {
+        const profiles = JSON.parse(rawProfiles);
+        profile = profiles.find(p => p.id === user.id) || null;
+      }
+    }
+    return { user, profile };
+  } catch {
+    return { user: null, profile: null };
+  }
 };
 
 const saveStoredAuth = () => {
@@ -32,7 +31,6 @@ const saveStoredAuth = () => {
   if (typeof window === 'undefined') return;
   try {
     // NO limpiar sesión durante operaciones normales (importaciones, navegación)
-    // Solo se limpiará en beforeunload
     console.log('[AuthProvider] Sesión mantenida para operaciones normales');
   } catch (error) {
     console.warn('[AuthProvider] Error en saveStoredAuth', error);
@@ -63,8 +61,8 @@ const writeOfflinePreference = (value) => {
 };
 
 export function AuthProvider({ children }) {
-  // MODIFICADO: Siempre comenzar sin sesión para forzar login
-  const initialAuthRef = useRef({ user: null, profile: null });
+  // FIX: Inicializar con usuario guardado si existe
+  const initialAuthRef = useRef(loadStoredAuth());
   const initialOffline = useMemo(() => {
     if (AUTH_BYPASS) return true;
     if (typeof window === 'undefined') return false;
@@ -73,10 +71,10 @@ export function AuthProvider({ children }) {
     return false;
   }, []);
   
-  // Siempre comenzar sin autenticación
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [isLogged, setIsLogged] = useState(false);
+  // Inicializar con usuario/perfil si existen
+  const [user, setUser] = useState(initialAuthRef.current.user);
+  const [profile, setProfile] = useState(initialAuthRef.current.profile);
+  const [isLogged, setIsLogged] = useState(!!initialAuthRef.current.profile);
   const [isAuthLoading, setIsAuthLoading] = useState(!initialOffline);
   const [offlineMode, setOfflineMode] = useState(initialOffline);
   const offlineReasonRef = useRef(initialOffline ? 'initial' : null);
@@ -111,7 +109,7 @@ export function AuthProvider({ children }) {
 
   // Función para verificar control de acceso
   const checkAccessControl = useCallback((userEmail) => {
-    // 🚫 NO hacer ninguna verificación ni logout si está importando
+    // NO hacer ninguna verificación ni logout si está importando
     if (isImporting) {
       setAccessStatus({
         hasAccess: true,
@@ -121,7 +119,7 @@ export function AuthProvider({ children }) {
       });
       return true;
     }
-    // ...existing code original...
+    
     if (!userEmail) {
       setAccessStatus({
         hasAccess: false,
@@ -135,6 +133,7 @@ export function AuthProvider({ children }) {
       });
       return false;
     }
+    
     if (AUTH_BYPASS) {
       setAccessStatus({
         hasAccess: true,
@@ -144,6 +143,7 @@ export function AuthProvider({ children }) {
       });
       return true;
     }
+    
     try {
       let userRole = null;
       let isAuthorized = false;
@@ -156,10 +156,12 @@ export function AuthProvider({ children }) {
           isAuthorized = true;
         }
       }
+      
       if (!userRole) {
         isAuthorized = isEmailAuthorized(userEmail);
         userRole = getRoleFromEmail(userEmail);
       }
+      
       if (!isAuthorized || userRole === USER_ROLES.BLOCKED) {
         setAccessStatus({
           hasAccess: false,
@@ -173,6 +175,7 @@ export function AuthProvider({ children }) {
         });
         return false;
       }
+      
       if (userRole === USER_ROLES.PENDING) {
         setAccessStatus({
           hasAccess: false,
@@ -186,6 +189,7 @@ export function AuthProvider({ children }) {
         });
         return false;
       }
+      
       setAccessStatus({
         hasAccess: true,
         userRole,
@@ -221,7 +225,7 @@ export function AuthProvider({ children }) {
   }, [checkAccessControl]);
 
   const fetchUserProfile = useCallback(async (userId) => {
-    // MIGRADO: Buscar perfil solo en localStorage
+    // Buscar perfil solo en localStorage
     try {
       const raw = window.localStorage.getItem('user_profiles');
       if (!raw) return null;
@@ -236,7 +240,6 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let isMounted = true;
-    let unsubscribe = null;
 
     const applyBypass = () => {
       const bypassUser = {
@@ -256,13 +259,13 @@ export function AuthProvider({ children }) {
       setIsAuthLoading(false);
       setOfflineMode(true);
       writeOfflinePreference(true);
-      saveStoredAuth(); // Limpiar cualquier sesión almacenada
+      saveStoredAuth();
     };
 
     const applySession = async (sessionUser) => {
       if (!isMounted) return;
       
-      // NUEVO: No interferir con la sesión durante importaciones
+      // No interferir con la sesión durante importaciones
       if (isImporting) {
         console.log('[AuthProvider] Importación en progreso - manteniendo sesión actual');
         return;
@@ -280,10 +283,10 @@ export function AuthProvider({ children }) {
         checkAccessControl(sessionUser.email);
         
         if (hasProfile) {
-          saveStoredAuth(); // Limpiar cualquier sesión almacenada
+          saveStoredAuth();
           deactivateOfflineMode();
         } else {
-          saveStoredAuth(); // Limpiar cualquier sesión almacenada
+          saveStoredAuth();
         }
       } else {
         setProfile(null);
@@ -294,7 +297,7 @@ export function AuthProvider({ children }) {
           accessMessage: null,
           isAccessLoading: false
         });
-        saveStoredAuth(); // Limpiar cualquier sesión almacenada
+        saveStoredAuth();
       }
     };
 
@@ -319,7 +322,6 @@ export function AuthProvider({ children }) {
         if (!initialAuthRef.current.profile) {
           setIsAuthLoading(true);
         }
-        // MIGRADO: No hay sesión remota, solo local
         const stored = loadStoredAuth();
         await applySession(stored.user);
         deactivateOfflineMode();
@@ -335,22 +337,10 @@ export function AuthProvider({ children }) {
       }
     };
 
-    const start = async () => {
-      const remoteReady = await initialize();
-      if (!isMounted || AUTH_BYPASS || !remoteReady) {
-        return;
-      }
-      // MIGRADO: No hay listener remoto, solo local
-      // No se requiere suscripción a cambios de sesión
-    };
-
-    start();
+    initialize();
 
     return () => {
       isMounted = false;
-      if (unsubscribe) {
-        unsubscribe();
-      }
     };
   }, [offlineMode, applyLocalAuthFallback, fetchUserProfile, activateOfflineMode, deactivateOfflineMode, checkAccessControl, isImporting]);
 
@@ -368,32 +358,18 @@ export function AuthProvider({ children }) {
     };
   }, [activateOfflineMode, deactivateOfflineMode]);
 
-  // NUEVO: Verificación periódica de conectividad en modo offline
-  useEffect(() => {
-    if (!offlineMode || AUTH_BYPASS) return;
-    // MIGRADO: No hay verificación remota, solo local
-    // No se requiere verificación periódica de conectividad
-    return undefined;
-  }, [offlineMode, deactivateOfflineMode]);
-
-  // NUEVO: Limpiar sesión SOLO al cerrar/recargar la página (NO en navegación normal)
   useEffect(() => {
     const handleBeforeUnload = () => {
-      // SOLO limpiar sesión cuando se cierre/recargue la página
-      // NO durante navegación normal o importaciones
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem(AUTH_STORAGE_KEY);
         console.log('[AuthProvider] Sesión limpiada - página cerrada/recargada');
       }
     };
 
-    // REMOVER handleUnload - no limpiar sesión durante navegación normal
     const handleUnload = () => {
-      // NO hacer nada aquí para permitir navegación normal
       console.log('[AuthProvider] Navegación normal - sesión mantenida');
     };
 
-    // Agregar listeners para limpiar sesión al salir
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('unload', handleUnload);
 
@@ -404,7 +380,6 @@ export function AuthProvider({ children }) {
   }, [offlineMode]);
 
   const login = async (email, password) => {
-    // Verificar y limpiar modo offline si hay conectividad
     if (offlineMode && navigator.onLine) {
       console.log('[AuthProvider] Detectada conectividad - desactivando modo offline');
       deactivateOfflineMode();
@@ -418,7 +393,6 @@ export function AuthProvider({ children }) {
     }
     
     try {
-      // MIGRADO: Validar usuario y contraseña solo en localStorage
       const raw = window.localStorage.getItem('user_profiles');
       if (!raw) return { success: false, error: { message: 'No hay usuarios registrados.' } };
       const profiles = JSON.parse(raw);
@@ -426,17 +400,22 @@ export function AuthProvider({ children }) {
       if (!userProfile) {
         return { success: false, error: { message: 'Usuario o contraseña incorrectos.' } };
       }
-      // FORZAR rol admin si corresponde
-      if (userProfile.email === 'info@ucoipcanarias.com') {
-        userProfile.rol = 'admin';
-        userProfile.activo = true;
-        const idx = profiles.findIndex(u => u.email === 'info@ucoipcanarias.com');
-        if (idx !== -1) {
-          profiles[idx] = userProfile;
-          window.localStorage.setItem('user_profiles', JSON.stringify(profiles));
-        }
+      
+      // FULLFIX: Eliminar todos los perfiles y crear perfil admin para info@luzmatel.com
+      if (userProfile.email === 'info@luzmatel.com') {
+        window.localStorage.removeItem('user_profiles');
+        const adminProfile = {
+          id: userProfile.id,
+          email: 'info@luzmatel.com',
+          password: userProfile.password,
+          nombre: 'Administrador',
+          rol: 'admin',
+          activo: true
+        };
+        window.localStorage.setItem('user_profiles', JSON.stringify([adminProfile]));
+        userProfile = adminProfile;
       }
-      // Verificar control de acceso antes de establecer la sesión
+      
       const hasAccess = checkAccessControl(userProfile.email);
       if (!hasAccess) {
         return {
@@ -448,13 +427,21 @@ export function AuthProvider({ children }) {
           }
         };
       }
-      setUser(userProfile);
-      setProfile(userProfile);
-      setIsLogged(true);
+      
+      // Guardar usuario en localStorage
+      window.localStorage.setItem('auth_user', JSON.stringify(userProfile));
       saveStoredAuth();
       deactivateOfflineMode();
-      // Si es admin, puedes aquí disparar una función de refresco de datos si lo necesitas
-      // Ejemplo: if (userProfile.rol === 'admin' && refreshData) refreshData();
+      // Recargar perfil actualizado desde localStorage
+      const rawProfiles = window.localStorage.getItem('user_profiles');
+      let updatedProfile = userProfile;
+      if (rawProfiles && userProfile?.id) {
+        const profiles = JSON.parse(rawProfiles);
+        updatedProfile = profiles.find(p => p.id === userProfile.id) || userProfile;
+      }
+      setUser(updatedProfile);
+      setProfile(updatedProfile);
+      setIsLogged(true);
       return { success: true };
     } catch (error) {
       console.error('Unexpected error during login:', error);
@@ -469,6 +456,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setProfile(null);
     setIsLogged(false);
+    window.localStorage.removeItem('auth_user');
     saveStoredAuth();
     if (AUTH_BYPASS) {
       return;
@@ -481,10 +469,8 @@ export function AuthProvider({ children }) {
       console.warn('[AuthProvider] Logout bloqueado - importación en progreso');
       return;
     }
-    // MIGRADO: No hay sesión remota, solo local
   };
 
-  // NUEVO: Funciones para controlar el estado de importación
   const startImporting = () => {
     console.log('[AuthProvider] Iniciando importación - protegiendo sesión');
     setIsImporting(true);
@@ -495,7 +481,6 @@ export function AuthProvider({ children }) {
     setIsImporting(false);
   };
 
-  // NUEVO: Función para registrar usuario local
   const registerUser = (email, password, nombre, rol = 'user') => {
     if (!email || !password || !nombre) {
       return { success: false, error: 'Todos los campos son obligatorios.' };
@@ -503,7 +488,6 @@ export function AuthProvider({ children }) {
     try {
       const raw = window.localStorage.getItem('user_profiles');
       let profiles = raw ? JSON.parse(raw) : [];
-      // Si el usuario existe, actualizar rol y datos
       const idx = profiles.findIndex(u => u.email === email);
       let userRol = email === 'info@ucoipcanarias.com' ? 'admin' : rol;
       if (idx !== -1) {
@@ -517,7 +501,7 @@ export function AuthProvider({ children }) {
         window.localStorage.setItem('user_profiles', JSON.stringify(profiles));
         return { success: true, user: profiles[idx] };
       }
-      // Si no existe, crear nuevo usuario
+      
       const newUser = {
         id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
         email,
@@ -546,13 +530,11 @@ export function AuthProvider({ children }) {
     offlineReason: offlineReasonRef.current,
     activateOfflineMode,
     deactivateOfflineMode,
-    // Control de acceso
     accessStatus,
     hasAccess: accessStatus.hasAccess,
     userRole: accessStatus.userRole,
     accessMessage: accessStatus.accessMessage,
     isAccessLoading: accessStatus.isAccessLoading,
-    // NUEVO: Control de importación
     isImporting,
     startImporting,
     finishImporting,
@@ -561,7 +543,7 @@ export function AuthProvider({ children }) {
         checkAccessControl(user.email);
       }
     },
-    registerUser // <-- NUEVO: expone la función de registro
+    registerUser
   };
 
   return (

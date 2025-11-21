@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { Wifi, WifiOff, Download, Upload, Clock, HardDrive, ChevronDown, ChevronUp } from 'lucide-react';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthGestion } from '../../hooks/useAuthGestion';
 
 export default function OfflineStatus() {
   const { 
@@ -14,7 +14,7 @@ export default function OfflineStatus() {
     createEmergencyBackup, 
     getOfflineInfo 
   } = useOfflineSync();
-  const { offlineMode, offlineReason, activateOfflineMode, deactivateOfflineMode } = useAuth();
+  const { offlineMode, offlineReason, activateOfflineMode, deactivateOfflineMode } = useAuthGestion();
 
   const [isExpanded, setIsExpanded] = useState(false);
   const offlineInfo = getOfflineInfo ? getOfflineInfo() : { storageSizeKB: 0 };

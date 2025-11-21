@@ -1,14 +1,14 @@
 // src/components/ImportExcelMapperV2.jsx
-// Componente UI simplificado que usa el hook useImportExcel
+// Componente UI simplificado que usa el hook useImportGestion
 
 import { useState } from "react";
 import { Upload, Download, FileSpreadsheet, AlertCircle } from "lucide-react";
 import Toast from "./ui/Toast";
 import Card from "./ui/Card";
 import SectionTitle from "./ui/SectionTitle";
-import { useImportExcel } from "../hooks/useImportExcel";
+import { useImportGestion } from "../hooks/useImportGestion";
 import { MAPEO_CAMPOS, parseDate } from "../utils/importValidation";
-import { useAuth } from "../hooks/useAuth";
+import { useAuthGestion } from "../hooks/useAuthGestion";
 
 // Modal simple para mostrar errores
 function Modal({ open, onClose, title, children }) {
@@ -65,7 +65,7 @@ export default function ImportExcelMapperV2({
     importInteligente,
     importSimplificado,
     clearData,
-  } = useImportExcel({
+  } = useImportGestion({
     productos,
     operadores,
     colaboradores,
@@ -78,7 +78,7 @@ export default function ImportExcelMapperV2({
     onImportSuccess, // ← PASAR onImportSuccess al hook
   });
 
-  const { startImporting, finishImporting } = useAuth();
+  const { startImporting, finishImporting } = useAuthGestion();
 
   // Verificar si la funcionalidad de auto-creación está disponible
   const autoCreacionDisponible = !!(setProductos && setOperadores && setColaboradores && setZonas);

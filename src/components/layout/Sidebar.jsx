@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 
-export function Sidebar({ collapsed, toggle, nav, location, user, logout }) {
+export function Sidebar({ collapsed, toggle, nav = [], location, user, logout }) {
   return (
     <aside
       className={`h-screen sticky top-0 border-r border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 ${

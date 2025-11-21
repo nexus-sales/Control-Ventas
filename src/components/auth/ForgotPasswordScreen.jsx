@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthGestion } from '../../hooks/useAuthGestion';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
 import EmailInput from '../ui/EmailInput';
@@ -11,7 +11,7 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
-  const { offlineMode } = useAuth();
+  const { offlineMode } = useAuthGestion();
 
   const handleSubmit = async (e) => {
     e.preventDefault();

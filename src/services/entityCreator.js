@@ -180,3 +180,55 @@ export const mapExcelToEntity = (excelRow, fieldMappings, entityType) => {
       return { id: generateId(), ...mappedData };
   }
 };
+
+/**
+ * Crea entidades faltantes en local y actualiza los estados globales
+ * @param {Object} entidadesUnicas - Sets con nombres únicos por tipo
+ * @param {Object} existentes - Listas actuales de entidades
+ * @param {Object} setters - Setters para actualizar entidades globales
+ * @returns {Promise<{resumen: Object, mapeos: Object}>}
+ */
+export async function createMissingEntitiesLocal(entidadesUnicas, existentes, setters) {
+  // Mapeos de nombre a ID
+  const mapeos = {
+    colaboradores: {},
+    productos: {},
+    operadores: {},
+    zonas: {},
+  };
+
+  // Resumen de creación
+  const resumen = {
+    colaboradoresCreados: 0,
+    productosCreados: 0,
+    operadoresCreados: 0,
+    zonasCreadas: 0,
+  };
+
+  // Helper para crear y actualizar entidades
+  const crearFaltantes = (tipo, creador, existentesArr, setFn, nombresUnicos) => {
+    const nuevos = [];
+    const existentesPorNombre = Object.fromEntries(existentesArr.map(e => [e.nombre?.toUpperCase(), e]));
+    nombresUnicos.forEach(nombre => {
+      const nombreNorm = String(nombre).trim().toUpperCase();
+      if (!existentesPorNombre[nombreNorm]) {
+        const entidad = creador({ nombre });
+        nuevos.push(entidad);
+        mapeos[tipo][nombre] = entidad.id;
+      } else {
+        mapeos[tipo][nombre] = existentesPorNombre[nombreNorm].id;
+      }
+    });
+    if (nuevos.length && typeof setFn === 'function') {
+      setFn(prev => [...prev, ...nuevos]);
+    }
+    resumen[tipo + (tipo === 'zonas' ? 'Creadas' : 'Creados')] += nuevos.length;
+  };
+
+  crearFaltantes('colaboradores', createColaborador, existentes.colaboradores || [], setters.setColaboradores, entidadesUnicas.colaboradores || new Set());
+  crearFaltantes('productos', createProducto, existentes.productos || [], setters.setProductos, entidadesUnicas.productos || new Set());
+  crearFaltantes('operadores', createOperador, existentes.operadores || [], setters.setOperadores, entidadesUnicas.operadores || new Set());
+  crearFaltantes('zonas', createZona, existentes.zonas || [], setters.setZonas, entidadesUnicas.zonas || new Set());
+
+  return { resumen, mapeos };
+}

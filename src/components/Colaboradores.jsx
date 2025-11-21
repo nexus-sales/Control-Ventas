@@ -1,6 +1,6 @@
 import { useState, useMemo, useContext } from "react";
 import { AlertCircle, Plus, Phone, Zap, Shield, User, Edit3, Trash2 } from "lucide-react";
-import { DataContext } from "../context/DataContextDef";
+import { DataContext } from "../context/DataContext";
 import Card from "./ui/Card";
 import { ColaboradoresTable, ColaboradorEditModal } from "./colaboradores/index.js";
 
@@ -78,7 +78,7 @@ export default function Colaboradores() {
   };
 
   // Mostrar loading mientras se cargan los datos
-  if (false && !dataInitialized) {
+  if (!dataInitialized) {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">

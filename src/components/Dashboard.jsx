@@ -1,7 +1,7 @@
-import { useContext, useState, useEffect } from "react";
+import { useState } from "react";
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useNavigate } from "react-router-dom";
-import { DataContext } from "../context/DataContextDef";
+import { useData } from "../context/DataContext";
 import Loading from "./common/Loading";
 import Card from "./ui/Card";
 import SectionTitle from "./ui/SectionTitle";
@@ -10,9 +10,8 @@ import SectorAnalysis from "./dashboard/SectorAnalysis";
 import FamiliaAnalysis from "./dashboard/FamiliaAnalysis";
 import GeoDistributionPanel from "./dashboard/GeoDistributionPanel";
 import EvolucionTemporalPanel from "./dashboard/EvolucionTemporalPanel";
-import QuickActions from "./widgets/QuickActions";
-import SmartAlerts from "./widgets/SmartAlerts";
-import QuickStats from "./widgets/QuickStats";
+import StatusWidgets from "./widgets/StatusWidgets";
+import { QuickActions, QuickStats, SmartAlerts } from "./widgets/DashboardWidgets";
 import VentasEnProceso from "./widgets/VentasEnProceso";
 import AnalisisRendimiento from "./widgets/AnalisisRendimiento";
 import FiltrosPersonalizados from "./widgets/FiltrosPersonalizados";
@@ -22,6 +21,7 @@ import ExtraMetricsPanel from "./dashboard/ExtraMetricsPanel";
 import PipelinePanel from "./dashboard/PipelinePanel";
 import TendenciasPanel from "./dashboard/TendenciasPanel";
 import ProductividadPanel from "./dashboard/ProductividadPanel";
+import AnalysisWidgets from "./widgets/AnalysisWidgets";
 import {
   Euro,
   TrendingUp,
@@ -37,7 +37,10 @@ import {
   Award,
   Briefcase,
   AlertCircle,
-  Plus
+  Plus,
+  AlertTriangle,
+  CheckCircle,
+  Clock
 } from "lucide-react";
 
 function euro(n) {
@@ -73,7 +76,7 @@ export default function Dashboard() {
       return;
     }
     
-    // Manejar ventas con modal (Nueva Venta)
+    // Manejar ventas with modal (Nueva Venta)
     if (route === 'ventas' && options.openModal) {
       navigate(`/${route}?modal=${options.openModal}`);
       return;
@@ -84,16 +87,13 @@ export default function Dashboard() {
   };
   
   // Usar el contexto de datos
-  const { data, dataInitialized } = useContext(DataContext);
-  useEffect(() => {
-    console.log('[Dashboard] dataInitialized changed:', dataInitialized);
-  }, [dataInitialized]);
+  const { data, dataInitialized } = useData();
+  
   const ventas = Array.isArray(data?.ventas) ? data.ventas : [];
   const productos = Array.isArray(data?.productos) ? data.productos : [];
   const operadores = Array.isArray(data?.operadores) ? data.operadores : [];
   const colaboradores = Array.isArray(data?.colaboradores) ? data.colaboradores : [];
   const zonas = Array.isArray(data?.zonas) ? data.zonas : [];
-  const liquidaciones = Array.isArray(data?.liquidaciones) ? data.liquidaciones : [];
 
   const total = ventas.length;
   const ventasCalculadas = ventas.filter(v => v._calc?.ok);
@@ -368,27 +368,124 @@ export default function Dashboard() {
 
 
   // Mostrar loading mientras se cargan los datos
-  if (false) {
-    return <Loading message="Cargando dashboard..." />;
+  if (!dataInitialized) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-slate-200 rounded w-1/4" />
+          <div className="h-64 bg-slate-200 rounded" />
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      {/* Dashboard Mejorado - Sección Superior Prioritaria */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Columna 1: Acciones Rápidas */}
-        <div className="lg:col-span-1">
-          <QuickActions onNavigate={handleNavigate} />
-        </div>
-        
-        {/* Columna 2: Estadísticas Rápidas */}
-        <div className="lg:col-span-2">
-          <QuickStats 
-            ventas={ventas} 
-            colaboradores={colaboradores} 
-            liquidaciones={liquidaciones} 
-          />
-        </div>
+      <StatusWidgets />
+      {/* Acciones Rápidas en su propia fila */}
+      <div className="mb-6">
+        <QuickActions 
+          onNewVenta={() => handleNavigate('ventas', { openModal: 'nueva' })}
+          onImportExcel={() => handleNavigate('importar')}
+          onExportData={() => handleNavigate('ventas')}
+          onViewAnalytics={() => handleNavigate('dashboard')}
+          onManageUsers={() => handleNavigate('colaboradores')}
+          onOpenSettings={() => handleNavigate('config')}
+        />
+      </div>
+
+      {/* Estadísticas Rápidas en su propia fila */}
+      <div className="mb-6">
+        <QuickStats 
+          stats={[
+            {
+              icon: Euro,
+              title: "Facturación",
+              value: euro(facturacionTotal),
+              subtitle: "Total registrado",
+              color: "text-emerald-600",
+              bgColor: "bg-emerald-50"
+            },
+            {
+              icon: Target,
+              title: "Comisiones",
+              value: euro(kpis.comBruta),
+              subtitle: "Total calculado",
+              color: "text-blue-600",
+              bgColor: "bg-blue-50"
+            },
+            {
+              icon: BarChart3,
+              title: "Ventas",
+              value: total.toString(),
+              subtitle: "Total registradas",
+              color: "text-purple-600",
+              bgColor: "bg-purple-50"
+            },
+            {
+              icon: Award,
+              title: "Ticket Medio",
+              value: euro(ticketMedio),
+              subtitle: "Por venta",
+              color: "text-amber-600",
+              bgColor: "bg-amber-50"
+            }
+          ]}
+        />
+      </div>
+
+      {/* Alertas Inteligentes en su propia fila */}
+      <div className="mb-6">
+        <SmartAlerts 
+          alerts={(() => {
+            const alerts = [];
+            const ventasSinCalcular = ventas.filter(v => !v._calc?.ok).length;
+            const ventasPendientes = ventas.filter(v => v.estado === 'Borrador' || v.estado === 'Confirmada').length;
+            
+            if (ventasSinCalcular > 0) {
+              alerts.push({
+                type: 'warning',
+                icon: AlertTriangle,
+                title: 'Comisiones Pendientes',
+                message: `${ventasSinCalcular} ventas sin calcular comisiones`,
+                priority: 'high',
+                action: {
+                  label: 'Ver Ventas',
+                  onClick: () => handleNavigate('ventas')
+                }
+              });
+            }
+            
+            if (ventasPendientes > 0) {
+              alerts.push({
+                type: 'info',
+                icon: Clock,
+                title: 'Ventas en Proceso',
+                message: `${ventasPendientes} ventas pendientes de cerrar`,
+                priority: 'normal',
+                action: {
+                  label: 'Revisar',
+                  onClick: () => handleNavigate('ventas', { 
+                    filtros: { estado: ['Borrador', 'Confirmada'] },
+                    titulo: 'Ventas Pendientes'
+                  })
+                }
+              });
+            }
+            
+            if (alerts.length === 0) {
+              alerts.push({
+                type: 'success',
+                icon: CheckCircle,
+                title: 'Todo en Orden',
+                message: 'No hay alertas importantes en este momento',
+                priority: 'low'
+              });
+            }
+            
+            return alerts;
+          })()}
+        />
       </div>
 
       {/* Sección Crítica: Estados de Ventas - LO MÁS IMPORTANTE */}
@@ -405,15 +502,6 @@ export default function Dashboard() {
         ventas={ventas}
         productos={productos}
         operadores={operadores}
-        onNavigate={handleNavigate}
-      />
-
-      {/* Alertas del Sistema */}
-      <SmartAlerts 
-        ventas={ventas}
-        colaboradores={colaboradores}
-        productos={productos}
-        liquidaciones={liquidaciones}
         onNavigate={handleNavigate}
       />
 
@@ -653,6 +741,17 @@ export default function Dashboard() {
         <SectionTitle>Pipeline de Ventas</SectionTitle>
         <PipelinePanel byEstado={byEstado} total={total} />
       </Card>
+
+      {/* Nuevos widgets de análisis - refactorizado */}
+      <AnalysisWidgets 
+        ventas={ventas}
+        productos={productos}
+        operadores={operadores}
+        colaboradores={colaboradores}
+        onNavigate={handleNavigate}
+        currentFilters={{}}
+        onApplyFilters={() => {}}
+      />
     </div>
   );
 }

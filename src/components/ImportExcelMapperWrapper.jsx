@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import ImportExcelMapperV2 from './ImportExcelMapperV2';
-import { DataContext } from '../context/DataContextDef';
+import { DataContext } from '../context/DataContext';
 import Loading from './common/Loading';
 
 export default function ImportExcelMapperWrapper() {
@@ -29,8 +29,15 @@ export default function ImportExcelMapperWrapper() {
     }
   };
 
-  if (false && !dataInitialized) {
-    return <Loading />;
+  if (!dataInitialized) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-slate-200 rounded w-1/4" />
+          <div className="h-64 bg-slate-200 rounded" />
+        </div>
+      </div>
+    );
   }
 
   return (

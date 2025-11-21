@@ -483,6 +483,31 @@ export function useImportGestion({
           if (Object.keys(extras).length > 0) {
             ventaFinal.extras = extras;
           }
+
+        // Forzar actualización de productos, zonas y colaboradores si crearAutomaticamente está activo
+        if (state.crearAutomaticamente) {
+          // Extraer entidades únicas de las filas importadas
+          const nuevosProductos = [];
+          const nuevosZonas = [];
+          const nuevosColaboradores = [];
+          rows.forEach(row => {
+            const prod = row[state.mapping["producto_id"]] || row["PRODUCTO"];
+            if (prod && !productos.some(p => p.nombre === prod)) {
+              nuevosProductos.push({ id: `prod_${Date.now()}_${Math.random()}`, nombre: prod });
+            }
+            const zona = row[state.mapping["zona_id"]] || row["ZONA"];
+            if (zona && !zonas.some(z => z.nombre === zona)) {
+              nuevosZonas.push({ id: `zona_${Date.now()}_${Math.random()}`, nombre: zona });
+            }
+            const colab = row[state.mapping["colaborador_id"]] || row["COLABORADOR"];
+            if (colab && !colaboradores.some(c => c.nombre === colab)) {
+              nuevosColaboradores.push({ id: `colab_${Date.now()}_${Math.random()}`, nombre: colab });
+            }
+          });
+          if (setProductos && nuevosProductos.length > 0) setProductos(prev => [...nuevosProductos, ...prev]);
+          if (setZonas && nuevosZonas.length > 0) setZonas(prev => [...nuevosZonas, ...prev]);
+          if (setColaboradores && nuevosColaboradores.length > 0) setColaboradores(prev => [...nuevosColaboradores, ...prev]);
+        }
         }
 
         nuevasVentas.push(ventaFinal);

@@ -1,20 +1,17 @@
 import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { DataContext } from '../../context/DataContextDef';
+import { DataContext } from '../../context/DataContext';
 import { computeVenta } from '../../utils/calculos';
-import { useVentasOperations } from '../../hooks/useVentasOperations';
-import { useVentasFilters } from '../../hooks/useVentasFilters';
-import { useVentasSelection } from '../../hooks/useVentasSelection';
+import { useVentasGestion } from '../../hooks/useVentasGestion';
 import { usePagination } from '../../hooks/usePagination';
 import Loading from '../common/Loading';
+import { Search, Filter, Download, X } from 'lucide-react';
 
-// Componentes
+// Componentes consolidados
 import { VentasStats } from './VentasStats';
-import { VentasFilters } from './VentasFilters';
 import { VentasActions } from './VentasActions';
 import { VentasTable } from './VentasTable';
-import { NewVentaModal } from './modals/NewVentaModal';
-import { EditVentaModal } from './modals/EditVentaModal';
+import VentaFormModal from './modals/VentaFormModal';
 import { VentaDetailModal } from './modals/VentaDetailModal';
 import { PvpEditModal } from './modals/PvpEditModal';
 
@@ -26,7 +23,40 @@ export default function VentasPage() {
   // Contexto global
   const { data, dataInitialized } = useContext(DataContext);
   
-  // Datos seguros
+  // Hook consolidado de gestión de ventas
+  const {
+    // Datos
+    ventas,
+    productos,
+    colaboradores,
+    zonas,
+    
+    // Operaciones CRUD
+    addVenta,
+    updateVenta,
+    deleteVenta,
+    deleteMultipleVentas,
+    updateEstado,
+    updateProductPvp,
+    isVentaBlocked,
+    createInitialDraft,
+    
+    // Filtros
+    filtros,
+    updateFilter,
+    clearFilters,
+    ventasFiltradas,
+    exportarDatos,
+    
+    // Selección
+    selectedIds,
+    handleSelect,
+    handleSelectAll,
+    isAllSelected,
+    clearSelection
+  } = useVentasGestion();
+
+  // Datos seguros - ARRAYS DEFENSIVOS MEJORADOS
   const operadores = useMemo(
     () => (Array.isArray(data?.operadores) ? data.operadores : []),
     [data?.operadores]
@@ -34,33 +64,46 @@ export default function VentasPage() {
   const niveles = useMemo(() => Array.isArray(data?.niveles) ? data.niveles : [], [data?.niveles]);
   const reglas = useMemo(() => Array.isArray(data?.reglas) ? data.reglas : [], [data?.reglas]);
 
-  // Hooks personalizados
-  const ventasOps = useVentasOperations();
-  const filtrosData = useVentasFilters(ventasOps.ventas, ventasOps.productos);
+  // Arrays defensivos para props y selects - VALIDACIÓN MEJORADA
+  const productosSafe = useMemo(() => Array.isArray(productos) ? productos : [], [productos]);
+  const colaboradoresSafe = useMemo(() => Array.isArray(colaboradores) ? colaboradores : [], [colaboradores]);
+  const zonasSafe = useMemo(() => Array.isArray(zonas) ? zonas : [], [zonas]);
+  const operadoresSafe = useMemo(() => Array.isArray(operadores) ? operadores : [], [operadores]);
+  const ventasFiltradasSafe = useMemo(() => Array.isArray(ventasFiltradas) ? ventasFiltradas : [], [ventasFiltradas]);
   
-
-  
-  // Calcular ventas con datos de negocio ANTES de paginación
+  // Calcular ventas con datos de negocio ANTES de paginación - USANDO ARRAYS SEGUROS
   const ventasCalc = useMemo(() => {
-    if (!Array.isArray(filtrosData.ventasFiltradas)) return [];
+    if (!Array.isArray(ventasFiltradasSafe) || ventasFiltradasSafe.length === 0) {
+      return [];
+    }
     
-    return filtrosData.ventasFiltradas.map((v) => ({
-      ...v,
-      _calc: computeVenta({
-        venta: v,
-        productos: ventasOps.productos || [],
-        operadores: operadores || [],
-        zonas: ventasOps.zonas || [],
-        colaboradores: ventasOps.colaboradores || [],
-        niveles: niveles || [],
-        reglas: reglas || [],
-      }),
-    }));
-  }, [filtrosData.ventasFiltradas, ventasOps.productos, operadores, ventasOps.zonas, ventasOps.colaboradores, niveles, reglas]);
+    return ventasFiltradasSafe.map((v) => {
+      try {
+        return {
+          ...v,
+          _calc: computeVenta({
+            venta: v,
+            productos: productosSafe,
+            operadores: operadoresSafe,
+            zonas: zonasSafe,
+            colaboradores: colaboradoresSafe,
+            niveles: niveles,
+            reglas: reglas,
+          }),
+        };
+      } catch (error) {
+        console.error('Error calculando venta:', error, v);
+        return {
+          ...v,
+          _calc: { ok: false, error: error.message }
+        };
+      }
+    });
+  }, [ventasFiltradasSafe, productosSafe, operadoresSafe, zonasSafe, colaboradoresSafe, niveles, reglas]);
 
-  // Paginación después de calcular las ventas
-  const pagination = usePagination(ventasCalc, 25);
-  const selectionData = useVentasSelection(pagination.paginatedData);
+  // Paginación después de calcular las ventas - CON VALIDACIÓN
+  const ventasCalcSafe = useMemo(() => Array.isArray(ventasCalc) ? ventasCalc : [], [ventasCalc]);
+  const pagination = usePagination(ventasCalcSafe, 25);
 
   // Estados de UI
   const [activeModal, setActiveModal] = useState(null);
@@ -80,7 +123,7 @@ export default function VentasPage() {
     const modal = params.get('modal');
     if (modal === 'newVenta') {
       // Abrir modal de nueva venta automáticamente
-      setActiveModal('new'); // CORREGIDO: cambiado de 'newVenta' a 'new'
+      setActiveModal('new');
       // Limpiar el parámetro de la URL
       params.delete('modal');
       const newSearch = params.toString();
@@ -103,43 +146,59 @@ export default function VentasPage() {
     // Aplicar filtros si existen
     if (Object.keys(filtrosUrl).length > 0) {
       Object.entries(filtrosUrl).forEach(([key, value]) => {
-        if (key === 'estado' && filtrosData.setEstadoFiltro) {
-          value.forEach(estado => filtrosData.setEstadoFiltro(estado, true));
-        } else if (key === 'fechaDesde' && filtrosData.setFechaDesde) {
-          filtrosData.setFechaDesde(value);
-        } else if (key === 'fechaHasta' && filtrosData.setFechaHasta) {
-          filtrosData.setFechaHasta(value);
-        }
-        // Añadir más filtros según sea necesario
+        updateFilter && updateFilter(key, value);
       });
     }
-  }, [location.search, location.pathname, filtrosData, navigate, setActiveModal]);
+  }, [location.search, location.pathname, updateFilter, navigate]);
 
-  // Calcular estadísticas
+  // Calcular estadísticas - CON ARRAYS DEFENSIVOS COMPLETOS
   const estadisticas = useMemo(() => {
     let totalPvp = 0;
     let countConPvp = 0;
 
-    ventasCalc.forEach((v) => {
-      const prod = ventasOps.productos.find((p) => p?.id === v.producto_id);
-      const pvpValue = prod?.pvp || v.pvp || 0;
-      if (pvpValue > 0) {
-        totalPvp += pvpValue;
-        countConPvp++;
+    // Validar que ventasCalcSafe sea un array válido
+    if (!Array.isArray(ventasCalcSafe)) {
+      return {
+        totalVentas: 0,
+        volumenTotal: 0,
+        comisionesTotal: 0,
+        ticketMedio: 0,
+        ventasSinPvp: 0,
+      };
+    }
+    
+    ventasCalcSafe.forEach((v) => {
+      try {
+        // Usar array defensivo para evitar errores cuando productos es undefined
+        const prod = productosSafe.find((p) => p?.id === v?.producto_id);
+        const pvpValue = prod?.pvp || v?.pvp || 0;
+        
+        if (pvpValue > 0) {
+          totalPvp += pvpValue;
+          countConPvp++;
+        }
+      } catch (error) {
+        console.error('Error procesando estadística de venta:', error, v);
       }
     });
 
+    const comisionesTotal = ventasCalcSafe.reduce((sum, v) => {
+      try {
+        return sum + (v?._calc?.ok ? (v._calc.detalle?.comBruta || 0) : 0);
+      } catch (error) {
+        console.error('Error calculando comisión:', error, v);
+        return sum;
+      }
+    }, 0);
+
     return {
-      totalVentas: ventasCalc.length,
+      totalVentas: ventasCalcSafe.length,
       volumenTotal: totalPvp,
-      comisionesTotal: ventasCalc.reduce(
-        (sum, v) => sum + (v._calc?.ok ? v._calc.detalle.comBruta : 0),
-        0,
-      ),
+      comisionesTotal,
       ticketMedio: countConPvp > 0 ? totalPvp / countConPvp : 0,
-      ventasSinPvp: ventasCalc.length - countConPvp,
+      ventasSinPvp: ventasCalcSafe.length - countConPvp,
     };
-  }, [ventasCalc, ventasOps.productos]);
+  }, [ventasCalcSafe, productosSafe]);
 
   // Handlers de modales
   const openNewVentaModal = () => setActiveModal('new');
@@ -165,67 +224,201 @@ export default function VentasPage() {
     setPvpEdit({ producto_id: null, producto_nombre: "", pvp: 0 });
   };
 
-  // Handlers de acciones
+  // Handlers de acciones - CON VALIDACIONES
   const handleDeleteSelected = () => {
-    const success = ventasOps.deleteMultipleVentas(selectionData.selectedIds);
-    if (success) {
-      selectionData.clearSelection();
+    if (deleteMultipleVentas && Array.isArray(selectedIds) && selectedIds.length > 0) {
+      const success = deleteMultipleVentas(selectedIds);
+      if (success && clearSelection) {
+        clearSelection();
+      }
     }
   };
 
   const handleExport = () => {
-    filtrosData.exportarDatos(ventasCalc, ventasOps.colaboradores, ventasOps.zonas);
+    if (exportarDatos) {
+      exportarDatos(ventasCalcSafe, colaboradoresSafe, zonasSafe);
+    }
   };
 
   const handleActivate = (ventaId) => {
-    ventasOps.updateEstado(ventaId, 'ACTIVO');
+    if (updateEstado) {
+      updateEstado(ventaId, 'ACTIVO');
+    }
   };
 
   const handleDelete = (ventaId) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar esta venta?')) {
-      ventasOps.deleteVenta(ventaId);
+    if (window.confirm('¿Estás seguro de que quieres eliminar esta venta?') && deleteVenta) {
+      deleteVenta(ventaId);
     }
   };
 
   const handleSaveVenta = (ventaData) => {
-    ventasOps.addVenta(ventaData);
+    if (addVenta) {
+      addVenta(ventaData);
+    }
   };
 
   const handleUpdateVenta = (ventaId, changes) => {
-    ventasOps.updateVenta(ventaId, changes);
+    if (updateVenta) {
+      updateVenta(ventaId, changes);
+    }
   };
 
   const handleUpdatePvp = (productoId, pvp) => {
-    ventasOps.updateProductPvp(productoId, pvp);
+    if (updateProductPvp) {
+      updateProductPvp(productoId, pvp);
+    }
   };
 
   const isAdmin = true; // TODO: Obtener del contexto de usuario
 
-
   // Mostrar loading mientras se cargan los datos
-  if (false && !dataInitialized) {
-    return <Loading />;
+  if (!dataInitialized) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-slate-200 rounded w-1/4" />
+          <div className="h-64 bg-slate-200 rounded" />
+        </div>
+      </div>
+    );
   }
+
+  // Verificar si hay filtros activos - CON VALIDACIÓN
+  const hasActiveFilters = filtros && Object.values(filtros).some(value => {
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'string') return value !== '';
+    if (typeof value === 'boolean') return value;
+    return false;
+  });
 
   return (
     <div className="space-y-6">
       {/* Estadísticas */}
-      <VentasStats ventasCalc={ventasCalc} productos={ventasOps.productos} />
+      <VentasStats ventasCalc={ventasCalcSafe} productos={productosSafe} />
 
-      {/* Filtros */}
-      <VentasFilters
-        {...filtrosData}
-        onExport={handleExport}
-        colaboradores={ventasOps.colaboradores}
-        productos={ventasOps.productos}
-        operadores={operadores}
-        zonas={ventasOps.zonas}
-      />
+      {/* Filtros integrados - reemplaza VentasFilters */}
+      <div className="bg-white rounded-lg shadow-sm border p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="w-5 h-5 text-gray-500" />
+          <h3 className="font-medium text-gray-900">Filtros</h3>
+          {hasActiveFilters && (
+            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+              Activos
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          {/* Búsqueda */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Búsqueda
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={(filtros || {}).search || ''}
+                onChange={(e) => updateFilter && updateFilter('search', e.target.value)}
+                placeholder="Cliente, producto..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+          
+          {/* Colaborador */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Colaborador
+            </label>
+            <select
+              value={(filtros || {}).colaborador_id || ''}
+              onChange={(e) => updateFilter && updateFilter('colaborador_id', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Todos los colaboradores</option>
+              {colaboradoresSafe.map(colab => (
+                <option key={colab.id} value={colab.id}>{colab.nombre}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Estado */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Estado
+            </label>
+            <select
+              value={(filtros || {}).estado || ''}
+              onChange={(e) => updateFilter && updateFilter('estado', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Todos los estados</option>
+              <option value="Confirmada">Confirmada</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Cancelada">Cancelada</option>
+              <option value="En proceso">En proceso</option>
+            </select>
+          </div>
+
+          {/* Operador */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Operador
+            </label>
+            <select
+              value={(filtros || {}).operador_id || ''}
+              onChange={(e) => updateFilter && updateFilter('operador_id', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Todos los operadores</option>
+              {operadoresSafe.map(op => (
+                <option key={op.id} value={op.id}>{op.nombre}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Acciones de filtros */}
+        <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex items-center gap-2">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={(filtros || {}).sinPvp || false}
+                onChange={(e) => updateFilter && updateFilter('sinPvp', e.target.checked)}
+                className="mr-2 rounded"
+              />
+              <span className="text-sm text-gray-700">Solo ventas sin PVP</span>
+            </label>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {hasActiveFilters && (
+              <button
+                onClick={() => clearFilters && clearFilters()}
+                className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:text-gray-800 text-sm"
+              >
+                <X className="w-4 h-4" />
+                Limpiar filtros
+              </button>
+            )}
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
+            >
+              <Download className="w-4 h-4" />
+              Exportar
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Acciones */}
       <VentasActions
-        ventasCount={ventasCalc.length}
-        selectedIds={selectionData.selectedIds}
+        ventasCount={ventasCalcSafe.length}
+        selectedIds={selectedIds || []}
         onNewVenta={openNewVentaModal}
         onDeleteSelected={handleDeleteSelected}
         isAdmin={isAdmin}
@@ -234,53 +427,41 @@ export default function VentasPage() {
 
       {/* Tabla con Paginación */}
       <VentasTable
-        ventasCalc={pagination.paginatedData}
-        productos={ventasOps.productos}
-        colaboradores={ventasOps.colaboradores}
-        zonas={ventasOps.zonas}
-        selectedIds={selectionData.selectedIds}
-        onSelect={selectionData.handleSelect}
-        onSelectAll={selectionData.handleSelectAll}
-        isAllSelected={selectionData.isAllSelected}
+        ventasCalc={pagination?.paginatedData || []}
+        productos={productosSafe}
+        colaboradores={colaboradoresSafe}
+        zonas={zonasSafe}
+        selectedIds={selectedIds || []}
+        onSelect={handleSelect}
+        onSelectAll={handleSelectAll}
+        isAllSelected={isAllSelected}
         onEdit={openEditModal}
         onView={openDetailModal}
         onDelete={handleDelete}
         onActivate={handleActivate}
         onDefinePvp={openPvpModal}
-        isVentaBlocked={ventasOps.isVentaBlocked}
+        isVentaBlocked={isVentaBlocked}
         isAdmin={isAdmin}
         // Props de paginación
-        currentPage={pagination.currentPage}
-        pageSize={pagination.pageSize}
-        totalItems={pagination.totalItems}
-        onPageChange={pagination.handlePageChange}
-        onPageSizeChange={pagination.handlePageSizeChange}
+        currentPage={pagination?.currentPage || 1}
+        pageSize={pagination?.pageSize || 25}
+        totalItems={pagination?.totalItems || 0}
+        onPageChange={pagination?.handlePageChange}
+        onPageSizeChange={pagination?.handlePageSizeChange}
       />
 
-      {/* Modales */}
-      {activeModal === 'new' && (
-        <NewVentaModal
+      {/* Modales consolidados */}
+      {(activeModal === 'new' || activeModal === 'edit') && (
+        <VentaFormModal
           isOpen={true}
           onClose={closeModal}
-          onSave={handleSaveVenta}
-          createInitialDraft={ventasOps.createInitialDraft}
-          productos={ventasOps.productos}
-          operadores={operadores}
-          colaboradores={ventasOps.colaboradores}
-          zonas={ventasOps.zonas}
-        />
-      )}
-
-      {activeModal === 'edit' && selectedVenta && (
-        <EditVentaModal
-          isOpen={true}
-          onClose={closeModal}
-          onSave={handleUpdateVenta}
-          venta={selectedVenta}
-          productos={ventasOps.productos}
-          operadores={operadores}
-          colaboradores={ventasOps.colaboradores}
-          zonas={ventasOps.zonas}
+          onSave={activeModal === 'new' ? handleSaveVenta : handleUpdateVenta}
+          venta={activeModal === 'edit' ? selectedVenta : null}
+          createInitialDraft={createInitialDraft}
+          productos={productosSafe}
+          operadores={operadoresSafe}
+          colaboradores={colaboradoresSafe}
+          zonas={zonasSafe}
         />
       )}
 
@@ -290,10 +471,10 @@ export default function VentasPage() {
           onClose={closeModal}
           onEdit={openEditModal}
           venta={selectedVenta}
-          productos={ventasOps.productos}
-          colaboradores={ventasOps.colaboradores}
-          zonas={ventasOps.zonas}
-          isVentaBlocked={ventasOps.isVentaBlocked}
+          productos={productosSafe}
+          colaboradores={colaboradoresSafe}
+          zonas={zonasSafe}
+          isVentaBlocked={isVentaBlocked}
         />
       )}
 
@@ -310,4 +491,3 @@ export default function VentasPage() {
     </div>
   );
 }
-

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Card from "./ui/Card";
 import SectionTitle from "./ui/SectionTitle";
-import { DataContext } from "../context/DataContextDef";
+import { DataContext } from "../context/DataContext";
 
 import { NivelEditModal, ReglaEditModal } from "./reglas/index.js";
 
@@ -126,10 +126,15 @@ export default function Reglas() {
     }
   };
 
-  if (false && !dataInitialized) {
-    if (false && !dataInitialized) {
-  return <Loading />;
-}
+  if (!dataInitialized) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-slate-200 rounded w-1/4" />
+          <div className="h-64 bg-slate-200 rounded" />
+        </div>
+      </div>
+    );
   }
 
   return (

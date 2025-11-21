@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect } from "react";
 import Loading from "./common/Loading";
 import { useLocation } from "react-router-dom";
 import { MapPin, Building, Package, Settings, SlidersHorizontal } from "lucide-react";
-import { DataContext } from "../context/DataContextDef";
+import { DataContext } from "../context/DataContext";
 import ProductosSection from "./config/ProductosSection";
 import OperadoresSection from "./config/OperadoresSection";
 import ZonasSection from "./config/ZonasSection";
@@ -46,6 +46,17 @@ export default function Config() {
   const filteredProductos = productos.filter(p =>
     p.nombre?.toLowerCase().includes(searchProducto.toLowerCase())
   );
+
+  if (!dataInitialized) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-slate-200 rounded w-1/4" />
+          <div className="h-64 bg-slate-200 rounded" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-darkBg dark:to-darkCard p-6 transition-colors">
@@ -195,4 +206,3 @@ export default function Config() {
     </div>
   );
 }
-

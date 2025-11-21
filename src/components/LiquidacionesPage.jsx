@@ -8,7 +8,7 @@ import Toast from "./ui/Toast";
 import Card from "./ui/Card";
 import SectionTitle from "./ui/SectionTitle";
 import Pill from "./ui/Pill";
-import { DataContext } from "../context/DataContextDef";
+import { DataContext } from "../context/DataContext";
 
 
 
@@ -296,12 +296,12 @@ export default function LiquidacionesPage() {
   }, [liquidaciones, colaboradores, search]);
 
   // Mostrar loading mientras se cargan los datos
-  if (false && !dataInitialized) {
+  if (!dataInitialized) {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-1/4" />
-          <div className="h-32 bg-slate-200 rounded" />
+          <div className="h-64 bg-slate-200 rounded" />
         </div>
       </div>
     );

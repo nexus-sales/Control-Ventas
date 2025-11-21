@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import AuthCtx from '../../context/AuthCtx';
+import { useContext } from 'react';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
 import EmailInput from '../ui/EmailInput';
@@ -10,6 +12,7 @@ import { LoginRateLimit, formatTime } from '../../utils/authValidation';
 import '../../styles/login-animations.css';
 
 export default function LoginScreen() {
+    const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isEmailValid, setIsEmailValid] = useState(false);
@@ -27,7 +30,7 @@ export default function LoginScreen() {
   const [registerError, setRegisterError] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [nombre, setNombre] = useState('');
-  const { login, registerUser } = useAuth();
+  const { login, registerUser } = useContext(AuthCtx);
 
   // Verificar rate limiting y cargar email recordado al cargar el componente
   useEffect(() => {
@@ -144,6 +147,9 @@ export default function LoginScreen() {
             setIsSubmitting(false);
             if (res.success) {
               setLoginSuccess(true);
+              setTimeout(() => {
+                navigate('/');
+              }, 500);
             } else {
               setError(res.error?.message || 'Error de acceso');
               if (res.error?.accessDenied) {

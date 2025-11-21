@@ -1,27 +1,39 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { DataContext } from './DataContextDef';
+import React, { useState, useEffect, useCallback, useMemo, useContext, useRef, createContext } from 'react';
+import { runSeedIfNeeded } from '../data/seeds';
 
-// Utilidades para localStorage
+// Crear el contexto
+export const DataContext = createContext();
+
+// Hook personalizado integrado
+export const useData = () => {
+  const context = useContext(DataContext);
+  if (!context) {
+    throw new Error('useData debe ser usado dentro de un DataContextProvider');
+  }
+  return context;
+};
+
+// Función para cargar datos desde localStorage
 const loadFromStorage = (key, defaultValue = []) => {
   try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaultValue;
   } catch (error) {
-    console.warn(`Error cargando ${key} desde localStorage:`, error);
+    console.warn(`Error loading ${key} from localStorage:`, error);
     return defaultValue;
   }
 };
 
-const saveToStorage = (key, value) => {
+// Función para guardar datos en localStorage
+const saveToStorage = (key, data) => {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
-    console.error(`Error guardando ${key} en localStorage:`, error);
+    console.warn(`Error saving ${key} to localStorage:`, error);
   }
 };
 
-export function DataProvider({ children }) {
-  // Estados principales
+export function DataContextProvider({ children }) {
   const [data, setData] = useState({
     ventas: [],
     colaboradores: [],
@@ -31,16 +43,48 @@ export function DataProvider({ children }) {
     zonas: [],
     reglas: [],
     liquidaciones: [],
+    decomisiones: [],
+  });
+  
+  const [dataInitialized, setDataInitialized] = useState(() => {
+    const debugFlag = localStorage.getItem("__app_force_initialized") === "true";
+    return debugFlag || false;
   });
 
-  const [dataInitialized, setDataInitialized] = useState(false);
+  // Sistema de debug
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const debugEnabled = localStorage.getItem("__app_debug_enabled") === "true";
+      if (debugEnabled && !window.__APP_DEBUG__) {
+        window.__APP_DEBUG__ = { dataInitEvents: [] };
+      }
+    } catch (error) {
+      console.warn("[DataContextProvider] No se pudo inicializar debug dashboard", error);
+    }
+  }, []);
 
-  // Función para inicializar datos desde localStorage
-  const initializeFromStorage = useCallback(() => {
-    console.log('[DataContext] Inicializando datos desde localStorage...');
-    
-    // Cargar datos existentes
-    const initialData = {
+  const recordDebugEvent = useCallback((label, payload = {}) => {
+    if (typeof window === "undefined") return;
+    if (!window.__APP_DEBUG__) {
+      window.__APP_DEBUG__ = { dataInitEvents: [] };
+    }
+    const entry = {
+      label,
+      timestamp: new Date().toISOString(),
+      ...payload,
+    };
+    window.__APP_DEBUG__.dataInitEvents.push(entry);
+    if (window.__APP_DEBUG__.dataInitEvents.length > 50) {
+      window.__APP_DEBUG__.dataInitEvents.shift();
+    }
+    console.log("[DataContextProvider]", label, payload);
+  }, []);
+
+  const loadAllData = useCallback(async () => {
+    recordDebugEvent("load:start");
+
+    const localData = {
       ventas: loadFromStorage('appcv_ventas', []),
       colaboradores: loadFromStorage('appcv_colaboradores', []),
       niveles: loadFromStorage('appcv_niveles', []),
@@ -49,91 +93,88 @@ export function DataProvider({ children }) {
       zonas: loadFromStorage('appcv_zonas', []),
       reglas: loadFromStorage('appcv_reglas', []),
       liquidaciones: loadFromStorage('appcv_liquidaciones', []),
+      decomisiones: loadFromStorage('appcv_decomisiones', []),
     };
-
-    console.log('[DataContext] Datos cargados:', {
-      ventas: initialData.ventas.length,
-      colaboradores: initialData.colaboradores.length,
-      niveles: initialData.niveles.length,
-      operadores: initialData.operadores.length,
-      productos: initialData.productos.length,
-      zonas: initialData.zonas.length,
-      reglas: initialData.reglas.length,
-      liquidaciones: initialData.liquidaciones.length,
+    
+    recordDebugEvent("load:local", {
+      ventas: localData.ventas.length,
+      colaboradores: localData.colaboradores.length,
+      productos: localData.productos.length,
     });
 
-    setData(initialData);
+    setData(prev => ({ ...prev, ...localData }));
     setDataInitialized(true);
-    console.log('[DataContext] Datos inicializados correctamente');
-    
-    return initialData;
+    localStorage.removeItem("__app_force_initialized");
+    recordDebugEvent("load:end", { initialized: true, keys: Object.keys(localData) });
+    return localData;
+  }, [recordDebugEvent]);
+
+  // Cargar datos cuando el componente se monta
+  useEffect(() => {
+    console.log('DataContextProvider - Iniciando carga de datos...');
+    runSeedIfNeeded();
+    loadAllData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo ejecutar al montar
+
+  // Guardar datos solo en localStorage
+  const saveData = useCallback(async (newData) => {
+    console.log('DataContextProvider - Guardando dataset completo:', newData);
+    setData(prev => {
+      const next = { ...prev, ...newData };
+      Object.entries(newData).forEach(([key, value]) => {
+        saveToStorage(`appcv_${key}`, value);
+      });
+      return next;
+    });
+    return { success: true };
   }, []);
 
-  // Funciones setter para cada entidad
-  const setVentas = useCallback((ventas) => {
-    const ventasArray = typeof ventas === 'function' ? ventas(data.ventas) : ventas;
-    const finalVentas = Array.isArray(ventasArray) ? ventasArray : [];
-    setData(prev => ({ ...prev, ventas: finalVentas }));
-    saveToStorage('appcv_ventas', finalVentas);
-  }, [data.ventas]);
+  // Función para recargar datos
+  const refreshData = useCallback(async () => {
+    await loadAllData();
+    return true;
+  }, [loadAllData]);
 
-  const setColaboradores = useCallback((colaboradores) => {
-    const colaboradoresArray = typeof colaboradores === 'function' ? colaboradores(data.colaboradores) : colaboradores;
-    const finalColaboradores = Array.isArray(colaboradoresArray) ? colaboradoresArray : [];
-    setData(prev => ({ ...prev, colaboradores: finalColaboradores }));
-    saveToStorage('appcv_colaboradores', finalColaboradores);
-  }, [data.colaboradores]);
+  // Funciones específicas por entidad
+  const createCollectionSetter = useCallback((collectionKey) => {
+    const storageKey = `appcv_${collectionKey}`;
+    return (update) => {
+      setData(prev => {
+        const previousItems = prev[collectionKey] || [];
+        let nextItems = typeof update === 'function' ? update(previousItems) : update;
+        if (!Array.isArray(nextItems)) {
+          console.warn(`[DataContextProvider] La actualización de ${collectionKey} no devolvió un array válido.`);
+          nextItems = [];
+        }
+        saveToStorage(storageKey, nextItems);
+        return { ...prev, [collectionKey]: nextItems };
+      });
+    };
+  }, []);
 
-  const setNiveles = useCallback((niveles) => {
-    const nivelesArray = typeof niveles === 'function' ? niveles(data.niveles) : niveles;
-    const finalNiveles = Array.isArray(nivelesArray) ? nivelesArray : [];
-    setData(prev => ({ ...prev, niveles: finalNiveles }));
-    saveToStorage('appcv_niveles', finalNiveles);
-  }, [data.niveles]);
+  // Funciones setter memoizadas
+  const setVentas = useMemo(() => createCollectionSetter('ventas'), [createCollectionSetter]);
+  const setProductos = useMemo(() => createCollectionSetter('productos'), [createCollectionSetter]);
+  const setOperadores = useMemo(() => createCollectionSetter('operadores'), [createCollectionSetter]);
+  const setColaboradores = useMemo(() => createCollectionSetter('colaboradores'), [createCollectionSetter]);
+  const setZonas = useMemo(() => createCollectionSetter('zonas'), [createCollectionSetter]);
+  const setNiveles = useMemo(() => createCollectionSetter('niveles'), [createCollectionSetter]);
+  const setReglas = useMemo(() => createCollectionSetter('reglas'), [createCollectionSetter]);
+  const setLiquidaciones = useMemo(() => createCollectionSetter('liquidaciones'), [createCollectionSetter]);
+  const setDecomisiones = useMemo(() => createCollectionSetter('decomisiones'), [createCollectionSetter]);
 
-  const setOperadores = useCallback((operadores) => {
-    const operadoresArray = typeof operadores === 'function' ? operadores(data.operadores) : operadores;
-    const finalOperadores = Array.isArray(operadoresArray) ? operadoresArray : [];
-    setData(prev => ({ ...prev, operadores: finalOperadores }));
-    saveToStorage('appcv_operadores', finalOperadores);
-  }, [data.operadores]);
+  // Insertar ventas
+  const insertVentas = useCallback(async (ventas) => {
+    if (!Array.isArray(ventas) || ventas.length === 0) {
+      console.warn('insertVentas: datos inválidos');
+      return { success: false };
+    }
+    setVentas(prev => [...ventas, ...prev]);
+    return { success: true };
+  }, [setVentas]);
 
-  const setProductos = useCallback((productos) => {
-    const productosArray = typeof productos === 'function' ? productos(data.productos) : productos;
-    const finalProductos = Array.isArray(productosArray) ? productosArray : [];
-    setData(prev => ({ ...prev, productos: finalProductos }));
-    saveToStorage('appcv_productos', finalProductos);
-  }, [data.productos]);
-
-  const setZonas = useCallback((zonas) => {
-    const zonasArray = typeof zonas === 'function' ? zonas(data.zonas) : zonas;
-    const finalZonas = Array.isArray(zonasArray) ? zonasArray : [];
-    setData(prev => ({ ...prev, zonas: finalZonas }));
-    saveToStorage('appcv_zonas', finalZonas);
-  }, [data.zonas]);
-
-  const setReglas = useCallback((reglas) => {
-    const reglasArray = typeof reglas === 'function' ? reglas(data.reglas) : reglas;
-    const finalReglas = Array.isArray(reglasArray) ? reglasArray : [];
-    setData(prev => ({ ...prev, reglas: finalReglas }));
-    saveToStorage('appcv_reglas', finalReglas);
-  }, [data.reglas]);
-
-  const setLiquidaciones = useCallback((liquidaciones) => {
-    const liquidacionesArray = typeof liquidaciones === 'function' ? liquidaciones(data.liquidaciones) : liquidaciones;
-    const finalLiquidaciones = Array.isArray(liquidacionesArray) ? liquidacionesArray : [];
-    setData(prev => ({ ...prev, liquidaciones: finalLiquidaciones }));
-    saveToStorage('appcv_liquidaciones', finalLiquidaciones);
-  }, [data.liquidaciones]);
-
-  // Inicialización al montar el componente
-  useEffect(() => {
-    console.log('[DataContext] Componente montado, inicializando...');
-    initializeFromStorage();
-  }, [initializeFromStorage]);
-
-
-  // Función para limpiar todos los datos y localStorage
+  // Limpiar datos
   const resetAllData = useCallback(() => {
     const emptyData = {
       ventas: [],
@@ -144,6 +185,7 @@ export function DataProvider({ children }) {
       zonas: [],
       reglas: [],
       liquidaciones: [],
+      decomisiones: [],
     };
     Object.keys(emptyData).forEach(key => {
       localStorage.setItem(`appcv_${key}`, JSON.stringify([]));
@@ -152,53 +194,61 @@ export function DataProvider({ children }) {
     setDataInitialized(true);
   }, []);
 
-  // Función para validar relaciones y limpiar duplicados
+  // Validar relaciones
   const validateAllRelations = useCallback(() => {
-    // Eliminar duplicados por id en cada entidad, pero NO filtrar por relaciones
-    function uniqueById(arr) {
-      const seen = new Set();
-      return arr.filter(item => {
-        if (!item.id || seen.has(item.id)) return false;
-        seen.add(item.id);
-        return true;
+    setData(prev => {
+      function uniqueById(arr) {
+        const seen = new Set();
+        return arr.filter(item => {
+          if (!item.id || seen.has(item.id)) return false;
+          seen.add(item.id);
+          return true;
+        });
+      }
+      
+      const cleanData = {
+        ventas: uniqueById(prev.ventas).filter(v => v.id),
+        colaboradores: uniqueById(prev.colaboradores).filter(c => c.id),
+        niveles: uniqueById(prev.niveles),
+        operadores: uniqueById(prev.operadores).filter(op => op.id),
+        productos: uniqueById(prev.productos).filter(p => p.id),
+        zonas: uniqueById(prev.zonas).filter(z => z.id),
+        reglas: uniqueById(prev.reglas),
+        liquidaciones: uniqueById(prev.liquidaciones),
+        decomisiones: uniqueById(prev.decomisiones),
+      };
+
+      Object.keys(cleanData).forEach(key => {
+        saveToStorage(`appcv_${key}`, cleanData[key]);
       });
-    }
-    // Solo limpiar duplicados y campos vacíos
-    let operadores = uniqueById(data.operadores).filter(op => op.id);
-    let zonas = uniqueById(data.zonas).filter(z => z.id);
-    let colaboradores = uniqueById(data.colaboradores).filter(c => c.id);
-    let productos = uniqueById(data.productos).filter(p => p.id);
-    let ventas = uniqueById(data.ventas).filter(v => v.id);
-    let niveles = uniqueById(data.niveles);
-    let reglas = uniqueById(data.reglas);
-    let liquidaciones = uniqueById(data.liquidaciones);
-    // Guardar y actualizar
-    setData({ ventas, colaboradores, niveles, operadores, productos, zonas, reglas, liquidaciones });
-    saveToStorage('appcv_ventas', ventas);
-    saveToStorage('appcv_colaboradores', colaboradores);
-    saveToStorage('appcv_niveles', niveles);
-    saveToStorage('appcv_operadores', operadores);
-    saveToStorage('appcv_productos', productos);
-    saveToStorage('appcv_zonas', zonas);
-    saveToStorage('appcv_reglas', reglas);
-    saveToStorage('appcv_liquidaciones', liquidaciones);
-    setDataInitialized(true);
-  }, [data]);
+
+      setDataInitialized(true);
+      return cleanData;
+    });
+  }, []);
 
   // Valor del contexto
   const contextValue = {
     data,
     dataInitialized,
-    setVentas,
-    setColaboradores,
-    setNiveles,
-    setOperadores,
-    setProductos,
-    setZonas,
-    setReglas,
-    setLiquidaciones,
+    isDataLoading: false,
+    lastError: null,
+    saveData,
+    refreshData,
+    insertVentas,
+    loadAllData,
+    syncAll: refreshData,
     resetAllData,
     validateAllRelations,
+    setVentas,
+    setProductos,
+    setOperadores,
+    setColaboradores,
+    setZonas,
+    setNiveles,
+    setReglas,
+    setLiquidaciones,
+    setDecomisiones,
   };
 
   return (
@@ -207,3 +257,5 @@ export function DataProvider({ children }) {
     </DataContext.Provider>
   );
 }
+
+export default DataContextProvider;

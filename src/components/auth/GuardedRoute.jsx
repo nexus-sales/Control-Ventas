@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useContext } from 'react';
+import AuthCtx from '../../context/AuthCtx';
 import Loading from '../common/Loading';
 import AccessDeniedScreen from './AccessDeniedScreen';
 import { checkUserPermission } from '../../utils/accessControl';
@@ -15,7 +15,7 @@ export function GuardedRoute({ children, roles, permission }) {
     hasAccess,
     accessMessage,
     isAccessLoading
-  } = useAuth();
+  } = useContext(AuthCtx);
   const location = useLocation();
 
   // Mostrar loading mientras se verifica autenticación
@@ -71,4 +71,3 @@ export function GuardedRoute({ children, roles, permission }) {
 
   return children;
 }
-

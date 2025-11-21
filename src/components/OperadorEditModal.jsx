@@ -32,6 +32,8 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
   const [error, setError] = useState("");
 
   const handleSave = () => {
+    console.log('[OperadorEditModal] Iniciando guardado con datos:', draft);
+    
     if (!draft.nombre?.trim()) {
       setError("El nombre del operador es obligatorio");
       return;
@@ -51,11 +53,8 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
       return;
     }
 
-    // Si no existe id, asignar uno único
-    let operadorId = draft.id;
-    if (!operadorId) {
-      operadorId = `op_${Date.now()}_${Math.floor(Math.random()*10000)}`;
-    }
+    // Si no existe id, será null para que el padre genere uno
+    let operadorId = draft.id || null;
 
     const cleanedData = {
       ...draft,
@@ -72,6 +71,7 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
       }
     };
 
+    console.log('[OperadorEditModal] Enviando datos limpios a onSave:', cleanedData);
     onSave(cleanedData, true);
   };
 
@@ -80,37 +80,38 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
       <div className="bg-white dark:bg-darkCard rounded-xl shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto relative text-slate-800 dark:text-darkText transition-colors">
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 p-2 hover:bg-slate-100 rounded-full"
+          className="absolute top-3 right-3 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"
         >
           <X className="w-5 h-5 text-slate-500" />
         </button>
 
-        <h2 className="text-xl font-bold mb-6 text-slate-800">
-          Editar Operador: {operador?.nombre}
+        <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-white">
+          {operador ? `Editar Operador: ${operador.nombre}` : 'Crear Nuevo Operador'}
         </h2>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl text-red-700 dark:text-red-300 text-sm">
             {error}
           </div>
         )}
 
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Nombre *</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Nombre *</label>
             <input
-              className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-green-400"
+              className="border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-green-400"
               value={draft.nombre}
               onChange={(e) => {
                 setDraft((d) => ({ ...d, nombre: e.target.value }));
                 setError("");
               }}
+              placeholder="Ej: O2, VODAFONE, ORANGE..."
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Sector *</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Sector *</label>
             <select
-              className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-green-400"
+              className="border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-green-400"
               value={draft.sector}
               onChange={(e) => setDraft((d) => ({ ...d, sector: e.target.value }))}
             >
@@ -122,20 +123,61 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
               <option value="otros">Otros</option>
             </select>
           </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Código</label>
+            <input
+              className="border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-green-400"
+              value={draft.codigo || ''}
+              onChange={(e) => setDraft((d) => ({ ...d, codigo: e.target.value }))}
+              placeholder="Código interno"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Contacto</label>
+            <input
+              className="border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-green-400"
+              value={draft.contacto || ''}
+              onChange={(e) => setDraft((d) => ({ ...d, contacto: e.target.value }))}
+              placeholder="Persona de contacto"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Teléfono</label>
+            <input
+              className="border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-green-400"
+              value={draft.telefono || ''}
+              onChange={(e) => setDraft((d) => ({ ...d, telefono: e.target.value }))}
+              placeholder="Teléfono de contacto"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+            <input
+              type="email"
+              className="border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-green-400"
+              value={draft.email || ''}
+              onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
+              placeholder="email@operador.com"
+            />
+          </div>
         </div>
 
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl">
           <div className="flex items-center mb-3">
-            <Settings className="w-5 h-5 mr-2 text-red-600" />
-            <h3 className="font-semibold text-red-800">Reglas de Decomisión</h3>
+            <Settings className="w-5 h-5 mr-2 text-red-600 dark:text-red-400" />
+            <h3 className="font-semibold text-red-800 dark:text-red-300">Reglas de Decomisión</h3>
           </div>
           <div className="grid md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Antes de {draft.reglas_decomision.limite_meses} meses (%)
               </label>
               <input
-                className="border border-red-200 rounded-xl px-3 py-2 w-full"
+                className="border border-red-200 dark:border-red-600 dark:bg-red-900/20 dark:text-white rounded-xl px-3 py-2 w-full"
                 type="number"
                 min="0"
                 max="100"
@@ -152,11 +194,11 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Después de {draft.reglas_decomision.limite_meses} meses (%)
               </label>
               <input
-                className="border border-red-200 rounded-xl px-3 py-2 w-full"
+                className="border border-red-200 dark:border-red-600 dark:bg-red-900/20 dark:text-white rounded-xl px-3 py-2 w-full"
                 type="number"
                 min="0"
                 max="100"
@@ -173,9 +215,9 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Límite (meses)</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Límite (meses)</label>
               <input
-                className="border border-red-200 rounded-xl px-3 py-2 w-full"
+                className="border border-red-200 dark:border-red-600 dark:bg-red-900/20 dark:text-white rounded-xl px-3 py-2 w-full"
                 type="number"
                 min="1"
                 max="24"
@@ -194,10 +236,10 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-600">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 hover:bg-slate-50"
+            className="px-4 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600"
           >
             Cancelar
           </button>

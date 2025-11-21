@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useCustomFields } from '../hooks/useCustomFields';
+import { useImportGestion } from '../hooks/useImportGestion';
 import { X, Clock, User } from "lucide-react";
 
 const FIELD_LABELS = {
@@ -55,7 +55,7 @@ function createHistoryEntry(original, updated) {
 
 export default function ProductoEditModal({ producto, onSave, onClose }) {
   // Obtener campos personalizados para productos
-  const customFields = useCustomFields('productos');
+  const { customFields } = useImportGestion({ modulo: 'productos' });
   // Obtener operadores desde window (por props no llegan)
   const operadores = window.__operadores || [];
   const [draft, setDraft] = useState(() => ({

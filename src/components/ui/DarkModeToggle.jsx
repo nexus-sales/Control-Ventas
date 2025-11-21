@@ -1,7 +1,7 @@
 // src/components/ui/DarkModeToggle.jsx
 import React from 'react';
 import { Moon, Sun } from 'lucide-react';
-import { useTheme } from '../../context/useTheme';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function DarkModeToggle({ className = "" }) {
   const { isDark, toggleTheme } = useTheme();
