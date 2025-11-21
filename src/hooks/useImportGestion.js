@@ -472,17 +472,14 @@ export function useImportGestion({
         let ventaFinal = applyDefaults(ventaBase, modo === 'inteligente');
 
         if (state.guardarExtras) {
-          const extras = {};
-          Object.keys(row).forEach(key => {
-            const mappedField = Object.keys(state.mapping).find(field => state.mapping[field] === key);
-            if (!mappedField && row[key] && String(row[key]).trim()) {
+            // Guardar absolutamente todos los campos del Excel como extras
+            const extras = {};
+            Object.keys(row).forEach(key => {
               extras[key] = row[key];
+            });
+            if (Object.keys(extras).length > 0) {
+              ventaFinal.extras = extras;
             }
-          });
-          
-          if (Object.keys(extras).length > 0) {
-            ventaFinal.extras = extras;
-          }
 
         // Forzar actualización de productos, zonas y colaboradores si crearAutomaticamente está activo
         if (state.crearAutomaticamente) {
@@ -490,7 +487,7 @@ export function useImportGestion({
           const nuevosProductos = [];
           const nuevosZonas = [];
           const nuevosColaboradores = [];
-          rows.forEach(row => {
+          state.rows.forEach(row => {
             const prod = row[state.mapping["producto_id"]] || row["PRODUCTO"];
             if (prod && !productos.some(p => p.nombre === prod)) {
               nuevosProductos.push({ id: `prod_${Date.now()}_${Math.random()}`, nombre: prod });
