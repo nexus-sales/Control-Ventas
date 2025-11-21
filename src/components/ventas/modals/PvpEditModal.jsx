@@ -14,13 +14,14 @@ export function PvpEditModal({
 
   useEffect(() => {
     if (isOpen) {
-      setPvp(pvpInicial);
+      setPvp(pvpInicial ?? 0);
     }
   }, [isOpen, pvpInicial]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(productoId, pvp);
+    const numericPvp = parseFloat(pvp) || 0;
+    onSave(productoId, numericPvp);
     onClose();
   };
 
@@ -53,8 +54,15 @@ export function PvpEditModal({
             </div>
 
             <div>
-              <label className="text-sm text-slate-500" id="label-producto" htmlFor="pvp-producto-nombre">Producto</label>
-              <p className="font-medium text-slate-800" id="pvp-producto-nombre" tabIndex={0} aria-labelledby="label-producto">
+              <label className="text-sm text-slate-500" id="label-producto" htmlFor="pvp-producto-nombre">
+                Producto
+              </label>
+              <p
+                className="font-medium text-slate-800"
+                id="pvp-producto-nombre"
+                tabIndex={0}
+                aria-labelledby="label-producto"
+              >
                 {productoNombre}
               </p>
             </div>
@@ -78,7 +86,10 @@ export function PvpEditModal({
                   aria-describedby="nota-pvp"
                   autoFocus
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500" aria-hidden="true">
+                <span
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                  aria-hidden="true"
+                >
                   €
                 </span>
               </div>
@@ -111,3 +122,5 @@ export function PvpEditModal({
     </div>
   );
 }
+
+export default PvpEditModal;

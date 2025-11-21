@@ -317,8 +317,8 @@ export default function LiquidacionesPage() {
       
       {/* Alertas de configuración */}
       {colaboradores.some(c => !c.zona_id) && (
-        <Card className="bg-orange-50 border-orange-200">
-          <div className="flex items-center gap-2 text-orange-700">
+        <Card className="card-pastel">
+          <div className="flex items-center gap-2 text-pink-700">
             <span className="text-lg">⚠️</span>
             <div>
               <p className="font-medium">Colaboradores sin zona fiscal asignada</p>
@@ -330,7 +330,7 @@ export default function LiquidacionesPage() {
 
       {/* Alerta si no hay operadores configurados */}
       {operadores.length === 0 && (
-        <Card className="bg-yellow-50 border-yellow-200">
+        <Card className="card-yellow">
           <div className="flex items-center gap-2 text-yellow-700">
             <span className="text-lg">⚠️</span>
             <div>
@@ -343,7 +343,7 @@ export default function LiquidacionesPage() {
 
       {/* Alerta de decomisiones pendientes */}
       {decomisionesPeriodo.length > 0 && (
-        <Card className="bg-red-50 border-red-200">
+        <Card className="card-red">
           <div className="flex items-center gap-2 text-red-700">
             <span className="text-lg">🚨</span>
             <div>
@@ -351,7 +351,7 @@ export default function LiquidacionesPage() {
               <p className="text-sm">Se detectaron {decomisionesPeriodo.length} casos de bajas anticipadas que requieren decomisión de comisiones.</p>
               <button
                 onClick={() => setShowDecomisiones(!showDecomisiones)}
-                className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200"
+                className="mt-2 px-3 py-1 bg-red-200 text-red-900 rounded-lg text-sm hover:bg-red-300"
               >
                 {showDecomisiones ? 'Ocultar' : 'Ver'} decomisiones
               </button>
@@ -360,7 +360,7 @@ export default function LiquidacionesPage() {
         </Card>
       )}
 
-      <Card>
+      <Card className="card-pastel">
         <SectionTitle>Generar Liquidaciones</SectionTitle>
         <LiquidacionesGenerar
           periodo={periodo}
@@ -380,10 +380,11 @@ export default function LiquidacionesPage() {
           operadores={operadores}
           periodo={periodo}
           setToast={setToast}
+          className="bg-pink-50 dark:bg-pink-200 border-pink-200 dark:border-pink-400"
         />
       )}
 
-      <Card>
+      <Card className="bg-pink-50 dark:bg-pink-200 border-pink-200 dark:border-pink-400">
         <LiquidacionesResumenColab
           porColab={porColab}
           zonas={zonas}
@@ -392,7 +393,7 @@ export default function LiquidacionesPage() {
         />
       </Card>
 
-      <Card>
+      <Card className="bg-pink-50 dark:bg-pink-200 border-pink-200 dark:border-pink-400">
         <SectionTitle>Liquidaciones Generadas</SectionTitle>
         <LiquidacionesTabla
           filteredLiquidaciones={filteredLiquidaciones}

@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { Edit3, Eye, X, Check, Package } from 'lucide-react';
+import { Edit3, Eye, X, Check, Package, CreditCard as CardIcon } from 'lucide-react';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
-import Pill from '../ui/Pill';
-import Pagination from '../ui/Pagination';
 import '../../styles/table-optimizations.css';
 
 // Función para formatear fecha
@@ -47,43 +45,53 @@ export function VentasTable({
   onDelete,
   onActivate,
   onDefinePvp,
-  // isVentaBlocked,
   isAdmin = true,
   currentPage = 1,
   pageSize = 25,
   totalItems = 0,
   totalPages = 1,
   onPageChange,
-  onPageSizeChange
+  onPageSizeChange,
 }) {
   const [ariaMessage, setAriaMessage] = useState("");
 
-  // Helpers
-  const getNombreProducto = (id) =>
-    productos.find((p) => p?.id === id)?.nombre || id;
-  const getNombreZona = (id) =>
-    zonas.find((z) => z?.id === id)?.nombre || id;
-  const getNombreColaborador = (id) =>
-    colaboradores.find((c) => c?.id === id)?.nombre || id;
+  // Helpers para mostrar nombres en vez de IDs (con fallback a campos precalculados)
+  const getNombreProducto = (venta) => {
+    if (venta.productoNombre) return venta.productoNombre;
+    const prod = productos.find((p) => p?.id === venta?.producto_id);
+    return prod?.nombre ? prod.nombre : (prod?.codigo || venta?.producto_id || "");
+  };
+
+  const getNombreZona = (venta) => {
+    if (venta.zonaNombre) return venta.zonaNombre;
+    const zona = zonas.find((z) => z?.id === venta?.zona_id);
+    return zona?.nombre ? zona.nombre : (venta?.zona_id || "");
+  };
+
+  const getNombreColaborador = (venta) => {
+    if (venta.colaboradorNombre) return venta.colaboradorNombre;
+    const colab = colaboradores.find((c) => c?.id === venta?.colaborador_id);
+    return colab?.nombre ? colab.nombre : (venta?.colaborador_id || "");
+  };
 
   // Función para obtener estilo del estado
   const getEstadoStyle = (estado) => {
     const estilos = {
-      "ACTIVO": "bg-emerald-100 text-emerald-700",
-      "PENDIENTE": "bg-amber-100 text-amber-700",
+      ACTIVO: "bg-emerald-100 text-emerald-700",
+      PENDIENTE: "bg-amber-100 text-amber-700",
       "PENDIENTE VALIDAR": "bg-yellow-100 text-yellow-700",
-      "SCORING": "bg-blue-100 text-blue-700",
-      "INCIDENCIA": "bg-orange-100 text-orange-700",
-      "INSTALACION": "bg-indigo-100 text-indigo-700",
-      "ENVIADA": "bg-cyan-100 text-cyan-700",
+      SCORING: "bg-blue-100 text-blue-700",
+      INCIDENCIA: "bg-orange-100 text-orange-700",
+      INSTALACION: "bg-indigo-100 text-indigo-700",
+      ENVIADA: "bg-cyan-100 text-cyan-700",
       "PENDIENTE INSTALACION": "bg-purple-100 text-purple-700",
-      "CITADA": "bg-lime-100 text-lime-700",
-      "TRAMITACION": "bg-sky-100 text-sky-700",
-      "CANCELADA": "bg-red-100 text-red-700",
-      "BAJA": "bg-gray-100 text-gray-700",
+      CITADA: "bg-lime-100 text-lime-700",
+      TRAMITACION: "bg-sky-100 text-sky-700",
+      CANCELADA: "bg-red-100 text-red-700",
+      BAJA: "bg-gray-100 text-gray-700",
       "OFERTA FIRMADA": "bg-green-100 text-green-700",
       "PDTE FIRMA": "bg-pink-100 text-pink-700",
-      "RECHAZADA": "bg-rose-100 text-rose-700"
+      RECHAZADA: "bg-rose-100 text-rose-700",
     };
     return estilos[estado] || "bg-slate-100 text-slate-700";
   };
@@ -98,11 +106,15 @@ export function VentasTable({
     return (
       <Card>
         <SectionTitle>Lista de Ventas</SectionTitle>
-        <div aria-live="polite" className="sr-only">{ariaMessage}</div>
+        <div aria-live="polite" className="sr-only">
+          {ariaMessage}
+        </div>
         <div className="text-center py-12">
           <Package className="w-16 h-16 mx-auto text-slate-300 mb-4" />
           <h3 className="text-lg font-medium text-slate-600 mb-2">No hay ventas</h3>
-          <p className="text-slate-500">No se encontraron ventas con los filtros actuales.</p>
+          <p className="text-slate-500">
+            No se encontraron ventas con los filtros actuales.
+          </p>
         </div>
       </Card>
     );
@@ -110,7 +122,9 @@ export function VentasTable({
 
   return (
     <Card className="overflow-hidden">
-      <div aria-live="polite" className="sr-only">{ariaMessage}</div>
+      <div aria-live="polite" className="sr-only">
+        {ariaMessage}
+      </div>
       <SectionTitle>Listado de Ventas</SectionTitle>
 
       <div className="overflow-x-auto">
@@ -147,6 +161,8 @@ export function VentasTable({
               const estadoLabel = venta.estado || "SIN ESTADO";
               const comisionBase = venta._calc?.detalle?.comBruta;
               const neto = venta._calc?.detalle?.netoColab;
+              const nombreProducto = getNombreProducto(venta);
+
               return (
                 <tr
                   key={venta.id || idx}
@@ -173,13 +189,13 @@ export function VentasTable({
                     )}
                   </td>
                   <td className="px-2 md:px-4 py-3 align-middle text-slate-700">
-                    {getNombreProducto(venta.producto_id)}
+                    {nombreProducto}
                   </td>
                   <td className="px-2 md:px-4 py-3 align-middle text-slate-600">
-                    {getNombreZona(venta.zona_id)}
+                    {getNombreZona(venta)}
                   </td>
                   <td className="px-2 md:px-4 py-3 align-middle text-slate-700">
-                    {getNombreColaborador(venta.colaborador_id)}
+                    {getNombreColaborador(venta)}
                   </td>
                   <td className="px-2 md:px-4 py-3 align-middle text-right font-semibold text-slate-900">
                     {formatCurrency(venta.pvp ?? venta._calc?.detalle?.producto?.pvp)}
@@ -192,7 +208,9 @@ export function VentasTable({
                   </td>
                   <td className="px-2 md:px-4 py-3 align-middle">
                     <span
-                      className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${getEstadoStyle(estadoLabel)}`}
+                      className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${getEstadoStyle(
+                        estadoLabel
+                      )}`}
                     >
                       {estadoLabel}
                     </span>
@@ -216,25 +234,28 @@ export function VentasTable({
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => onDelete && onDelete(venta)}
+                            onClick={() => onDelete && onDelete(venta.id)}
                             aria-label={`Eliminar venta ${venta.id}`}
                             className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
                           >
                             <X className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => onActivate && onActivate(venta)}
+                            onClick={() => onActivate && onActivate(venta.id)}
                             aria-label={`Activar venta ${venta.id}`}
                             className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
                           >
                             <Check className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => onDefinePvp && onDefinePvp(venta)}
-                            aria-label={`Definir PVP de venta ${venta.id}`}
+                            onClick={() =>
+                              onDefinePvp &&
+                              onDefinePvp(venta.producto_id, nombreProducto)
+                            }
+                            aria-label={`Definir PVP del producto de la venta ${venta.id}`}
                             className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
                           >
-                            <Package className="w-4 h-4" />
+                            <CardIcon className="w-4 h-4" />
                           </button>
                         </>
                       )}
@@ -247,16 +268,12 @@ export function VentasTable({
         </table>
       </div>
 
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        pageSize={pageSize}
-        totalItems={totalItems}
-        onPageChange={handlePageChange}
-        onPageSizeChange={onPageSizeChange}
-        aria-label="Paginación de ventas"
-        pageSizeOptions={[25, 50, 100, 200]}
-      />
+      {/* Paginación si la usas: */}
+      {onPageChange && (
+        <div className="mt-4 flex justify-end">
+          {/* Aquí puedes seguir usando tu componente Pagination si lo tenías */}
+        </div>
+      )}
     </Card>
   );
 }

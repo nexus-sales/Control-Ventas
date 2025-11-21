@@ -59,13 +59,12 @@ export function useVentasGestion(customFields = []) {
   });
 
   // =================== DATOS MEMOIZADOS ===================
-  const ventasData = useMemo(() => ({
-    ventas: Array.isArray(data?.ventas) ? data.ventas : [],
-    productos: Array.isArray(data?.productos) ? data.productos : [],
-    colaboradores: Array.isArray(data?.colaboradores) ? data.colaboradores : [],
-    zonas: Array.isArray(data?.zonas) ? data.zonas : [],
-    operadores: Array.isArray(data?.operadores) ? data.operadores : [],
-  }), [data]);
+  // Usar SIEMPRE los datos del contexto, nunca mantener copia interna
+  const ventas = Array.isArray(data?.ventas) ? data.ventas : [];
+  const productos = Array.isArray(data?.productos) ? data.productos : [];
+  const colaboradores = Array.isArray(data?.colaboradores) ? data.colaboradores : [];
+  const zonas = Array.isArray(data?.zonas) ? data.zonas : [];
+  const operadores = Array.isArray(data?.operadores) ? data.operadores : [];
 
   // =================== 🔍 FUNCIONES DE FILTRADO ===================
   
@@ -102,18 +101,13 @@ export function useVentasGestion(customFields = []) {
 
   // 🎯 MEJORA: Ventas filtradas optimizadas
   const ventasFiltradas = useMemo(() => {
-    const { ventas, productos } = ventasData;
     const { filtros } = state;
-    
     if (!ventas.length) return [];
-    
     return ventas.filter((venta) => {
       if (!venta?.id) return false;
-      
       const producto = productos.find(p => p?.id === venta.producto_id);
       const pvpValue = producto?.pvp || venta.pvp || 0;
       const fecha = venta.fecha?.slice(0, 10) || '';
-      
       // 🎯 MEJORA: Usar early return para mejor performance
       if (filtros.operador_id && producto?.operador_id !== filtros.operador_id) return false;
       if (filtros.colaborador_id && venta.colaborador_id !== filtros.colaborador_id) return false;
@@ -126,7 +120,6 @@ export function useVentasGestion(customFields = []) {
       if (filtros.sinPvp && pvpValue > 0) return false;
       if (filtros.montoMin && pvpValue < Number(filtros.montoMin)) return false;
       if (filtros.montoMax && pvpValue > Number(filtros.montoMax)) return false;
-      
       // Búsqueda de texto (optimizada)
       if (filtros.texto) {
         const searchTerm = filtros.texto.toLowerCase();
@@ -136,13 +129,11 @@ export function useVentasGestion(customFields = []) {
           venta.numeracion,
           venta.documento
         ].join(' ').toLowerCase();
-        
         if (!searchableText.includes(searchTerm)) return false;
       }
-      
       return true;
     });
-  }, [ventasData, state.filtros]);
+  }, [ventas, productos, state.filtros]);
 
   // =================== ✅ FUNCIONES DE SELECCIÓN ===================
   
@@ -321,7 +312,7 @@ export function useVentasGestion(customFields = []) {
         const producto = productos.find(p => p?.id === venta.producto_id);
         const colaborador = colaboradores.find(c => c?.id === venta.colaborador_id);
         const zona = zonas.find(z => z?.id === venta.zona_id);
-        const operador = ventasData.operadores.find(op => op?.id === producto?.operador_id);
+        const operador = operadores.find(op => op?.id === producto?.operador_id);
         
         // Datos base
         const row = {
@@ -387,7 +378,7 @@ export function useVentasGestion(customFields = []) {
     } finally {
       setState(prev => ({ ...prev, isExporting: false }));
     }
-  }, [state.selectedIds, ventasFiltradas, ventasData, customFields, getSelectedVentas]);
+  }, [state.selectedIds, ventasFiltradas, productos, colaboradores, zonas, operadores, customFields, getSelectedVentas]);
 
   // =================== 🛠️ HELPERS Y VALIDACIONES ===================
   
@@ -400,9 +391,9 @@ export function useVentasGestion(customFields = []) {
     fecha: new Date().toISOString().slice(0, 10),
     cliente: "",
     cif: "",
-    producto_id: ventasData.productos[0]?.id || "",
-    zona_id: ventasData.zonas[0]?.id || "",
-    colaborador_id: ventasData.colaboradores[0]?.id || "",
+    producto_id: productos[0]?.id || "",
+    zona_id: zonas[0]?.id || "",
+    colaborador_id: colaboradores[0]?.id || "",
     pvp: 0,
     cantidad: 1,
     estado: "PENDIENTE",
@@ -411,7 +402,7 @@ export function useVentasGestion(customFields = []) {
     telefono_fijo: "",
     telefono_movil: "",
     observaciones: "",
-  }), [ventasData]);
+  }), [productos, zonas, colaboradores, operadores]);
 
   // =================== 📊 ESTADÍSTICAS CALCULADAS ===================
   
@@ -423,33 +414,28 @@ export function useVentasGestion(customFields = []) {
     return {
       // Filtros
       hasActiveFilters,
-      
       // Selección
       hasSelection: state.selectedIds.length > 0,
       selectionCount: state.selectedIds.length,
       isAllSelected: state.selectedIds.length > 0 && 
                      state.selectedIds.length === ventasFiltradas.length,
-      
       // Contadores
       filteredCount: ventasFiltradas.length,
-      totalCount: ventasData.ventas.length,
-      
+      totalCount: ventas.length,
       // Estados UI
       isExporting: state.isExporting,
       isProcessing: state.isProcessing,
-      
       // 🎯 MEJORA: Métricas de negocio
       selectedValue: getSelectedVentas().reduce((sum, v) => {
-        const producto = ventasData.productos.find(p => p.id === v.producto_id);
+        const producto = productos.find(p => p.id === v.producto_id);
         return sum + (producto?.pvp || v.pvp || 0);
       }, 0),
-      
       filteredValue: ventasFiltradas.reduce((sum, v) => {
-        const producto = ventasData.productos.find(p => p.id === v.producto_id);
+        const producto = productos.find(p => p.id === v.producto_id);
         return sum + (producto?.pvp || v.pvp || 0);
       }, 0),
     };
-  }, [state, ventasFiltradas, ventasData, getSelectedVentas]);
+  }, [state, ventasFiltradas, ventas, productos, getSelectedVentas]);
 
   // =================== 📤 RETURN CONSOLIDADO ===================
   

@@ -147,6 +147,16 @@ export function DataContextProvider({ children }) {
           console.warn(`[DataContextProvider] La actualización de ${collectionKey} no devolvió un array válido.`);
           nextItems = [];
         }
+        // Limpieza automática de duplicados SOLO para productos
+        if (collectionKey === 'productos') {
+          try {
+            // Importar la función de limpieza
+            const { cleanProductos } = require('../utils/dataCleaner');
+            nextItems = cleanProductos(nextItems);
+          } catch (e) {
+            console.warn('No se pudo limpiar productos:', e);
+          }
+        }
         saveToStorage(storageKey, nextItems);
         return { ...prev, [collectionKey]: nextItems };
       });

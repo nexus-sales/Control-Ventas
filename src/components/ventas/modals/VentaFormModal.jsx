@@ -30,61 +30,80 @@ export function VentaFormModal({
   colaboradores = [],
   zonas = []
 }) {
-  
-  // =================== ESTADO Y CONFIGURACIÓN ===================
-  
-  // Determinar si es modo edición
-  const isEditing = !!venta;
-  
-  // Estado del formulario
-  const [formData, setFormData] = useState({});
-  const [errors, setErrors] = useState({});
-  const [isDirty, setIsDirty] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Hook para campos personalizados
-  const { customFields } = useImportGestion({ modulo: 'ventas' });
+    // Estado para cambios sin guardar y envío
+    const [isDirty, setIsDirty] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    // Obtener campos personalizados del módulo ventas
+    const { customFields = [] } = useImportGestion({ modulo: "ventas" });
 
-  // =================== INICIALIZACIÓN DEL FORMULARIO ===================
-  
-  // Inicializar formulario al abrir modal
-  useEffect(() => {
-    if (isOpen) {
-      if (isEditing && venta) {
-        // Modo edición: cargar datos existentes
-        setFormData({ ...venta });
-      } else if (createInitialDraft) {
-        // Modo creación: usar draft inicial
-        setFormData(createInitialDraft());
-      } else {
-        // Fallback: formulario vacío
-        setFormData({
-          fecha: new Date().toISOString().slice(0, 10),
-          cliente: "",
-          cif: "",
-          estado: "Confirmada",
-          cantidad: 1,
-        });
+    // =================== ESTADO Y CONFIGURACIÓN ===================
+
+    // Determinar si es modo edición
+    const isEditing = !!venta;
+
+    // Estado del formulario SIEMPRE inicializado
+    const [formData, setFormData] = useState({});
+    const [errors, setErrors] = useState({});
+
+    // Producto seleccionado (después de inicializar formData)
+    const productoSeleccionado = useMemo(() =>
+      productos.find(p => p.id === formData.producto_id),
+      [productos, formData.producto_id]
+    );
+
+  // Filtrar colaboradores activos y con nombre
+  const colaboradoresFiltrados = useMemo(() =>
+    colaboradores.filter(c => {
+      // Considerar activo si tiene nombre y no tiene fecha_baja o la fecha_baja es futura
+      if (!c.nombre) return false;
+      if (!c.fecha_baja) return true;
+      // Permitir fechas en formato string o Date
+      const fechaBaja = typeof c.fecha_baja === 'string' ? new Date(c.fecha_baja) : c.fecha_baja;
+      return fechaBaja > new Date();
+    }),
+    [colaboradores]
+  );
+
+    // Inicialización avanzada del formulario al abrir el modal
+    useEffect(() => {
+      if (isOpen) {
+        if (isEditing && venta) {
+          setFormData({ ...venta });
+        } else if (createInitialDraft) {
+          // Modo creación: usar draft inicial
+          const draft = createInitialDraft();
+          // Selección automática de colaborador si no está definido
+          if (colaboradoresFiltrados.length > 0 && !draft.colaborador_id) {
+            draft.colaborador_id = colaboradoresFiltrados[0].id;
+            draft.comision_colaborador = colaboradoresFiltrados[0].pct_colaborador_default || 0;
+          }
+          setFormData(draft);
+        } else {
+          // Fallback: formulario vacío
+          const emptyForm = {
+            fecha: new Date().toISOString().slice(0, 10),
+            cliente: "",
+            cif: "",
+            estado: "Confirmada",
+            cantidad: 1,
+          };
+          // Selección automática de colaborador si hay
+          if (colaboradoresFiltrados.length > 0) {
+            emptyForm.colaborador_id = colaboradoresFiltrados[0].id;
+            emptyForm.comision_colaborador = colaboradoresFiltrados[0].pct_colaborador_default || 0;
+          }
+          setFormData(emptyForm);
+        }
+        setErrors({});
+        setIsDirty(false);
+        setIsSubmitting(false);
       }
-      
-      setErrors({});
-      setIsDirty(false);
-      setIsSubmitting(false);
-    }
-  }, [isOpen, isEditing, venta, createInitialDraft]);
+    }, [isOpen, isEditing, venta, createInitialDraft, colaboradoresFiltrados]);
 
-  // =================== DATOS CALCULADOS ===================
-  
-  // Producto y colaborador seleccionados
-  const productoSeleccionado = useMemo(() => 
-    productos.find(p => p.id === formData.producto_id), 
-    [productos, formData.producto_id]
-  );
-  
-  const colaboradorSeleccionado = useMemo(() => 
-    colaboradores.find(c => c.id === formData.colaborador_id), 
-    [colaboradores, formData.colaborador_id]
-  );
+    const colaboradorSeleccionado = useMemo(() =>
+      colaboradoresFiltrados.find(c => c.id === formData.colaborador_id),
+      [colaboradoresFiltrados, formData.colaborador_id]
+    );
   
   const operadorSeleccionado = useMemo(() => 
     operadores.find(o => o.id === formData.operador_id), 
@@ -292,28 +311,28 @@ export function VentaFormModal({
   const Icon = isEditing ? Edit3 : Plus;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-darkCard rounded-2xl shadow-2xl border border-slate-200 dark:border-darkAccent/30 p-6 w-full max-w-7xl max-h-[90vh] overflow-y-auto transition-colors">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-pink-200/40 dark:bg-pink-900/60 backdrop-blur-sm p-4">
+      <div className="card-pastel rounded-2xl shadow-2xl p-6 w-full max-w-7xl max-h-[90vh] overflow-y-auto transition-colors">
         
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-darkCard pb-4 mb-6 border-b border-slate-200 dark:border-darkAccent/30">
+        <div className="sticky top-0 bg-pink-50 dark:bg-pink-200 pb-4 mb-6 border-b border-pink-200 dark:border-pink-400">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-800 dark:text-darkText flex items-center gap-2">
+            <h2 className="text-xl font-bold text-pink-900 dark:text-pink-700 flex items-center gap-2">
               <Icon className={`w-5 h-5 ${isEditing ? 'text-amber-600' : 'text-emerald-600'}`} />
               {modalTitle}
             </h2>
             <button
               onClick={handleClose}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="p-2 hover:bg-pink-100 dark:hover:bg-pink-300 rounded-lg transition-colors"
               disabled={isSubmitting}
             >
-              <X className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+              <X className="w-5 h-5 text-pink-700 dark:text-pink-900" />
             </button>
           </div>
           
-          {/* 🎯 MEJORA: Indicadores de estado */}
+          {/* 🏆 MEJORA: Indicadores de estado */}
           <div className="mt-4 flex items-center gap-4 text-sm">
-            <div className={`flex items-center gap-1 ${formStats.isComplete ? 'text-emerald-600' : 'text-slate-400'}`}>
+            <div className={`flex items-center gap-1 ${formStats.isComplete ? 'text-emerald-600' : 'text-pink-400'}`}>
               <CheckCircle className="w-4 h-4" />
               <span>Datos completos</span>
             </div>
@@ -349,11 +368,14 @@ export function VentaFormModal({
             
             {/* Columna 1: Información del Cliente */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-slate-800 dark:text-darkText pb-2 border-b border-slate-200 dark:border-darkAccent/30">
+              <h4 className="font-semibold text-pink-900 dark:text-pink-700 pb-2 border-b border-pink-200 dark:border-pink-400">
                 📋 Información del Cliente
               </h4>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
+                <h4 className="font-semibold text-pink-900 dark:text-pink-700 pb-2 border-b border-pink-200 dark:border-pink-400">
+                  🏬 Detalles del Servicio
+                </h4>
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-cliente">
                     Cliente *
@@ -618,7 +640,7 @@ export function VentaFormModal({
                     required
                   >
                     <option value="">Seleccionar colaborador</option>
-                    {colaboradores.map((c) => (
+                    {colaboradoresFiltrados.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.nombre} - {c.nivelId} ({((c.pct_colaborador_default || 0) * 100).toFixed(1)}%)
                       </option>
@@ -639,7 +661,7 @@ export function VentaFormModal({
 
             {/* Columna 3: Precios y Comisiones */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-slate-800 dark:text-darkText pb-2 border-b border-slate-200 dark:border-darkAccent/30">
+              <h4 className="font-semibold text-pink-900 dark:text-pink-700 pb-2 border-b border-pink-200 dark:border-pink-400">
                 💰 Precios y Comisiones
               </h4>
 
@@ -756,8 +778,8 @@ export function VentaFormModal({
 
           {/* Campos personalizados */}
           {customFields?.length > 0 && (
-            <div className="border-t border-slate-200 dark:border-darkAccent/30 pt-6">
-              <h4 className="font-semibold text-slate-800 dark:text-darkText mb-4">
+            <div className="border-t border-pink-200 dark:border-pink-400 pt-6">
+              <h4 className="font-semibold text-pink-900 dark:text-pink-700 mb-4">
                 🎛️ Campos Personalizados
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -840,11 +862,11 @@ export function VentaFormModal({
           )}
 
           {/* Botones de acción */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-darkAccent/30">
+          <div className="flex justify-end gap-3 pt-6 border-t border-pink-200 dark:border-pink-400">
             <button
               type="button"
               onClick={handleClose}
-              className="px-8 py-3 border border-slate-300 dark:border-darkAccent rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              className="px-8 py-3 border border-pink-200 dark:border-pink-400 rounded-xl text-pink-700 dark:text-pink-900 hover:bg-pink-100 dark:hover:bg-pink-300 transition-colors"
               disabled={isSubmitting}
             >
               Cancelar
@@ -855,7 +877,7 @@ export function VentaFormModal({
               className={`flex items-center gap-2 px-8 py-3 rounded-xl text-white transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                 isEditing 
                   ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700'
-                  : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
+                  : 'bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700'
               }`}
             >
               <Save className="w-4 h-4" />

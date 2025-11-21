@@ -1,15 +1,17 @@
-// main.jsx - QUITAR BrowserRouter
 import React from "react";
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { BrowserRouter } from "react-router-dom";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import AppCVv2 from "./AppCVv2.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <Tooltip.Provider>
-      <AppCVv2 />
-    </Tooltip.Provider>
+    <BrowserRouter>
+      <Tooltip.Provider>
+        <AppCVv2 />
+      </Tooltip.Provider>
+    </BrowserRouter>
   </React.StrictMode>,
 );
 

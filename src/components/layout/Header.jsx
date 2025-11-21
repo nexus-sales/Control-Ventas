@@ -51,21 +51,25 @@ export function Header() {
         {/* Eliminado botón de sincronización Supabase */}
         
         {installable && (
-          <button
-            onClick={promptInstall}
-            className="px-3 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-gray-900 flex items-center gap-2 hover:bg-slate-800 dark:hover:bg-gray-100 transition-colors"
-          >
-            <Download className="w-4 h-4" /> Instalar
-          </button>
-        )}
-        
-        <button
-          className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
-          title="Notificaciones"
-        >
-          <Bell className="w-4 h-4" />
-        </button>
-      </div>
-    </header>
-  );
-}
+          return (
+            <header className="w-full flex items-center justify-between px-4 py-2 border-b border-pink-200 dark:border-pink-400 bg-pink-50 dark:bg-pink-200">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onToggleSidebar}
+                  className="p-2 rounded-lg hover:bg-pink-100 dark:hover:bg-pink-300"
+                >
+                  <Menu className="w-5 h-5 text-pink-700 dark:text-pink-900" />
+                </button>
+                <span className="font-bold text-pink-700 dark:text-pink-900">Control Ventas</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-pink-700 dark:text-pink-900">{user?.name}</span>
+                <button
+                  onClick={onLogout}
+                  className="px-3 py-1 rounded-lg bg-pink-200 hover:bg-pink-300 dark:bg-pink-400 dark:hover:bg-pink-500 text-pink-900 dark:text-pink-50"
+                >
+                  Salir
+                </button>
+              </div>
+            </header>
+          );

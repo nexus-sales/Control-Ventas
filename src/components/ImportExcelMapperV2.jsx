@@ -35,7 +35,7 @@ export default function ImportExcelMapperV2({
   setOperadores,
   setColaboradores,
   setZonas,
-  onImportSuccess, // ← PROP AGREGADA para recargar datos
+  onImportSuccess,
   productos = [],
   operadores = [],
   colaboradores = [],
@@ -44,7 +44,6 @@ export default function ImportExcelMapperV2({
   const [toast, setToast] = useState({ message: "", type: "info" });
   const [erroresFila, setErroresFila] = useState(null);
 
-  // Usar el hook personalizado
   const {
     headers,
     rows,
@@ -75,21 +74,24 @@ export default function ImportExcelMapperV2({
     setOperadores,
     setColaboradores,
     setZonas,
-    onImportSuccess, // ← PASAR onImportSuccess al hook
+    // onImportSuccess YA NO se usa dentro del hook para evitar doble llamada
   });
 
   const { startImporting, finishImporting } = useAuthGestion();
 
-  // Verificar si la funcionalidad de auto-creación está disponible
-  const autoCreacionDisponible = !!(setProductos && setOperadores && setColaboradores && setZonas);
+  const autoCreacionDisponible = !!(
+    setProductos &&
+    setOperadores &&
+    setColaboradores &&
+    setZonas
+  );
 
   // --------- Generar plantilla completa ---------
   const descargarPlantillaCompleta = async () => {
     try {
       const ExcelJS = (await import("exceljs")).default;
       const workbook = new ExcelJS.Workbook();
-      
-      // Hoja de datos de ejemplo
+
       const datosEjemplo = [
         {
           FECHA_ENVIO: "15/01/2024",
@@ -100,7 +102,7 @@ export default function ImportExcelMapperV2({
           OPERADOR: "Orange",
           PVP: 49.9,
           CANTIDAD: 1,
-          ESTADO: "Confirmada"
+          ESTADO: "Confirmada",
         },
         {
           FECHA_ENVIO: "16/01/2024",
@@ -111,16 +113,15 @@ export default function ImportExcelMapperV2({
           OPERADOR: "Vodafone",
           PVP: 35.0,
           CANTIDAD: 2,
-          ESTADO: "Pendiente"
-        }
+          ESTADO: "Pendiente",
+        },
       ];
-      
+
       const headers = Object.keys(datosEjemplo[0]);
       const ws = workbook.addWorksheet("Plantilla Ejemplo");
       ws.columns = headers.map((h) => ({ header: h, key: h, width: 18 }));
       datosEjemplo.forEach((row) => ws.addRow(row));
 
-      // Hoja de mapeo de campos
       const mapeoData = Object.keys(MAPEO_CAMPOS).map((interno) => ({
         "Campo Interno": interno,
         "Posibles Nombres Excel": MAPEO_CAMPOS[interno].join(", "),
@@ -136,7 +137,6 @@ export default function ImportExcelMapperV2({
       ];
       mapeoData.forEach((row) => wsMapeo.addRow(row));
 
-      // Hoja de instrucciones
       const wsInstrucciones = workbook.addWorksheet("Instrucciones");
       wsInstrucciones.columns = [
         { header: "Aspecto", key: "aspecto", width: 20 },
@@ -158,23 +158,29 @@ export default function ImportExcelMapperV2({
         },
         {
           aspecto: "Colaboradores",
-          instruccion: "Usa nombres completos. Se crearán automáticamente si no existen.",
+          instruccion:
+            "Usa nombres completos. Se crearán automáticamente si no existen.",
         },
         {
           aspecto: "Productos",
-          instruccion: "Nombres de productos/servicios. Se vincularán automáticamente a operadores.",
+          instruccion:
+            "Nombres de productos/servicios. Se vincularán automáticamente a operadores.",
         },
         {
           aspecto: "Zonas",
-          instruccion: "Nombres de zonas geográficas (Península, Canarias, etc.)",
-        }
+          instruccion:
+            "Nombres de zonas geográficas (Península, Canarias, etc.)",
+        },
       ];
       instrucciones.forEach((row) => wsInstrucciones.addRow(row));
 
-      const fileName = `plantilla_completa_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const fileName = `plantilla_completa_${new Date()
+        .toISOString()
+        .slice(0, 10)}.xlsx`;
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        type:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -194,7 +200,6 @@ export default function ImportExcelMapperV2({
     }
   };
 
-  // Manejar carga de archivo
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -203,24 +208,22 @@ export default function ImportExcelMapperV2({
       await loadFile(file);
       setToast({ message: `Archivo cargado: ${file.name}`, type: "success" });
     } catch (error) {
-      console.error('Error cargando archivo:', error);
+      console.error("Error cargando archivo:", error);
       setToast({ message: `Error: ${error.message}`, type: "error" });
     }
   };
 
-  // Manejar importación - FUNCIÓN OPTIMIZADA
   const handleImport = async () => {
     startImporting();
     try {
-      console.log('🔍 INICIANDO IMPORTACIÓN OPTIMIZADA');
-      
-      // Mostrar progreso visual
-      setToast({ 
-        message: "Iniciando importación... Por favor espera.", 
-        type: "info" 
+      console.log("🔍 INICIANDO IMPORTACIÓN OPTIMIZADA");
+
+      setToast({
+        message: "Iniciando importación... Por favor espera.",
+        type: "info",
       });
-      
-      console.log('Estado actual:', {
+
+      console.log("Estado actual:", {
         crearAutomaticamente,
         validationStats,
         autoCreacionDisponible,
@@ -229,12 +232,14 @@ export default function ImportExcelMapperV2({
           setOperadores: !!setOperadores,
           setColaboradores: !!setColaboradores,
           setZonas: !!setZonas,
-        }
+        },
       });
 
-      // Validaciones previas
       if (!mapping || Object.keys(mapping).length === 0) {
-        setToast({ message: "Por favor, mapea al menos un campo", type: "error" });
+        setToast({
+          message: "Por favor, mapea al menos un campo",
+          type: "error",
+        });
         return;
       }
 
@@ -247,53 +252,61 @@ export default function ImportExcelMapperV2({
       }
 
       try {
-        // Actualizar progreso
-        setToast({ 
-          message: `Procesando ${validationStats.valid} filas válidas...`, 
-          type: "info" 
+        setToast({
+          message: `Procesando ${validationStats.valid} filas válidas...`,
+          type: "info",
         });
 
-        // Ejecutar importación
-        const resultado = crearAutomaticamente && autoCreacionDisponible
-          ? await importInteligente()
-          : await importNormal();
+        const resultado =
+          crearAutomaticamente && autoCreacionDisponible
+            ? await importInteligente()
+            : await importNormal();
 
-        console.log('✅ RESULTADO IMPORTACIÓN:', resultado);
+        console.log("✅ RESULTADO IMPORTACIÓN:", resultado);
 
-        // Mensaje de éxito mejorado con detalles
         const detalles = [];
-        if (resultado.operadoresCreados > 0) detalles.push(`${resultado.operadoresCreados} operadores`);
-        if (resultado.productosCreados > 0) detalles.push(`${resultado.productosCreados} productos`);
-        if (resultado.colaboradoresCreados > 0) detalles.push(`${resultado.colaboradoresCreados} colaboradores`);
-        if (resultado.zonasCreadas > 0) detalles.push(`${resultado.zonasCreadas} zonas`);
+        if (resultado.operadoresCreados > 0)
+          detalles.push(`${resultado.operadoresCreados} operadores`);
+        if (resultado.productosCreados > 0)
+          detalles.push(`${resultado.productosCreados} productos`);
+        if (resultado.colaboradoresCreados > 0)
+          detalles.push(`${resultado.colaboradoresCreados} colaboradores`);
+        if (resultado.zonasCreadas > 0)
+          detalles.push(`${resultado.zonasCreadas} zonas`);
 
-        const mensaje = crearAutomaticamente && autoCreacionDisponible
-          ? `🚀 Importación inteligente completada: ${resultado.ventasCreadas} ventas ${detalles.length > 0 ? '+ ' + detalles.join(', ') + ' creados' : ''}`
-          : `✅ Importación exitosa: ${resultado.ventasCreadas} ventas guardadas`;
+        const mensaje =
+          crearAutomaticamente && autoCreacionDisponible
+            ? `🚀 Importación inteligente completada: ${resultado.ventasCreadas} ventas${
+                detalles.length > 0
+                  ? " + " + detalles.join(", ") + " creados"
+                  : ""
+              }`
+            : `✅ Importación exitosa: ${resultado.ventasCreadas} ventas guardadas`;
 
         setToast({ message: mensaje, type: "success" });
 
-        // ← LÍNEAS CRÍTICAS AGREGADAS: Recargar datos después del éxito
         if (onImportSuccess) {
-          console.log("🔄 Recargando datos después de importación exitosa...");
+          console.log(
+            "🔄 Recargando datos después de importación exitosa (desde componente)..."
+          );
           try {
-            await onImportSuccess();
+            await onImportSuccess(resultado);
             console.log("✅ Datos recargados correctamente en la interfaz");
           } catch (reloadError) {
             console.error("❌ Error recargando datos:", reloadError);
-            setToast({ 
-              message: "Importación exitosa, pero error recargando interfaz. Recarga la página.", 
-              type: "warning" 
+            setToast({
+              message:
+                "Importación exitosa, pero error recargando interfaz. Recarga la página.",
+              type: "warning",
             });
           }
         } else {
-          console.warn("⚠️ onImportSuccess no está definido - los datos no se recargarán automáticamente");
+          console.warn(
+            "⚠️ onImportSuccess no está definido - los datos no se recargarán automáticamente"
+          );
         }
-        
-        // No limpiar datos inmediatamente para permitir ver el resumen
-        // clearData();
       } catch (error) {
-        console.error('❌ ERROR IMPORTACIÓN:', error);
+        console.error("❌ ERROR IMPORTACIÓN:", error);
         setToast({ message: `❌ Error: ${error.message}`, type: "error" });
       }
     } finally {
@@ -301,7 +314,6 @@ export default function ImportExcelMapperV2({
     }
   };
 
-  // Importación simplificada para casos difíciles
   const handleImportSimplificado = async () => {
     startImporting();
     try {
@@ -311,31 +323,34 @@ export default function ImportExcelMapperV2({
       }
 
       try {
-        console.log('🔧 EJECUTANDO IMPORTACIÓN SIMPLIFICADA...');
-        setToast({ message: "🔧 Ejecutando importación simplificada...", type: "info" });
-
-        const resultado = await importSimplificado();
-        
-        console.log('🔧 RESULTADO SIMPLIFICADO:', resultado);
-
-        setToast({ 
-          message: `✅ IMPORTACIÓN COMPLETADA: ${resultado.ventasCreadas} ventas creadas`, 
-          type: "success" 
+        console.log("🔧 EJECUTANDO IMPORTACIÓN SIMPLIFICADA...");
+        setToast({
+          message: "🔧 Ejecutando importación simplificada...",
+          type: "info",
         });
 
-        // Recargar datos
+        const resultado = await importSimplificado();
+
+        console.log("🔧 RESULTADO SIMPLIFICADO:", resultado);
+
+        setToast({
+          message: `✅ IMPORTACIÓN COMPLETADA: ${resultado.ventasCreadas} ventas creadas`,
+          type: "success",
+        });
+
         if (onImportSuccess) {
-          console.log("🔧 Recargando datos después de importación simplificada...");
+          console.log(
+            "🔧 Recargando datos después de importación simplificada..."
+          );
           try {
-            await onImportSuccess();
+            await onImportSuccess(resultado);
             console.log("🔧 Datos recargados correctamente");
           } catch (reloadError) {
             console.error("🔧 Error recargando datos:", reloadError);
           }
         }
-
       } catch (error) {
-        console.error('🔧 ERROR IMPORTACIÓN SIMPLIFICADA:', error);
+        console.error("🔧 ERROR IMPORTACIÓN SIMPLIFICADA:", error);
         setToast({ message: `❌ Error: ${error.message}`, type: "error" });
       }
     } finally {
@@ -343,7 +358,6 @@ export default function ImportExcelMapperV2({
     }
   };
 
-  // Mostrar errores de fila
   const handleRowErrorClick = (rowIndex) => {
     const validation = validateSingleRow(rowIndex);
     if (validation && !validation.isValid) {
@@ -354,8 +368,6 @@ export default function ImportExcelMapperV2({
     }
   };
 
-  // Previsualización: paginación para grandes volúmenes
-  // Añadir paginación si hay más de 100 filas
   const [previewPage, setPreviewPage] = useState(1);
   const PREVIEW_PAGE_SIZE = 20;
   const totalPreviewPages = Math.ceil(rows.length / PREVIEW_PAGE_SIZE);
@@ -377,9 +389,7 @@ export default function ImportExcelMapperV2({
         <div className="flex items-center mb-4">
           <FileSpreadsheet className="w-6 h-6 mr-3 text-sky-600" />
           <div>
-            <SectionTitle>
-              Importación/Exportación Masiva Excel/CSV
-            </SectionTitle>
+            <SectionTitle>Importación/Exportación Masiva Excel/CSV</SectionTitle>
             <p className="text-sm text-slate-600">
               Importa y exporta datos fácilmente. Optimizado para datos legacy y
               nuevos.
@@ -388,7 +398,7 @@ export default function ImportExcelMapperV2({
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Sección de importación */}
+          {/* Importar */}
           <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-sky-300 transition-colors bg-gradient-to-br from-sky-50 to-sky-100">
             <Upload className="w-12 h-12 mx-auto mb-4 text-sky-600" />
             <h4 className="font-semibold mb-2 text-slate-800">
@@ -408,7 +418,7 @@ export default function ImportExcelMapperV2({
             />
             <label
               htmlFor="file-upload"
-              className={`inline-block px-4 py-2 rounded-lg text-white transition-all cursor-pointer ${        
+              className={`inline-block px-4 py-2 rounded-lg text-white transition-all cursor-pointer ${
                 isLoading
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700"
@@ -416,8 +426,7 @@ export default function ImportExcelMapperV2({
             >
               {isLoading ? "Cargando..." : "Seleccionar archivo"}
             </label>
-            
-            {/* Opciones */}
+
             <div className="mt-4 space-y-2">
               <label className="flex items-center justify-center gap-2 text-sm">
                 <input
@@ -442,7 +451,9 @@ export default function ImportExcelMapperV2({
                   <input
                     type="checkbox"
                     checked={crearAutomaticamente}
-                    onChange={(e) => setCrearAutomaticamente(e.target.checked)}
+                    onChange={(e) =>
+                      setCrearAutomaticamente(e.target.checked)
+                    }
                     className="rounded"
                   />
                   🚀 Crear automáticamente entidades faltantes
@@ -456,7 +467,7 @@ export default function ImportExcelMapperV2({
             </div>
           </div>
 
-          {/* Sección de exportar/descargar plantilla */}
+          {/* Plantilla */}
           <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-emerald-300 transition-colors bg-gradient-to-br from-emerald-50 to-emerald-100 flex flex-col items-center justify-center">
             <Download className="w-12 h-12 mx-auto mb-4 text-emerald-600" />
             <h4 className="font-semibold mb-2 text-slate-800">
@@ -478,7 +489,7 @@ export default function ImportExcelMapperV2({
           </div>
         </div>
 
-        {/* Advertencias importantes */}
+        {/* Avisos */}
         <div className="mt-4 space-y-2">
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
             <div className="flex items-start gap-2">
@@ -504,7 +515,7 @@ export default function ImportExcelMapperV2({
         </div>
       </Card>
 
-      {/* Mapeo de columnas */}
+      {/* Mapeo */}
       {headers.length > 0 && (
         <Card>
           <SectionTitle>Mapeo de Columnas</SectionTitle>
@@ -528,7 +539,10 @@ export default function ImportExcelMapperV2({
                   className="border rounded px-2 py-1 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   value={mapping[campo] || ""}
                   onChange={(e) =>
-                    setMapping((prev) => ({ ...prev, [campo]: e.target.value }))
+                    setMapping((prev) => ({
+                      ...prev,
+                      [campo]: e.target.value,
+                    }))
                   }
                 >
                   <option value="">—</option>
@@ -552,14 +566,19 @@ export default function ImportExcelMapperV2({
           <div className="mb-4 flex justify-between items-center">
             <div className="text-sm text-slate-600">
               {rows.length > PREVIEW_PAGE_SIZE
-                ? `Mostrando filas ${((previewPage - 1) * PREVIEW_PAGE_SIZE) + 1} a ${Math.min(previewPage * PREVIEW_PAGE_SIZE, rows.length)} de ${rows.length}`
+                ? `Mostrando filas ${
+                    (previewPage - 1) * PREVIEW_PAGE_SIZE + 1
+                  } a ${Math.min(
+                    previewPage * PREVIEW_PAGE_SIZE,
+                    rows.length
+                  )} de ${rows.length}`
                 : `Mostrando ${rows.length} filas`}
             </div>
             {rows.length > PREVIEW_PAGE_SIZE && (
               <div className="flex gap-2 items-center">
                 <button
                   className="px-2 py-1 rounded bg-slate-200 text-slate-700 text-sm hover:bg-slate-300"
-                  onClick={() => setPreviewPage(p => Math.max(1, p - 1))}
+                  onClick={() => setPreviewPage((p) => Math.max(1, p - 1))}
                   disabled={previewPage === 1}
                 >
                   Anterior
@@ -569,7 +588,11 @@ export default function ImportExcelMapperV2({
                 </span>
                 <button
                   className="px-2 py-1 rounded bg-slate-200 text-slate-700 text-sm hover:bg-slate-300"
-                  onClick={() => setPreviewPage(p => Math.min(totalPreviewPages, p + 1))}
+                  onClick={() =>
+                    setPreviewPage((p) =>
+                      Math.min(totalPreviewPages, p + 1)
+                    )
+                  }
                   disabled={previewPage === totalPreviewPages}
                 >
                   Siguiente
@@ -578,7 +601,6 @@ export default function ImportExcelMapperV2({
             )}
           </div>
 
-          {/* Estadísticas de validación */}
           <div className="mb-4 flex gap-4 text-sm">
             <span className="text-green-600 font-medium">
               ✅ Válidas: {validationStats.valid}
@@ -607,82 +629,85 @@ export default function ImportExcelMapperV2({
                 </tr>
               </thead>
               <tbody>
-                {(rows.length > PREVIEW_PAGE_SIZE ? pagedRows : rows).map((row, index) => {
-                  // Ajustar el índice real para validación y errores
-                  const realIndex = rows.length > PREVIEW_PAGE_SIZE
-                    ? (previewPage - 1) * PREVIEW_PAGE_SIZE + index
-                    : index;
-                  const validation = validateSingleRow(realIndex);
-                  const isValid = validation?.isValid ?? true;
+                {(rows.length > PREVIEW_PAGE_SIZE ? pagedRows : rows).map(
+                  (row, index) => {
+                    const realIndex =
+                      rows.length > PREVIEW_PAGE_SIZE
+                        ? (previewPage - 1) * PREVIEW_PAGE_SIZE + index
+                        : index;
+                    const validation = validateSingleRow(realIndex);
+                    const isValid = validation?.isValid ?? true;
 
-                  return (
-                    <tr
-                      key={realIndex}
-                      className={`border-b ${isValid ? "bg-green-50" : "bg-red-50"}`}
-                    >
-                      <td className="py-2 px-3">
-                        {isValid ? (
-                          <span
-                            className="w-3 h-3 bg-green-500 rounded-full inline-block"
-                            title="Válido"
-                          ></span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="w-3 h-3 bg-red-500 rounded-full hover:ring-2 hover:ring-red-300"        
-                            title="Ver errores"
-                            onClick={() => handleRowErrorClick(realIndex)}
-                          />
-                        )}
-                      </td>
-                      {headers.map((header) => (
-                        <td
-                          key={`${realIndex}-${header}`}
-                          className="py-2 px-3 whitespace-nowrap"
-                        >
-                          {(() => {
-                            const valor = row[header];
-                            if (
-                              header.toLowerCase().includes("fecha") &&
-                              valor
-                            ) {
-                              const fechaParsed = parseDate(valor);
-                              if (fechaParsed) {
-                                const [y, m, d] = fechaParsed.split("-");
-                                return `${d}/${m}/${y}`;
-                              }
-                            }
-                            return String(valor || "—");
-                          })()}
+                    return (
+                      <tr
+                        key={realIndex}
+                        className={`border-b ${
+                          isValid ? "bg-green-50" : "bg-red-50"
+                        }`}
+                      >
+                        <td className="py-2 px-3">
+                          {isValid ? (
+                            <span
+                              className="w-3 h-3 bg-green-500 rounded-full inline-block"
+                              title="Válido"
+                            ></span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="w-3 h-3 bg-red-500 rounded-full hover:ring-2 hover:ring-red-300"
+                              title="Ver errores"
+                              onClick={() => handleRowErrorClick(realIndex)}
+                            />
+                          )}
                         </td>
-                      ))}
-                    </tr>
-                  );
-                })}
+                        {headers.map((header) => (
+                          <td
+                            key={`${realIndex}-${header}`}
+                            className="py-2 px-3 whitespace-nowrap"
+                          >
+                            {(() => {
+                              const valor = row[header];
+                              if (
+                                header.toLowerCase().includes("fecha") &&
+                                valor
+                              ) {
+                                const fechaParsed = parseDate(valor);
+                                if (fechaParsed) {
+                                  const [y, m, d] = fechaParsed.split("-");
+                                  return `${d}/${m}/${y}`;
+                                }
+                              }
+                              return String(valor || "—");
+                            })()}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  }
+                )}
               </tbody>
             </table>
           </div>
 
-          {/* Botones de acción */}
           <div className="mt-4 flex gap-3">
             <button
               onClick={handleImport}
               disabled={validationStats.valid === 0 || isLoading}
               className="px-4 py-2 rounded-xl text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                background: crearAutomaticamente && autoCreacionDisponible
-                  ? "linear-gradient(to right, #10b981, #059669)"
-                  : "linear-gradient(to right, #0ea5e9, #0284c7)",
+                background:
+                  crearAutomaticamente && autoCreacionDisponible
+                    ? "linear-gradient(to right, #10b981, #059669)"
+                    : "linear-gradient(to right, #0ea5e9, #0284c7)",
               }}
             >
               {isLoading
                 ? "Procesando..."
                 : crearAutomaticamente && autoCreacionDisponible
-                  ? `🚀 Importación Inteligente (${validationStats.valid} filas)`
-                  : `Importar ${validationStats.valid} filas válidas`}
+                ? `🚀 Importación Inteligente (${validationStats.valid} filas)`
+                : `Importar ${validationStats.valid} filas válidas`}
             </button>
 
-            {/* Botón de importación simplificada */}
             <button
               onClick={handleImportSimplificado}
               disabled={rows.length === 0 || isLoading}
@@ -724,9 +749,7 @@ export default function ImportExcelMapperV2({
               <strong className="text-slate-700">Sugerencias:</strong>
               <ul className="text-sm text-slate-600 mt-2 space-y-1">
                 <li>• Verifica que los datos sean correctos</li>
-                <li>
-                  • Asegúrate de que las fechas estén en formato DD/MM/YYYY
-                </li>
+                <li>• Asegúrate de que las fechas estén en formato DD/MM/YYYY</li>
                 {!crearAutomaticamente && (
                   <li>
                     • Activa "Crear automáticamente" para generar entidades
@@ -779,14 +802,16 @@ export default function ImportExcelMapperV2({
                   ✅ Colaboradores creados:
                 </strong>
                 <div className="mt-1 flex flex-wrap gap-2">
-                  {resumenImportacion.colaboradoresNuevos.map((nombre, i) => (
-                    <span
-                      key={i}
-                      className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs"
-                    >
-                      {nombre}
-                    </span>
-                  ))}
+                  {resumenImportacion.colaboradoresNuevos.map(
+                    (nombre, i) => (
+                      <span
+                        key={i}
+                        className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs"
+                      >
+                        {nombre}
+                      </span>
+                    )
+                  )}
                 </div>
               </div>
             )}
