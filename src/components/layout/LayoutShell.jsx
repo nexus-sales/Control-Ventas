@@ -119,7 +119,7 @@ export function LayoutShell() {
               </button>
             </div>
           </header>
-          <div className="max-w-7xl mx-auto p-4">
+          <div className="w-full px-2 sm:px-4 lg:px-8">
             {/* Usar <Outlet /> para rutas anidadas */}
             <Outlet />
           </div>
