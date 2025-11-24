@@ -11,7 +11,7 @@ import { Header } from './Header';
  */
 import { useState, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
-import AuthCtx from '../../context/AuthCtx';
+import { useAuth } from '../../context/hooks';
 import { Home, BarChart3, Euro, Users, Settings, SlidersHorizontal } from 'lucide-react';
 
 const NAV_MODULES = [
@@ -28,7 +28,7 @@ import { Outlet } from 'react-router-dom';
 const AppLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { user, logout } = useContext(AuthCtx);
+  const { user, logout } = useAuth();
   const toggleSidebar = () => setCollapsed((prev) => !prev);
 
   return (

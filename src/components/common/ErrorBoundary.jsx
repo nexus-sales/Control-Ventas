@@ -12,7 +12,7 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    console.error("ErrorBoundary:", error, info);
+    // LOG ELIMINADO
   }
 
   render() {

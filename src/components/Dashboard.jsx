@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useData } from "../context/DataContext";
+import { useData } from "../context/AppContexts";
 import Loading from "./common/Loading";
 import Card from "./ui/Card";
 import SectionTitle from "./ui/SectionTitle";
@@ -20,12 +19,9 @@ import {
   Briefcase
 } from "lucide-react";
 
-function euro(n) {
-  return (n ?? 0).toFixed(2) + " €";
-}
 
 export default function Dashboard() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // Eliminado: no se usa
   const { data, dataInitialized } = useData();
   
   const ventas = Array.isArray(data?.ventas) ? data.ventas : [];

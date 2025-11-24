@@ -22,7 +22,7 @@ export function SyncButton({ dataContext }) {
         }
       }
     } catch (e) {
-      console.error('Error en sincronización:', e);
+      // LOG ELIMINADO
       setSyncStatus({ type: 'error', message: 'Error al sincronizar: ' + e.message });
     } finally {
       setSyncing(false);

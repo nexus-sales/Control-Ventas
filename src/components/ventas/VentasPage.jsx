@@ -1,8 +1,8 @@
 // src/components/ventas/VentasPage.jsx
 // VERSIÓN OPTIMIZADA - Consolidación final del módulo ventas
-import React, { useState, useMemo, useContext, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { DataContext } from '../../context/DataContext';
+import { useData } from '../../context/AppContexts';
 import { computeVenta } from '../../utils/calculos';
 import { useVentasGestion } from '../../hooks/useVentasGestion';
 import { usePagination } from '../../hooks/usePagination';
@@ -35,9 +35,8 @@ export default function VentasPage() {
   // Hooks de React Router
   const location = useLocation();
   const navigate = useNavigate();
-  
   // Contexto global
-  const { data, dataInitialized } = useContext(DataContext);
+  const { data, dataInitialized } = useData();
   
   // Hook consolidado de gestión de ventas
   const {
@@ -138,7 +137,7 @@ export default function VentasPage() {
           }),
         };
       } catch (error) {
-        console.error('Error calculando venta:', error, venta);
+        // LOG ELIMINADO
         return {
           ...venta,
           productoNombre: venta?.producto_id || '',
@@ -189,7 +188,7 @@ export default function VentasPage() {
           comisionesTotal += venta._calc.detalle?.comBruta || 0;
         }
       } catch (error) {
-        console.error('Error procesando estadística:', error, venta);
+        // LOG ELIMINADO
       }
     });
 

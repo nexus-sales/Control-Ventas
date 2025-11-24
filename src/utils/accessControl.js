@@ -161,7 +161,7 @@ export class AccessRequestManager {
       const requests = localStorage.getItem(this.STORAGE_KEY);
       return requests ? JSON.parse(requests) : [];
     } catch (error) {
-      console.error('Error loading access requests:', error);
+      // LOG ELIMINADO
       return [];
     }
   }
@@ -187,7 +187,7 @@ export class AccessRequestManager {
       }
       return false;
     } catch (error) {
-      console.error('Error saving access request:', error);
+      // LOG ELIMINADO
       return false;
     }
   }
@@ -204,7 +204,7 @@ export class AccessRequestManager {
       }
       return false;
     } catch (error) {
-      console.error('Error updating access request:', error);
+      // LOG ELIMINADO
       return false;
     }
   }

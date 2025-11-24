@@ -96,7 +96,7 @@ export function runSeedIfNeeded() {
   const current = loadLS(LS_KEYS.seedVersion, 0);
   if (current >= SEED_VERSION) return;
 
-  console.log(`Ejecutando seeds v${SEED_VERSION}...`);
+  // LOG ELIMINADO
 
   if (!loadLS(LS_KEYS.niveles, null) || loadLS(LS_KEYS.niveles, []).length === 0) {
     saveLS(LS_KEYS.niveles, seedNiveles);
@@ -121,5 +121,5 @@ export function runSeedIfNeeded() {
   }
 
   saveLS(LS_KEYS.seedVersion, SEED_VERSION);
-  console.log(`Seeds v${SEED_VERSION} ejecutados correctamente`);
+  // LOG ELIMINADO
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useData } from '../context/DataContext';
+import { useData } from '../context/AppContexts';
 
 // Filtros iniciales para gestión de ventas
 const INITIAL_FILTERS = {
@@ -257,7 +257,7 @@ export function useVentasGestion(customFields = []) {
       clearSelection();
       return true;
     } catch (error) {
-      console.error('Error eliminando ventas múltiples:', error);
+      // LOG ELIMINADO
       return false;
     } finally {
       setState(prev => ({ ...prev, isProcessing: false }));
@@ -373,7 +373,7 @@ export function useVentasGestion(customFields = []) {
       
       return true;
     } catch (error) {
-      console.error('Error exportando ventas:', error);
+      // LOG ELIMINADO
       return false;
     } finally {
       setState(prev => ({ ...prev, isExporting: false }));

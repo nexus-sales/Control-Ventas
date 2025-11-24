@@ -1,10 +1,10 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { 
   Home, TrendingUp, Users, Settings, FileSpreadsheet, PiggyBank, Target,
   ChevronLeft, ChevronRight, Bell, Search, LogOut, Database, RefreshCw, Building
 } from "lucide-react";
-import AuthCtx from "../../context/AuthCtx";
+import { useAuth } from "../../context/AppContexts";
 import StatusWidgets from "../widgets/StatusWidgets";
 import DarkModeToggle from "../ui/DarkModeToggle";
 import { LS_KEYS } from "../../utils/constants";
@@ -13,8 +13,7 @@ import { loadLS, saveLS } from "../../utils/storage";
 export function LayoutShell() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(() => loadLS(LS_KEYS.ui, { collapsed: false }).collapsed);
-  // CORREGIDO: Usar AuthCtx directamente
-  const { user, logout } = useContext(AuthCtx);
+  const { user, logout } = useAuth();
 
   const toggle = () => {
     setCollapsed((c) => {

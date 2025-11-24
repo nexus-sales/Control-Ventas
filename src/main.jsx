@@ -34,7 +34,7 @@ if ("serviceWorker" in navigator) {
         console.info("[PWA] Service worker registrado", swUrl, registration);
       },
       onRegisterError(error) {
-        console.error("[PWA] Error registrando service worker", error);
+        // LOG ELIMINADO
       },
     });
   });

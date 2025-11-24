@@ -1,7 +1,7 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { SlidersHorizontal } from "lucide-react";
-import { DataContext } from "../context/DataContext";
+import { useData } from "../context/AppContexts";
 import ConfigSections from "./config/ConfigSections";
 
 export default function Config() {
@@ -17,8 +17,8 @@ export default function Config() {
     }
   }, [location.search]);
 
-  // Usar el contexto de datos
-  const { data, dataInitialized } = useContext(DataContext);
+  // Usar el hook de datos
+  const { data, dataInitialized } = useData();
   const zonas = Array.isArray(data?.zonas) ? data.zonas : [];
 
   if (!dataInitialized) {

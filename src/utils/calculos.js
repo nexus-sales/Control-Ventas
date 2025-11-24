@@ -74,7 +74,7 @@ export function getProductoComisionBase(producto, pvp) {
 
 // DEPRECATED: Mantener por compatibilidad pero marcar como obsoleta
 export function findNivelPct(colab, niveles) {
-  console.warn("findNivelPct está obsoleta, usar getColaboradorComision");
+  // LOG ELIMINADO
   if (typeof colab?.pct_colaborador === "number") return colab.pct_colaborador;
   return (
     niveles.find((n) => n.id === colab?.nivel)?.pct_colaborador_default ?? 0.5

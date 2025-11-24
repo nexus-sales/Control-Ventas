@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../context/hooks';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
 import AccessRequestsManager from '../admin/AccessRequestsManager';
@@ -83,7 +83,7 @@ export default function AccessControlDemo() {
         <div className="space-y-3 mt-4">
           <button
             onClick={() => {
-              console.log('Estado actual:', { user, userRole, hasAccess, accessMessage });
+              // LOG ELIMINADO
             }}
             className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
           >

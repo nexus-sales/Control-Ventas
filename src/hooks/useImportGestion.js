@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback, useContext } from "react";
-import { DataContext } from "../context/DataContext";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useData } from "../context/AppContexts";
 import {
   autoguessMapping,
   validateRow,
@@ -53,24 +53,29 @@ const formatDate = (dateStr) => {
  */
 export function useImportGestion({
   modulo = "ventas", // Para campos personalizados
-  onImportSuccess, // ahora solo lo referencia el componente, no el hook
+  // onImportSuccess es referenciado por componentes externos, mantenemos compatibilidad
+  // eslint-disable-next-line no-unused-vars
+  onImportSuccess,
+  // Props adicionales para futura extensibilidad
+  // eslint-disable-next-line no-unused-vars
   ...props
 } = {}) {
   // =================== CONTEXTO Y DATOS ===================
 
-  const dataCtx = useContext(DataContext);
-
-  const {
-    productos = [],
-    operadores = [],
-    colaboradores = [],
-    zonas = [],
-    setVentas = dataCtx?.setVentas,
-    setProductos = dataCtx?.setProductos,
-    setOperadores = dataCtx?.setOperadores,
-    setColaboradores = dataCtx?.setColaboradores,
-    setZonas = dataCtx?.setZonas,
-  } = { ...dataCtx?.data, ...dataCtx, ...props };
+  const { 
+    // data no se usa directamente pero se mantiene para compatibilidad
+    // eslint-disable-next-line no-unused-vars
+    data, 
+    setVentas, 
+    setProductos, 
+    setOperadores, 
+    setColaboradores, 
+    setZonas, 
+    productos = [], 
+    operadores = [], 
+    colaboradores = [], 
+    zonas = [] 
+  } = useData();
 
   const autoCreacionDisponible = !!(
     setProductos &&
@@ -121,8 +126,7 @@ export function useImportGestion({
         }));
 
         return moduleFields;
-      } catch (error) {
-        console.warn("Error cargando campos personalizados:", error);
+      } catch {
         setState((prev) => ({
           ...prev,
           customFields: [],
@@ -155,8 +159,7 @@ export function useImportGestion({
         }));
 
         return true;
-      } catch (error) {
-        console.error("Error guardando campos personalizados:", error);
+      } catch {
         return false;
       }
     },
@@ -227,10 +230,7 @@ export function useImportGestion({
 
     return { total: rows.length, valid, invalid, warnings };
   }, [
-    state.rows,
-    state.mapping,
-    state.crearAutomaticamente,
-    state.resolverNombres,
+    state,
     indexers,
   ]);
 
@@ -273,7 +273,7 @@ export function useImportGestion({
 
         rows = lines
           .slice(1)
-          .map((line, index) => {
+          .map((line) => {
             try {
               const columns = line.split(separator);
               const obj = {};
@@ -284,8 +284,7 @@ export function useImportGestion({
                 obj[header] = value;
               });
               return obj;
-            } catch (error) {
-              console.warn(`Error procesando línea ${index + 2}:`, error);
+            } catch {
               return null;
             }
           })
@@ -309,8 +308,8 @@ export function useImportGestion({
               );
             } else {
               const obj = {};
-              headers.forEach((header, index) => {
-                let cellValue = values[index] ?? "";
+              headers.forEach((header, headerIndex) => {
+                let cellValue = values[headerIndex] ?? "";
 
                 if (cellValue instanceof Date) {
                   cellValue = cellValue.toISOString().slice(0, 10);
@@ -330,8 +329,8 @@ export function useImportGestion({
                 rows.push(obj);
               }
             }
-          } catch (error) {
-            console.warn(`Error procesando fila ${rowNumber}:`, error);
+          } catch {
+            // Ignorar filas con errores de parsing
           }
         });
       } else {
@@ -353,13 +352,7 @@ export function useImportGestion({
         resumenImportacion: null,
       }));
 
-      console.log(
-        `✅ Archivo cargado: ${headers.length} columnas, ${rows.length} filas`
-      );
       return { headers, rows, mapping: autoMapping };
-    } catch (error) {
-      console.error("Error cargando archivo:", error);
-      throw error;
     } finally {
       setState((prev) => ({ ...prev, isLoading: false }));
     }
@@ -429,10 +422,6 @@ export function useImportGestion({
         const zonasNuevas = new Set();
         const colaboradoresNuevos = new Set();
         const operadoresNuevos = new Set(); // reservado por si más adelante creas operadores
-
-        console.log(
-          `🚀 Iniciando importación ${modo}: ${state.rows.length} filas`
-        );
 
         for (let index = 0; index < state.rows.length; index++) {
           const row = state.rows[index];
@@ -638,11 +627,7 @@ export function useImportGestion({
 
         setState((prev) => ({ ...prev, resumenImportacion: resumen }));
 
-        console.log(`✅ Importación ${modo} completada:`, resumen);
         return resumen;
-      } catch (error) {
-        console.error(`Error en importación ${modo}:`, error);
-        throw error;
       } finally {
         setState((prev) => ({ ...prev, isImporting: false, isLoading: false }));
       }
@@ -654,6 +639,10 @@ export function useImportGestion({
       productos,
       setVentas,
       autoCreacionDisponible,
+      setProductos,
+      setZonas,
+      setColaboradores,
+      resolveId,
     ]
   );
 
@@ -789,11 +778,7 @@ export function useImportGestion({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        console.log(`✅ Exportación completada: ${filename}`);
         return { success: true, filename, records: datosExport.length };
-      } catch (error) {
-        console.error("Error en exportación:", error);
-        throw error;
       } finally {
         setState((prev) => ({ ...prev, isExporting: false }));
       }

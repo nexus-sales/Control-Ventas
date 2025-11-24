@@ -1,11 +1,11 @@
-import { useState, useMemo, useContext } from "react";
+import { useState, useMemo } from "react";
 import { AlertCircle, Plus, Phone, Zap, Shield, User, Edit3, Trash2 } from "lucide-react";
-import { DataContext } from "../context/DataContext";
+import { useData } from "../context/AppContexts";
 import Card from "./ui/Card";
 import { ColaboradoresTable, ColaboradorEditModal } from "./colaboradores/index.js";
 
 export default function Colaboradores() {
-  const { data, setColaboradores, dataInitialized } = useContext(DataContext);
+  const { data, setColaboradores, dataInitialized } = useData();
   
   const colaboradores = useMemo(
     () => (Array.isArray(data?.colaboradores) ? data.colaboradores : []),

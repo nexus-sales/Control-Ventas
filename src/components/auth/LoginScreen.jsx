@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AuthCtx from '../../context/AuthCtx';
-import { useContext } from 'react';
+import { useAuth } from '../../context/hooks';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
 import EmailInput from '../ui/EmailInput';
@@ -30,7 +29,7 @@ export default function LoginScreen() {
   const [registerError, setRegisterError] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [nombre, setNombre] = useState('');
-  const { login, registerUser } = useContext(AuthCtx);
+  const { login, registerUser } = useAuth();
 
   // Verificar rate limiting y cargar email recordado al cargar el componente
   useEffect(() => {
@@ -251,12 +250,12 @@ export default function LoginScreen() {
                       try {
                         // Limpiar flag de modo offline
                         localStorage.removeItem('__app_offline_mode');
-                        console.log('🔧 Flag offline eliminado');
+                        // LOG ELIMINADO
                         
                         // Recargar la página
                         window.location.reload();
                       } catch (error) {
-                        console.error('Error en fix de emergencia:', error);
+                        // LOG ELIMINADO
                         alert('Error al intentar restaurar conectividad. Intenta recargar la página manualmente.');
                       }
                     }}

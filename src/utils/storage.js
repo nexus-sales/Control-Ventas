@@ -21,7 +21,7 @@ export function loadLS(key, fallback) {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
   } catch (e) {
-    console.warn("loadLS error", key, e);
+    // LOG ELIMINADO
     return fallback;
   }
 }
@@ -30,6 +30,6 @@ export function saveLS(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
-    console.warn("saveLS error", key, e);
+    // LOG ELIMINADO
   }
 }

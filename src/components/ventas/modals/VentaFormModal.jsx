@@ -287,7 +287,7 @@ export function VentaFormModal({
       onClose();
       
     } catch (error) {
-      console.error('Error guardando venta:', error);
+      // LOG ELIMINADO
       setErrors({ submit: error.message || 'Error al guardar la venta' });
     } finally {
       setIsSubmitting(false);

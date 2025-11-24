@@ -3,7 +3,7 @@
 // CON LIMPIEZA AUTOMÁTICA DE DUPLICADOS Y VALIDACIONES ROBUSTAS
 
 import React, { useState, useMemo, useContext, useCallback } from "react";
-import { DataContext } from "../../context/DataContext";
+import { useData } from "../../context/AppContexts";
 import Card from "../ui/Card";
 import { 
   Building, Plus, Edit3, X, Trash2, Save, Download, Search, SortAsc, SortDesc, 
@@ -37,14 +37,14 @@ const cleanProductosRobust = (productos = [], operadores = []) => {
     
     // Verificar que el operador existe
     if (prod.operador_id && !operadorIds.has(prod.operador_id)) {
-      console.warn(`Producto ${prod.nombre} tiene operador inexistente: ${prod.operador_id}`);
+      // LOG ELIMINADO
       return false;
     }
     
     // Prevenir duplicados
     const key = `${prod.nombre.toLowerCase().trim()}_${prod.operador_id || 'sin-operador'}`;
     if (seen.has(key)) {
-      console.warn(`Producto duplicado eliminado: ${prod.nombre}`);
+      // LOG ELIMINADO
       return false;
     }
     seen.add(key);
@@ -484,7 +484,7 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
 // COMPONENTE: ProductosSection (INTEGRADO + OPTIMIZADO)
 // ==========================================
 const ProductosSection = React.memo(() => {
-  const { data, setProductos } = useContext(DataContext);
+  const { data, setProductos } = useData();
   
   // Datos limpios y seguros
   const operadores = useMemo(() => cleanOperadores(data.operadores || []), [data.operadores]);
@@ -820,7 +820,7 @@ const ProductosSection = React.memo(() => {
 // COMPONENTE: OperadoresSection (INTEGRADO + CONTEO PRODUCTOS)
 // ==========================================
 const OperadoresSection = React.memo(() => {
-  const { data, setOperadores } = useContext(DataContext);
+  const { data, setOperadores } = useData();
   const operadores = useMemo(() => cleanOperadores(data.operadores || []), [data.operadores]);
   const productos = useMemo(() => cleanProductosRobust(data.productos || [], operadores), [data.productos, operadores]);
   

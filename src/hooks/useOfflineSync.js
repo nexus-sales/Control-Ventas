@@ -19,12 +19,12 @@ export function useOfflineSync() {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      console.log('🟢 Conexión restaurada - iniciando sincronización...');
+      // LOG ELIMINADO
     };
 
     const handleOffline = () => {
       setIsOnline(false);
-      console.log('🔴 Sin conexión - modo offline activado');
+      // LOG ELIMINADO
     };
 
     window.addEventListener('online', handleOnline);
@@ -50,7 +50,7 @@ export function useOfflineSync() {
       return updated;
     });
 
-    console.log('💾 Cambio guardado offline:', changeWithTimestamp);
+    // LOG ELIMINADO
   }, []);
 
   // Limpiar cambios sincronizados
@@ -62,7 +62,7 @@ export function useOfflineSync() {
     setLastSyncTime(now);
     localStorage.setItem('lastSyncTime', now);
     
-    console.log('✅ Cambios sincronizados correctamente');
+    // LOG ELIMINADO
   }, []);
 
   // Crear backup de emergencia
@@ -90,7 +90,7 @@ export function useOfflineSync() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    console.log('💾 Backup de emergencia creado');
+    // LOG ELIMINADO
   }, []);
 
   // Información del estado offline

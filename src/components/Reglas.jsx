@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState } from "react";
 import Toast from "./ui/Toast";
 import {
   Layers,
@@ -12,33 +12,23 @@ import {
 } from "lucide-react";
 import Card from "./ui/Card";
 import SectionTitle from "./ui/SectionTitle";
-import { DataContext } from "../context/DataContext";
-
+import { useData } from "../context/AppContexts";
 import { NivelEditModal, ReglaEditModal } from "./reglas/index.js";
 
 export default function Reglas() {
-  // Usar el contexto de datos - CORREGIDO: usar las funciones del contexto directamente
-  const { 
-    data, 
-    setNiveles: contextSetNiveles, 
-    setReglas: contextSetReglas,
+  // Usar el hook de datos
+  const {
+    data,
+    setNiveles,
+    setReglas,
     dataInitialized
-  } = useContext(DataContext);
-  
-  // DEBUG: Añadir console.logs para verificar
-  console.log('Data from context:', data);
-  console.log('Niveles:', data?.niveles);
-  console.log('setNiveles function:', contextSetNiveles);
-  
+  } = useData();
+
   const reglas = Array.isArray(data?.reglas) ? data.reglas : [];
   const operadores = Array.isArray(data?.operadores) ? data.operadores : [];
   const productos = Array.isArray(data?.productos) ? data.productos : [];
   const niveles = Array.isArray(data?.niveles) ? data.niveles : [];
   
-  // CORREGIDO: usar las funciones del contexto directamente
-  const setReglas = contextSetReglas;
-  const setNiveles = contextSetNiveles;
-
   const [toast, setToast] = useState({ message: "", type: "info" });
   const [activeTab, setActiveTab] = useState("niveles");
 
@@ -48,34 +38,25 @@ export default function Reglas() {
 
   // Funciones para niveles
   const handleModalNivelSave = (nivel, shouldClose) => {
-    console.log('handleModalNivelSave called with:', nivel);
-    console.log('Current niveles before save:', niveles);
-    console.log('modalNivel state:', modalNivel);
+    // LOGS ELIMINADOS
     
     // CORRECCIÓN: verificar si es edición basándose en modalNivel, no en nivel.id
     const isEditing = modalNivel && modalNivel.id && niveles.some(n => n.id === modalNivel.id);
     
     if (isEditing) {
       // Editando nivel existente
-      console.log('Updating existing nivel');
       setNiveles(prev => {
-        console.log('setNiveles prev:', prev);
         const updated = prev.map((n) => (n.id === nivel.id ? nivel : n));
-        console.log('setNiveles updated:', updated);
         return updated;
       });
     } else {
       // Nuevo nivel
-      console.log('Creating new nivel');
       const nuevoNivel = {
         ...nivel,
         id: nivel.id || `n_${Date.now()}` // Usar el ID del formulario o generar uno
       };
-      console.log('nuevoNivel:', nuevoNivel);
       setNiveles(prev => {
-        console.log('setNiveles prev:', prev);
         const updated = [nuevoNivel, ...prev];
-        console.log('setNiveles updated:', updated);
         return updated;
       });
     }

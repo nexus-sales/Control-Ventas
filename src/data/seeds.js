@@ -180,10 +180,10 @@ export function runSeedIfNeeded() {
     const existingData = loadLS(key, []);
     // Para niveles, siempre actualizar para obtener las nuevas propiedades
     if (key === LS_KEYS.niveles || !existingData || existingData.length === 0) {
-      console.log(`📦 Cargando ${key} (v${SEED_VERSION})...`);
+      // LOG ELIMINADO
       saveLS(key, seedData);
     } else {
-      console.log(`✅ ${key} ya tiene datos (${existingData.length} elementos)`);
+      // LOG ELIMINADO
     }
   });
 

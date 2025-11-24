@@ -458,7 +458,7 @@ export default function ConfigSections({ zonas = [] }) {
         setEmpresa(data);
       }
     } catch (error) {
-      console.error('Error cargando datos de empresa:', error);
+      // LOG ELIMINADO
     }
   }, []);
 
@@ -469,7 +469,7 @@ export default function ConfigSections({ zonas = [] }) {
       try {
         localStorage.setItem("empresaData", JSON.stringify(newData));
       } catch (error) {
-        console.error('Error guardando datos de empresa:', error);
+        // LOG ELIMINADO
       }
       return newData;
     });

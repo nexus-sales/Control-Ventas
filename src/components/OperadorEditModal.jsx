@@ -32,7 +32,7 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
   const [error, setError] = useState("");
 
   const handleSave = () => {
-    console.log('[OperadorEditModal] Iniciando guardado con datos:', draft);
+    // LOG ELIMINADO
     
     if (!draft.nombre?.trim()) {
       setError("El nombre del operador es obligatorio");
@@ -71,7 +71,7 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
       }
     };
 
-    console.log('[OperadorEditModal] Enviando datos limpios a onSave:', cleanedData);
+    // LOG ELIMINADO
     onSave(cleanedData, true);
   };
 

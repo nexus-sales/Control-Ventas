@@ -57,9 +57,9 @@ export default function AccessRequestsManager({ userEmail }) {
       setSelectedRequest(null);
       
       // Aquí podrías enviar un email de notificación
-      console.log('Solicitud aprobada:', requestId);
+      // LOG ELIMINADO
     } catch (error) {
-      console.error('Error approving request:', error);
+      // LOG ELIMINADO
       alert('Error al aprobar la solicitud');
     } finally {
       setIsLoading(false);
@@ -74,9 +74,9 @@ export default function AccessRequestsManager({ userEmail }) {
       setSelectedRequest(null);
       
       // Aquí podrías enviar un email de notificación
-      console.log('Solicitud rechazada:', requestId);
+      // LOG ELIMINADO
     } catch (error) {
-      console.error('Error rejecting request:', error);
+      // LOG ELIMINADO
       alert('Error al rechazar la solicitud');
     } finally {
       setIsLoading(false);

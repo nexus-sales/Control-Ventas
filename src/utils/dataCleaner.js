@@ -36,24 +36,24 @@ export function removeDuplicatesByMultipleFields(array, fields = ['id']) {
 
 // Limpiar operadores duplicados
 export function cleanOperadores(operadores) {
-  console.log('🧹 Limpiando operadores duplicados...');
+  // LOG ELIMINADO
   const cleaned = removeDuplicatesByMultipleFields(operadores, ['id', 'nombre', 'codigo']);
-  console.log(`Operadores: ${operadores.length} → ${cleaned.length}`);
+  // LOG ELIMINADO
   return cleaned;
 }
 
 // Limpiar zonas duplicadas
 export function cleanZonas(zonas) {
-  console.log('🧹 Limpiando zonas duplicadas...');
+  // LOG ELIMINADO
   const cleaned = removeDuplicatesByMultipleFields(zonas, ['id', 'nombre']);
-  console.log(`Zonas: ${zonas.length} → ${cleaned.length}`);
+  // LOG ELIMINADO
   return cleaned;
 }
 
 // Limpiar productos duplicados
 export function cleanProductos(productos) {
-  console.log('🧹 Limpiando productos duplicados...');
+  // LOG ELIMINADO
   const cleaned = removeDuplicatesByMultipleFields(productos, ['id', 'nombre', 'operador_id']);
-  console.log(`Productos: ${productos.length} → ${cleaned.length}`);
+  // LOG ELIMINADO
   return cleaned;
 }

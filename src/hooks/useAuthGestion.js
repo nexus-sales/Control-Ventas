@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useContext } from 'react';
-import { DataContext } from '../context/DataContext';
+import { useState, useEffect, useCallback } from 'react';
+import { useData } from '../context/AppContexts';
 import { 
   isEmailAuthorized, 
   getRoleFromEmail, 
@@ -16,7 +16,8 @@ export function useAuthGestion(user = null) {
   
   // =================== CONTEXTO Y DATOS ===================
   
-  const dataContext = useContext(DataContext);
+  // dataInitialized e isDataLoading se usan para el estado
+  const { dataInitialized, isDataLoading } = useData();
   
   // =================== ESTADO CONSOLIDADO ===================
   
@@ -30,7 +31,7 @@ export function useAuthGestion(user = null) {
     
     // 📊 INICIALIZACIÓN DE DATOS
     dataInitialized: false,
-    dataLoading: false,
+    isDataLoading: false,
     
     // 🔄 GESTIÓN DE SESIÓN
     sessionValid: false,
@@ -114,11 +115,9 @@ export function useAuthGestion(user = null) {
         accessMessage: null
       }));
 
-      console.log(`✅ Acceso autorizado para ${email} con rol: ${userRole}`);
       return true;
 
-    } catch (error) {
-      console.error('Error verificando acceso:', error);
+    } catch {
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
@@ -140,17 +139,16 @@ export function useAuthGestion(user = null) {
   
   // Verificar estado de inicialización de datos
   const checkDataInitialization = useCallback(() => {
-    const dataInitialized = dataContext?.dataInitialized || false;
-    const dataLoading = dataContext?.isDataLoading || false;
+    // dataInitialized y isDataLoading ya vienen del hook
     
     setAuthState(prev => ({
       ...prev,
       dataInitialized,
-      dataLoading
+      isDataLoading
     }));
     
     return dataInitialized;
-  }, [dataContext?.dataInitialized, dataContext?.isDataLoading]);
+  }, [dataInitialized, isDataLoading]);
 
   // =================== 🔄 GESTIÓN DE SESIÓN ===================
   
@@ -169,7 +167,6 @@ export function useAuthGestion(user = null) {
       isImporting: true,
       lastActivity: Date.now() // Mantener sesión activa durante importación
     }));
-    console.log('🔒 Sesión protegida durante importación');
   }, []);
 
   const finishImporting = useCallback(() => {
@@ -178,7 +175,6 @@ export function useAuthGestion(user = null) {
       isImporting: false,
       lastActivity: Date.now()
     }));
-    console.log('🔓 Protección de sesión liberada');
   }, []);
 
   // Verificar validez de la sesión
@@ -190,7 +186,6 @@ export function useAuthGestion(user = null) {
     
     // 🎯 MEJORA: No cerrar sesión durante importaciones
     if (isImporting) {
-      console.log('⏸️ Verificación de sesión pausada durante importación');
       return true;
     }
     
@@ -209,7 +204,6 @@ export function useAuthGestion(user = null) {
           message: 'Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.'
         }
       }));
-      console.log('⏰ Sesión expirada');
       return false;
     }
     
@@ -233,7 +227,6 @@ export function useAuthGestion(user = null) {
         message: 'Has cerrado sesión correctamente.'
       }
     }));
-    console.log('👋 Sesión cerrada manualmente');
   }, []);
 
   // =================== 🔍 FUNCIONES DE VERIFICACIÓN ===================
@@ -277,7 +270,6 @@ export function useAuthGestion(user = null) {
       sessionTimeout: prev.sessionTimeout + additionalTime,
       lastActivity: Date.now()
     }));
-    console.log('⏰ Sesión extendida por', Math.round(additionalTime / (60 * 1000)), 'minutos');
   }, []);
 
   // Configurar timeout personalizado
@@ -362,8 +354,8 @@ export function useAuthGestion(user = null) {
     // Estados de carga
     loading: {
       auth: authState.isLoading,
-      data: authState.dataLoading,
-      any: authState.isLoading || authState.dataLoading,
+      data: authState.isDataLoading,
+      any: authState.isLoading || authState.isDataLoading,
     },
   };
 

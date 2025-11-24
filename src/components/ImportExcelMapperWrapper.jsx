@@ -1,6 +1,6 @@
-import React, { useContext } from "react";
+import React from "react";
 import ImportExcelMapperV2 from "./ImportExcelMapperV2";
-import { DataContext } from "../context/DataContext";
+import { useData } from "../context/AppContexts";
 
 export default function ImportExcelMapperWrapper() {
   const {
@@ -11,18 +11,18 @@ export default function ImportExcelMapperWrapper() {
     setOperadores,
     setColaboradores,
     setZonas,
-  } = useContext(DataContext);
+  } = useData();
 
   // Callback de éxito SIN refresh remoto, solo log + mensaje
+  // result se mantiene para compatibilidad futura con notificaciones
+  // eslint-disable-next-line no-unused-vars
   const onImportSuccess = async (result) => {
-    console.log("✅ Importación completada exitosamente");
-    console.log("📊 Resumen:", result);
-
-    if (result?.ventasCreadas > 0) {
-      console.log(
-        `🎉 ${result.ventasCreadas} ventas importadas y visibles inmediatamente`
-      );
-    }
+    // LOGS ELIMINADOS
+    // Aquí podrías mostrar una notificación si lo deseas
+    // Ejemplo:
+    // if (result?.ventasCreadas > 0) {
+    //   showSuccess(`🎉 ${result.ventasCreadas} ventas importadas y visibles inmediatamente`);
+    // }
   };
 
   if (!dataInitialized) {

@@ -208,7 +208,6 @@ export default function ImportExcelMapperV2({
       await loadFile(file);
       setToast({ message: `Archivo cargado: ${file.name}`, type: "success" });
     } catch (error) {
-      console.error("Error cargando archivo:", error);
       setToast({ message: `Error: ${error.message}`, type: "error" });
     }
   };
@@ -216,23 +215,9 @@ export default function ImportExcelMapperV2({
   const handleImport = async () => {
     startImporting();
     try {
-      console.log("🔍 INICIANDO IMPORTACIÓN OPTIMIZADA");
-
       setToast({
         message: "Iniciando importación... Por favor espera.",
         type: "info",
-      });
-
-      console.log("Estado actual:", {
-        crearAutomaticamente,
-        validationStats,
-        autoCreacionDisponible,
-        settersDisponibles: {
-          setProductos: !!setProductos,
-          setOperadores: !!setOperadores,
-          setColaboradores: !!setColaboradores,
-          setZonas: !!setZonas,
-        },
       });
 
       if (!mapping || Object.keys(mapping).length === 0) {
@@ -262,8 +247,6 @@ export default function ImportExcelMapperV2({
             ? await importInteligente()
             : await importNormal();
 
-        console.log("✅ RESULTADO IMPORTACIÓN:", resultado);
-
         const detalles = [];
         if (resultado.operadoresCreados > 0)
           detalles.push(`${resultado.operadoresCreados} operadores`);
@@ -286,27 +269,17 @@ export default function ImportExcelMapperV2({
         setToast({ message: mensaje, type: "success" });
 
         if (onImportSuccess) {
-          console.log(
-            "🔄 Recargando datos después de importación exitosa (desde componente)..."
-          );
           try {
             await onImportSuccess(resultado);
-            console.log("✅ Datos recargados correctamente en la interfaz");
           } catch (reloadError) {
-            console.error("❌ Error recargando datos:", reloadError);
             setToast({
               message:
                 "Importación exitosa, pero error recargando interfaz. Recarga la página.",
               type: "warning",
             });
           }
-        } else {
-          console.warn(
-            "⚠️ onImportSuccess no está definido - los datos no se recargarán automáticamente"
-          );
         }
       } catch (error) {
-        console.error("❌ ERROR IMPORTACIÓN:", error);
         setToast({ message: `❌ Error: ${error.message}`, type: "error" });
       }
     } finally {
@@ -323,7 +296,6 @@ export default function ImportExcelMapperV2({
       }
 
       try {
-        console.log("🔧 EJECUTANDO IMPORTACIÓN SIMPLIFICADA...");
         setToast({
           message: "🔧 Ejecutando importación simplificada...",
           type: "info",
@@ -331,26 +303,23 @@ export default function ImportExcelMapperV2({
 
         const resultado = await importSimplificado();
 
-        console.log("🔧 RESULTADO SIMPLIFICADO:", resultado);
-
         setToast({
           message: `✅ IMPORTACIÓN COMPLETADA: ${resultado.ventasCreadas} ventas creadas`,
           type: "success",
         });
 
         if (onImportSuccess) {
-          console.log(
-            "🔧 Recargando datos después de importación simplificada..."
-          );
           try {
             await onImportSuccess(resultado);
-            console.log("🔧 Datos recargados correctamente");
           } catch (reloadError) {
-            console.error("🔧 Error recargando datos:", reloadError);
+            setToast({
+              message:
+                "Importación exitosa, pero error recargando interfaz. Recarga la página.",
+              type: "warning",
+            });
           }
         }
       } catch (error) {
-        console.error("🔧 ERROR IMPORTACIÓN SIMPLIFICADA:", error);
         setToast({ message: `❌ Error: ${error.message}`, type: "error" });
       }
     } finally {
