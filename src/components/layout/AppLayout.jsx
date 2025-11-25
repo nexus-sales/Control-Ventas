@@ -11,7 +11,7 @@ import { Header } from './Header';
  */
 import { useState, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/hooks';
+import { useAuth } from '../../context/AppContexts';
 import { Home, BarChart3, Euro, Users, Settings, SlidersHorizontal } from 'lucide-react';
 
 const NAV_MODULES = [

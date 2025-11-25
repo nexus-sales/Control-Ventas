@@ -11,15 +11,15 @@ export default function ImportExcelMapperWrapper() {
     setOperadores,
     setColaboradores,
     setZonas,
+    refreshData,
   } = useData();
 
-  // Callback de éxito SIN refresh remoto, solo log + mensaje
-  // result se mantiene para compatibilidad futura con notificaciones
-  // eslint-disable-next-line no-unused-vars
+  // Callback de éxito: fuerza recarga global de datos tras importar
   const onImportSuccess = async (result) => {
-    // LOGS ELIMINADOS
+    if (typeof refreshData === 'function') {
+      await refreshData();
+    }
     // Aquí podrías mostrar una notificación si lo deseas
-    // Ejemplo:
     // if (result?.ventasCreadas > 0) {
     //   showSuccess(`🎉 ${result.ventasCreadas} ventas importadas y visibles inmediatamente`);
     // }

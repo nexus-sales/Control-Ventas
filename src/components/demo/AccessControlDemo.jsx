@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../../context/hooks';
+import { useAuth } from '../../context/AppContexts';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
 import AccessRequestsManager from '../admin/AccessRequestsManager';

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Edit3, X, Save, Euro, Percent, AlertCircle, CheckCircle } from 'lucide-react';
-import Card from '../../ui/Card';
 import { SECTORES, FAMILIAS_POR_SECTOR } from '../../../utils/constants';
 import { useImportGestion } from '../../../hooks/useImportGestion';
 
@@ -12,12 +11,20 @@ const ESTADOS_VALIDOS = [
   "Instalada",
   "Cancelada",
   "Rechazada",
+  "ACTIVO",
+  "PENDIENTE",
+  "SCORING",
+  "INCIDENCIA",
+  "INSTALACION",
+  "ENVIADA",
+  "CITADA",
+  "TRAMITACION",
+  "BAJA",
 ];
 
 /**
- * Modal consolidado para crear y editar ventas
- * Reemplaza NewVentaModal.jsx + EditVentaModal.jsx
- * Incluye mejoras de UX, validaciones y optimizaciones
+ * 🎯 MODAL CORREGIDO para crear y editar ventas
+ * CORRECCIONES: Dropdowns funcionales, mejor resolución de entidades, validaciones mejoradas, sin warnings ESLint
  */
 export function VentaFormModal({ 
   isOpen, 
@@ -28,98 +35,227 @@ export function VentaFormModal({
   productos = [],
   operadores = [],
   colaboradores = [],
-  zonas = []
+  zonas = [],
+  // 🎯 NUEVAS: Props para helpers de resolución del hook
+  resolveProductoName,
+  resolveColaboradorName,
+  resolveZonaName,
+  resolveOperadorName,
 }) {
-    // Estado para cambios sin guardar y envío
-    const [isDirty, setIsDirty] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    // Obtener campos personalizados del módulo ventas
-    const { customFields = [] } = useImportGestion({ modulo: "ventas" });
+  // Estado para cambios sin guardar y envío
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Obtener campos personalizados del módulo ventas
+  const { customFields = [] } = useImportGestion({ modulo: "ventas" });
 
-    // =================== ESTADO Y CONFIGURACIÓN ===================
+  // =================== ESTADO Y CONFIGURACIÓN ===================
 
-    // Determinar si es modo edición
-    const isEditing = !!venta;
+  // Determinar si es modo edición
+  const isEditing = useMemo(() => !!venta, [venta]);
 
-    // Estado del formulario SIEMPRE inicializado
-    const [formData, setFormData] = useState({});
-    const [errors, setErrors] = useState({});
+  // Estado del formulario SIEMPRE inicializado
+  const [formData, setFormData] = useState({});
+  const [errors, setErrors] = useState({});
 
-    // Producto seleccionado (después de inicializar formData)
-    const productoSeleccionado = useMemo(() =>
-      productos.find(p => p.id === formData.producto_id),
-      [productos, formData.producto_id]
-    );
+  // 🎯 MEJORA: Memoizar arrays de datos para evitar warnings
+  const productosData = useMemo(() => productos || [], [productos]);
+  const operadoresData = useMemo(() => operadores || [], [operadores]);
+  const colaboradoresData = useMemo(() => colaboradores || [], [colaboradores]);
+  const zonasData = useMemo(() => zonas || [], [zonas]);
 
-  // Filtrar colaboradores activos y con nombre
-  const colaboradoresFiltrados = useMemo(() =>
-    colaboradores.filter(c => {
-      // Considerar activo si tiene nombre y no tiene fecha_baja o la fecha_baja es futura
-      if (!c.nombre) return false;
-      if (!c.fecha_baja) return true;
-      // Permitir fechas en formato string o Date
-      const fechaBaja = typeof c.fecha_baja === 'string' ? new Date(c.fecha_baja) : c.fecha_baja;
-      return fechaBaja > new Date();
-    }),
-    [colaboradores]
+  // 🎯 MEJORA: Filtrar y preparar colaboradores asegurando que tengan nombre
+  const colaboradoresDisponibles = useMemo(() => {
+    if (!Array.isArray(colaboradoresData) || colaboradoresData.length === 0) {
+      console.warn('VentaFormModal: No se recibieron colaboradores o array vacío');
+      return [];
+    }
+
+    return colaboradoresData
+      .filter(c => {
+        // Verificar que tenga ID y nombre
+        if (!c?.id) {
+          console.warn('Colaborador sin ID:', c);
+          return false;
+        }
+        
+        // Intentar obtener el nombre usando diferentes métodos
+        const nombre = c.nombre || 
+                      (resolveColaboradorName ? resolveColaboradorName(c.id) : null) ||
+                      c.id; // Usar ID como fallback
+        
+        return nombre && nombre.trim().length > 0;
+      })
+      .map(c => ({
+        ...c,
+        // Normalizar nombre para el dropdown
+        nombreDisplay: c.nombre || 
+                      (resolveColaboradorName ? resolveColaboradorName(c.id) : null) ||
+                      c.id,
+      }))
+      .sort((a, b) => a.nombreDisplay.localeCompare(b.nombreDisplay));
+  }, [colaboradoresData, resolveColaboradorName]);
+
+  // 🎯 MEJORA: Filtrar y preparar otros datos también
+  const zonasDisponibles = useMemo(() => {
+    if (!Array.isArray(zonasData)) return [];
+    
+    return zonasData
+      .filter(z => z?.id && (z.nombre || z.id))
+      .map(z => ({
+        ...z,
+        nombreDisplay: z.nombre || 
+                      (resolveZonaName ? resolveZonaName(z.id) : null) ||
+                      z.id,
+      }))
+      .sort((a, b) => a.nombreDisplay.localeCompare(b.nombreDisplay));
+  }, [zonasData, resolveZonaName]);
+
+  const operadoresDisponibles = useMemo(() => {
+    if (!Array.isArray(operadoresData)) return [];
+    
+    return operadoresData
+      .filter(o => o?.id && (o.nombre || o.codigo || o.id))
+      .map(o => ({
+        ...o,
+        nombreDisplay: o.nombre || o.codigo || 
+                      (resolveOperadorName ? resolveOperadorName(o.id) : null) ||
+                      o.id,
+      }))
+      .sort((a, b) => a.nombreDisplay.localeCompare(b.nombreDisplay));
+  }, [operadoresData, resolveOperadorName]);
+
+  const productosDisponibles = useMemo(() => {
+    if (!Array.isArray(productosData)) return [];
+    
+    return productosData
+      .filter(p => p?.id && (p.nombre || p.codigo || p.id))
+      .map(p => ({
+        ...p,
+        nombreDisplay: p.nombre || p.codigo ||
+                      (resolveProductoName ? resolveProductoName(p.id) : null) ||
+                      p.id,
+      }))
+      .sort((a, b) => a.nombreDisplay.localeCompare(b.nombreDisplay));
+  }, [productosData, resolveProductoName]);
+
+  // 🎯 MEJORA: Detectar modo desarrollo de forma segura
+  const isDevMode = useMemo(() => {
+    try {
+      return typeof process !== 'undefined' && process.env?.NODE_ENV === 'development';
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // 🎯 MEJORA: Log de debug para verificar datos (solo en desarrollo)
+  useEffect(() => {
+    if (isOpen && isDevMode) {
+      console.log('🎯 VentaFormModal Debug:', {
+        colaboradoresRecibidos: colaboradoresData.length,
+        colaboradoresDisponibles: colaboradoresDisponibles.length,
+        zonasDisponibles: zonasDisponibles.length,
+        operadoresDisponibles: operadoresDisponibles.length,
+        productosDisponibles: productosDisponibles.length,
+        resolverFunctions: {
+          resolveColaboradorName: !!resolveColaboradorName,
+          resolveZonaName: !!resolveZonaName,
+          resolveOperadorName: !!resolveOperadorName,
+          resolveProductoName: !!resolveProductoName,
+        }
+      });
+    }
+  }, [isOpen, isDevMode, colaboradoresData.length, colaboradoresDisponibles.length, zonasDisponibles.length, operadoresDisponibles.length, productosDisponibles.length, resolveColaboradorName, resolveZonaName, resolveOperadorName, resolveProductoName]);
+
+  // Producto seleccionado (después de inicializar formData)
+  const productoSeleccionado = useMemo(() =>
+    productosDisponibles.find(p => p.id === formData.producto_id),
+    [productosDisponibles, formData.producto_id]
   );
 
-    // Inicialización avanzada del formulario al abrir el modal
-    useEffect(() => {
-      if (isOpen) {
-        if (isEditing && venta) {
-          setFormData({ ...venta });
-        } else if (createInitialDraft) {
-          // Modo creación: usar draft inicial
-          const draft = createInitialDraft();
-          // Selección automática de colaborador si no está definido
-          if (colaboradoresFiltrados.length > 0 && !draft.colaborador_id) {
-            draft.colaborador_id = colaboradoresFiltrados[0].id;
-            draft.comision_colaborador = colaboradoresFiltrados[0].pct_colaborador_default || 0;
-          }
-          setFormData(draft);
-        } else {
-          // Fallback: formulario vacío
-          const emptyForm = {
-            fecha: new Date().toISOString().slice(0, 10),
-            cliente: "",
-            cif: "",
-            estado: "Confirmada",
-            cantidad: 1,
-          };
-          // Selección automática de colaborador si hay
-          if (colaboradoresFiltrados.length > 0) {
-            emptyForm.colaborador_id = colaboradoresFiltrados[0].id;
-            emptyForm.comision_colaborador = colaboradoresFiltrados[0].pct_colaborador_default || 0;
-          }
-          setFormData(emptyForm);
-        }
-        setErrors({});
-        setIsDirty(false);
-        setIsSubmitting(false);
-      }
-    }, [isOpen, isEditing, venta, createInitialDraft, colaboradoresFiltrados]);
-
-    const colaboradorSeleccionado = useMemo(() =>
-      colaboradoresFiltrados.find(c => c.id === formData.colaborador_id),
-      [colaboradoresFiltrados, formData.colaborador_id]
-    );
+  const colaboradorSeleccionado = useMemo(() =>
+    colaboradoresDisponibles.find(c => c.id === formData.colaborador_id),
+    [colaboradoresDisponibles, formData.colaborador_id]
+  );
   
   const operadorSeleccionado = useMemo(() => 
-    operadores.find(o => o.id === formData.operador_id), 
-    [operadores, formData.operador_id]
+    operadoresDisponibles.find(o => o.id === formData.operador_id), 
+    [operadoresDisponibles, formData.operador_id]
+  );
+
+  const zonaSeleccionada = useMemo(() => 
+    zonasDisponibles.find(z => z.id === formData.zona_id), 
+    [zonasDisponibles, formData.zona_id]
   );
 
   // Productos filtrados por operador
   const productosFiltrados = useMemo(() => {
-    if (!formData.operador_id) return productos;
-    return productos.filter(p => p.operador_id === formData.operador_id);
-  }, [productos, formData.operador_id]);
+    if (!formData.operador_id) return productosDisponibles;
+    return productosDisponibles.filter(p => p.operador_id === formData.operador_id);
+  }, [productosDisponibles, formData.operador_id]);
 
   // Familias disponibles según sector
   const familiasDisponibles = useMemo(() => {
     return formData.sector ? FAMILIAS_POR_SECTOR[formData.sector] || [] : [];
   }, [formData.sector]);
+
+  // 🎯 MEJORA: Inicialización inteligente del formulario al abrir el modal
+  useEffect(() => {
+    if (isOpen) {
+      if (isEditing && venta) {
+        // Modo edición: usar datos de la venta
+        setFormData({ ...venta });
+      } else if (createInitialDraft && typeof createInitialDraft === 'function') {
+        // Modo creación: usar draft inicial
+        const draft = createInitialDraft();
+        
+        // 🎯 MEJORA: Selección automática inteligente de colaborador
+        if (colaboradoresDisponibles.length > 0 && !draft.colaborador_id) {
+          const primerColaborador = colaboradoresDisponibles[0];
+          draft.colaborador_id = primerColaborador.id;
+          draft.comision_colaborador = primerColaborador.pct_colaborador_default || 0.15;
+        }
+        
+        // 🎯 MEJORA: Selección automática de zona y operador si hay solo uno
+        if (zonasDisponibles.length === 1) {
+          draft.zona_id = zonasDisponibles[0].id;
+        }
+        if (operadoresDisponibles.length === 1) {
+          draft.operador_id = operadoresDisponibles[0].id;
+        }
+        
+        setFormData(draft);
+      } else {
+        // Fallback: formulario vacío con valores predeterminados
+        const emptyForm = {
+          fecha: new Date().toISOString().slice(0, 10),
+          cliente: "",
+          cif: "",
+          estado: "Confirmada",
+          cantidad: 1,
+          pvp: 0,
+        };
+        
+        // Selección automática si hay datos disponibles
+        if (colaboradoresDisponibles.length > 0) {
+          emptyForm.colaborador_id = colaboradoresDisponibles[0].id;
+          emptyForm.comision_colaborador = colaboradoresDisponibles[0].pct_colaborador_default || 0.15;
+        }
+        if (zonasDisponibles.length > 0) {
+          emptyForm.zona_id = zonasDisponibles[0].id;
+        }
+        if (operadoresDisponibles.length > 0) {
+          emptyForm.operador_id = operadoresDisponibles[0].id;
+        }
+        
+        setFormData(emptyForm);
+      }
+      
+      setErrors({});
+      setIsDirty(false);
+      setIsSubmitting(false);
+    }
+  }, [isOpen, isEditing, venta, createInitialDraft, colaboradoresDisponibles, zonasDisponibles, operadoresDisponibles]);
 
   // 🎯 MEJORA: Validaciones en tiempo real
   const validationErrors = useMemo(() => {
@@ -128,8 +264,20 @@ export function VentaFormModal({
     // Campos requeridos
     if (!formData.cliente?.trim()) newErrors.cliente = "Cliente es obligatorio";
     if (!formData.fecha) newErrors.fecha = "Fecha es obligatoria";
-    if (!formData.colaborador_id) newErrors.colaborador_id = "Colaborador es obligatorio";
-    if (!formData.zona_id) newErrors.zona_id = "Zona es obligatoria";
+    if (!formData.colaborador_id) {
+      if (colaboradoresDisponibles.length === 0) {
+        newErrors.colaborador_id = "No hay colaboradores disponibles - verifica que existan colaboradores con nombres válidos";
+      } else {
+        newErrors.colaborador_id = "Colaborador es obligatorio";
+      }
+    }
+    if (!formData.zona_id) {
+      if (zonasDisponibles.length === 0) {
+        newErrors.zona_id = "No hay zonas disponibles - verifica que existan zonas en el sistema";
+      } else {
+        newErrors.zona_id = "Zona es obligatoria";
+      }
+    }
     
     // Validaciones de negocio
     if (formData.cliente && formData.cliente.length > 255) {
@@ -149,7 +297,7 @@ export function VentaFormModal({
     });
     
     return newErrors;
-  }, [formData, customFields]);
+  }, [formData, customFields, colaboradoresDisponibles.length, zonasDisponibles.length]);
 
   // 🎯 MEJORA: Información calculada del formulario
   const formStats = useMemo(() => {
@@ -171,8 +319,9 @@ export function VentaFormModal({
       comisionEstimada: comisionEstimada,
       hasErrors: Object.keys(validationErrors).length > 0,
       isComplete: !!(formData.cliente && formData.fecha && formData.colaborador_id && formData.zona_id),
+      hasMissingData: colaboradoresDisponibles.length === 0 || zonasDisponibles.length === 0,
     };
-  }, [formData, productoSeleccionado, colaboradorSeleccionado, validationErrors]);
+  }, [formData, productoSeleccionado, colaboradorSeleccionado, validationErrors, colaboradoresDisponibles.length, zonasDisponibles.length]);
 
   // =================== HANDLERS DEL FORMULARIO ===================
   
@@ -189,7 +338,7 @@ export function VentaFormModal({
 
   // Handler específico para producto
   const handleProductChange = useCallback((productoId) => {
-    const producto = productos.find(p => p.id === productoId);
+    const producto = productosDisponibles.find(p => p.id === productoId);
     setFormData(prev => ({
       ...prev,
       producto_id: productoId,
@@ -199,7 +348,7 @@ export function VentaFormModal({
       comision_tipo: producto?.comision_tipo || prev.comision_tipo || 'porcentaje'
     }));
     setIsDirty(true);
-  }, [productos]);
+  }, [productosDisponibles]);
 
   // Handler específico para operador
   const handleOperadorChange = useCallback((operadorId) => {
@@ -214,14 +363,14 @@ export function VentaFormModal({
 
   // Handler específico para colaborador
   const handleColaboradorChange = useCallback((colaboradorId) => {
-    const colaborador = colaboradores.find(c => c.id === colaboradorId);
+    const colaborador = colaboradoresDisponibles.find(c => c.id === colaboradorId);
     setFormData(prev => ({
       ...prev,
       colaborador_id: colaboradorId,
-      comision_colaborador: colaborador?.pct_colaborador_default || prev.comision_colaborador || 0
+      comision_colaborador: colaborador?.pct_colaborador_default || prev.comision_colaborador || 0.15
     }));
     setIsDirty(true);
-  }, [colaboradores]);
+  }, [colaboradoresDisponibles]);
 
   // 🎯 MEJORA: Handler para sectores con validación
   const handleSectorChange = useCallback((sector) => {
@@ -287,7 +436,7 @@ export function VentaFormModal({
       onClose();
       
     } catch (error) {
-      // LOG ELIMINADO
+      console.error('Error guardando venta:', error);
       setErrors({ submit: error.message || 'Error al guardar la venta' });
     } finally {
       setIsSubmitting(false);
@@ -311,28 +460,28 @@ export function VentaFormModal({
   const Icon = isEditing ? Edit3 : Plus;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-pink-200/40 dark:bg-pink-900/60 backdrop-blur-sm p-4">
-      <div className="card-pastel rounded-2xl shadow-2xl p-6 w-full max-w-7xl max-h-[90vh] overflow-y-auto transition-colors">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-7xl max-h-[90vh] overflow-y-auto">
         
         {/* Header */}
-        <div className="sticky top-0 bg-pink-50 dark:bg-pink-200 pb-4 mb-6 border-b border-pink-200 dark:border-pink-400">
+        <div className="sticky top-0 bg-white dark:bg-slate-800 pb-4 mb-6 border-b border-slate-200 dark:border-slate-600">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-pink-900 dark:text-pink-700 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <Icon className={`w-5 h-5 ${isEditing ? 'text-amber-600' : 'text-emerald-600'}`} />
               {modalTitle}
             </h2>
             <button
               onClick={handleClose}
-              className="p-2 hover:bg-pink-100 dark:hover:bg-pink-300 rounded-lg transition-colors"
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               disabled={isSubmitting}
             >
-              <X className="w-5 h-5 text-pink-700 dark:text-pink-900" />
+              <X className="w-5 h-5 text-slate-700 dark:text-slate-300" />
             </button>
           </div>
           
-          {/* 🏆 MEJORA: Indicadores de estado */}
+          {/* 🏆 MEJORA: Indicadores de estado mejorados */}
           <div className="mt-4 flex items-center gap-4 text-sm">
-            <div className={`flex items-center gap-1 ${formStats.isComplete ? 'text-emerald-600' : 'text-pink-400'}`}>
+            <div className={`flex items-center gap-1 ${formStats.isComplete ? 'text-emerald-600' : 'text-amber-500'}`}>
               <CheckCircle className="w-4 h-4" />
               <span>Datos completos</span>
             </div>
@@ -340,6 +489,12 @@ export function VentaFormModal({
               <AlertCircle className="w-4 h-4" />
               <span>{formStats.hasErrors ? `${Object.keys(validationErrors).length} errores` : 'Sin errores'}</span>
             </div>
+            {formStats.hasMissingData && (
+              <div className="flex items-center gap-1 text-orange-600">
+                <AlertCircle className="w-4 h-4" />
+                <span>Datos faltantes en el sistema</span>
+              </div>
+            )}
             {formStats.comisionEstimada > 0 && (
               <div className="flex items-center gap-1 text-blue-600">
                 <Euro className="w-4 h-4" />
@@ -347,6 +502,21 @@ export function VentaFormModal({
               </div>
             )}
           </div>
+
+          {/* 🎯 MEJORA: Alertas de datos faltantes */}
+          {formStats.hasMissingData && (
+            <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-orange-800">
+                  <strong>Atención:</strong> 
+                  {colaboradoresDisponibles.length === 0 && " No hay colaboradores válidos en el sistema."}
+                  {zonasDisponibles.length === 0 && " No hay zonas válidas en el sistema."}
+                  {" Verifica que existan entidades con nombres válidos antes de crear ventas."}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6" aria-label={`Formulario para ${isEditing ? 'editar' : 'crear'} venta`}>
@@ -368,155 +538,149 @@ export function VentaFormModal({
             
             {/* Columna 1: Información del Cliente */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-pink-900 dark:text-pink-700 pb-2 border-b border-pink-200 dark:border-pink-400">
+              <h4 className="font-semibold text-slate-900 dark:text-slate-100 pb-2 border-b border-slate-200 dark:border-slate-600">
                 📋 Información del Cliente
               </h4>
 
-              <div className="space-y-4">
-                <h4 className="font-semibold text-pink-900 dark:text-pink-700 pb-2 border-b border-pink-200 dark:border-pink-400">
-                  🏬 Detalles del Servicio
-                </h4>
+              <div>
+                <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-cliente">
+                  Cliente *
+                </label>
+                <input
+                  id="venta-cliente"
+                  className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
+                    errors.cliente 
+                      ? 'border-red-500 focus:ring-red-400' 
+                      : `focus:ring-${primaryColor}-400`
+                  } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                  value={formData.cliente || ''}
+                  onChange={(e) => updateField('cliente', e.target.value)}
+                  required
+                  aria-label="Nombre del cliente"
+                  maxLength="255"
+                />
+                {errors.cliente && (
+                  <p className="text-xs text-red-600 mt-1">{errors.cliente}</p>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-cliente">
-                    Cliente *
+                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-cif">
+                    CIF/DNI
                   </label>
                   <input
-                    id="venta-cliente"
+                    id="venta-cif"
                     className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
-                      errors.cliente 
+                      errors.cif 
                         ? 'border-red-500 focus:ring-red-400' 
                         : `focus:ring-${primaryColor}-400`
-                    } dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
-                    value={formData.cliente || ''}
-                    onChange={(e) => updateField('cliente', e.target.value)}
-                    required
-                    aria-label="Nombre del cliente"
-                    maxLength="255"
+                    } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                    value={formData.cif || ''}
+                    onChange={(e) => updateField('cif', e.target.value)}
+                    aria-label="CIF o DNI"
+                    maxLength="20"
                   />
-                  {errors.cliente && (
-                    <p className="text-xs text-red-600 mt-1">{errors.cliente}</p>
+                  {errors.cif && (
+                    <p className="text-xs text-red-600 mt-1">{errors.cif}</p>
                   )}
                 </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-cif">
-                      CIF/DNI
-                    </label>
-                    <input
-                      id="venta-cif"
-                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
-                        errors.cif 
-                          ? 'border-red-500 focus:ring-red-400' 
-                          : `focus:ring-${primaryColor}-400`
-                      } dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
-                      value={formData.cif || ''}
-                      onChange={(e) => updateField('cif', e.target.value)}
-                      aria-label="CIF o DNI"
-                      maxLength="20"
-                    />
-                    {errors.cif && (
-                      <p className="text-xs text-red-600 mt-1">{errors.cif}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-fecha">
-                      Fecha *
-                    </label>
-                    <input
-                      id="venta-fecha"
-                      type="date"
-                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
-                        errors.fecha 
-                          ? 'border-red-500 focus:ring-red-400' 
-                          : `focus:ring-${primaryColor}-400`
-                      } dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
-                      value={formData.fecha || ''}
-                      onChange={(e) => updateField('fecha', e.target.value)}
-                      required
-                      aria-label="Fecha de la venta"
-                    />
-                    {errors.fecha && (
-                      <p className="text-xs text-red-600 mt-1">{errors.fecha}</p>
-                    )}
-                  </div>
+                <div>
+                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-fecha">
+                    Fecha *
+                  </label>
+                  <input
+                    id="venta-fecha"
+                    type="date"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
+                      errors.fecha 
+                        ? 'border-red-500 focus:ring-red-400' 
+                        : `focus:ring-${primaryColor}-400`
+                    } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                    value={formData.fecha || ''}
+                    onChange={(e) => updateField('fecha', e.target.value)}
+                    required
+                    aria-label="Fecha de la venta"
+                  />
+                  {errors.fecha && (
+                    <p className="text-xs text-red-600 mt-1">{errors.fecha}</p>
+                  )}
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-idpedido">
-                      ID Pedido
-                    </label>
-                    <input
-                      id="venta-idpedido"
-                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
-                      placeholder="ID del pedido"
-                      value={formData.id_pedido || ''}
-                      onChange={(e) => updateField('id_pedido', e.target.value)}
-                      aria-label="ID del pedido"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-idcliente">
-                      ID Cliente
-                    </label>
-                    <input
-                      id="venta-idcliente"
-                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
-                      placeholder="ID del cliente"
-                      value={formData.id_cliente || ''}
-                      onChange={(e) => updateField('id_cliente', e.target.value)}
-                      aria-label="ID del cliente"
-                    />
-                  </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-idpedido">
+                    ID Pedido
+                  </label>
+                  <input
+                    id="venta-idpedido"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                    placeholder="ID del pedido"
+                    value={formData.id_pedido || ''}
+                    onChange={(e) => updateField('id_pedido', e.target.value)}
+                    aria-label="ID del pedido"
+                  />
                 </div>
+                <div>
+                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-idcliente">
+                    ID Cliente
+                  </label>
+                  <input
+                    id="venta-idcliente"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                    placeholder="ID del cliente"
+                    value={formData.id_cliente || ''}
+                    onChange={(e) => updateField('id_cliente', e.target.value)}
+                    aria-label="ID del cliente"
+                  />
+                </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-telfijo">
-                      Teléfono Fijo
-                    </label>
-                    <input
-                      id="venta-telfijo"
-                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
-                      value={formData.telefono_fijo || ''}
-                      onChange={(e) => updateField('telefono_fijo', e.target.value)}
-                      aria-label="Teléfono fijo"
-                      maxLength="20"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-telmovil">
-                      Teléfono Móvil
-                    </label>
-                    <input
-                      id="venta-telmovil"
-                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
-                      value={formData.telefono_movil || ''}
-                      onChange={(e) => updateField('telefono_movil', e.target.value)}
-                      aria-label="Teléfono móvil"
-                      maxLength="20"
-                    />
-                  </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-telfijo">
+                    Teléfono Fijo
+                  </label>
+                  <input
+                    id="venta-telfijo"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                    value={formData.telefono_fijo || ''}
+                    onChange={(e) => updateField('telefono_fijo', e.target.value)}
+                    aria-label="Teléfono fijo"
+                    maxLength="20"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-telmovil">
+                    Teléfono Móvil
+                  </label>
+                  <input
+                    id="venta-telmovil"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                    value={formData.telefono_movil || ''}
+                    onChange={(e) => updateField('telefono_movil', e.target.value)}
+                    aria-label="Teléfono móvil"
+                    maxLength="20"
+                  />
                 </div>
               </div>
             </div>
 
             {/* Columna 2: Detalles del Servicio */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-slate-800 dark:text-darkText pb-2 border-b border-slate-200 dark:border-darkAccent/30">
+              <h4 className="font-semibold text-slate-900 dark:text-slate-100 pb-2 border-b border-slate-200 dark:border-slate-600">
                 🛍️ Detalles del Servicio
               </h4>
 
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm text-slate-500 dark:text-slate-400">Sector *</label>
+                    <label className="text-sm text-slate-500 dark:text-slate-400">Sector</label>
                     <select
-                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                       value={formData.sector || ''}
                       onChange={(e) => handleSectorChange(e.target.value)}
-                      required
                     >
                       <option value="">Seleccionar sector</option>
                       {Object.entries(SECTORES).map(([key, label]) => (
@@ -526,12 +690,11 @@ export function VentaFormModal({
                   </div>
                   {formData.sector && (
                     <div>
-                      <label className="text-sm text-slate-500 dark:text-slate-400">Familia *</label>
+                      <label className="text-sm text-slate-500 dark:text-slate-400">Familia</label>
                       <select
-                        className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                        className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                         value={formData.familia || ''}
                         onChange={(e) => updateField('familia', e.target.value)}
-                        required
                       >
                         <option value="">Seleccionar familia</option>
                         {familiasDisponibles.map((familia) => (
@@ -543,34 +706,42 @@ export function VentaFormModal({
                 </div>
 
                 <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">Operador *</label>
+                  <label className="text-sm text-slate-500 dark:text-slate-400">
+                    Operador ({operadoresDisponibles.length} disponibles)
+                  </label>
                   <select
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                     value={formData.operador_id || ''}
                     onChange={(e) => handleOperadorChange(e.target.value)}
-                    required
                   >
                     <option value="">Seleccionar operador</option>
-                    {operadores.map((op) => (
+                    {operadoresDisponibles.map((op) => (
                       <option key={op.id} value={op.id}>
-                        {op.nombre}
+                        {op.nombreDisplay}
+                        {op.codigo && op.codigo !== op.nombreDisplay && ` (${op.codigo})`}
                       </option>
                     ))}
                   </select>
+                  {operadoresDisponibles.length === 0 && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      ⚠️ No hay operadores disponibles en el sistema
+                    </p>
+                  )}
                   {operadorSeleccionado && (
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      Operador seleccionado: {operadorSeleccionado.nombre}
+                    <p className="text-xs text-blue-600 mt-1">
+                      Operador: {operadorSeleccionado.nombreDisplay}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">Producto *</label>
+                  <label className="text-sm text-slate-500 dark:text-slate-400">
+                    Producto ({productosFiltrados.length} disponibles)
+                  </label>
                   <select
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                     value={formData.producto_id || ''}
                     onChange={(e) => handleProductChange(e.target.value)}
-                    required
                     disabled={!formData.operador_id}
                   >
                     <option value="">
@@ -578,12 +749,14 @@ export function VentaFormModal({
                     </option>
                     {productosFiltrados.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.nombre} {(!p.pvp || p.pvp === 0) && "(Sin PVP)"}
+                        {p.nombreDisplay}
+                        {(!p.pvp || p.pvp === 0) && " (Sin PVP)"}
+                        {p.pvp > 0 && ` (${p.pvp}€)`}
                       </option>
                     ))}
                   </select>
                   {productoSeleccionado && (
-                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                    <p className="text-xs text-green-600 mt-1">
                       PVP: {productoSeleccionado.pvp ? `${productoSeleccionado.pvp}€` : 'No definido'}
                     </p>
                   )}
@@ -591,32 +764,39 @@ export function VentaFormModal({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm text-slate-500 dark:text-slate-400">Zona *</label>
+                    <label className="text-sm text-slate-500 dark:text-slate-400">
+                      Zona * ({zonasDisponibles.length} disponibles)
+                    </label>
                     <select
                       className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
                         errors.zona_id 
                           ? 'border-red-500 focus:ring-red-400' 
                           : `focus:ring-${primaryColor}-400`
-                      } dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                      } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                       value={formData.zona_id || ''}
                       onChange={(e) => updateField('zona_id', e.target.value)}
                       required
                     >
                       <option value="">Seleccionar zona</option>
-                      {zonas.map((z) => (
+                      {zonasDisponibles.map((z) => (
                         <option key={z.id} value={z.id}>
-                          {z.nombre}
+                          {z.nombreDisplay}
                         </option>
                       ))}
                     </select>
                     {errors.zona_id && (
                       <p className="text-xs text-red-600 mt-1">{errors.zona_id}</p>
                     )}
+                    {zonaSeleccionada && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Zona: {zonaSeleccionada.nombreDisplay}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm text-slate-500 dark:text-slate-400">Estado</label>
                     <select
-                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                       value={formData.estado || 'Confirmada'}
                       onChange={(e) => updateField('estado', e.target.value)}
                     >
@@ -628,21 +808,25 @@ export function VentaFormModal({
                 </div>
 
                 <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">Colaborador *</label>
+                  <label className="text-sm text-slate-500 dark:text-slate-400">
+                    Colaborador * ({colaboradoresDisponibles.length} disponibles)
+                  </label>
                   <select
                     className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
                       errors.colaborador_id 
                         ? 'border-red-500 focus:ring-red-400' 
                         : `focus:ring-${primaryColor}-400`
-                    } dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                    } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                     value={formData.colaborador_id || ''}
                     onChange={(e) => handleColaboradorChange(e.target.value)}
                     required
                   >
                     <option value="">Seleccionar colaborador</option>
-                    {colaboradoresFiltrados.map((c) => (
+                    {colaboradoresDisponibles.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.nombre} - {c.nivelId} ({((c.pct_colaborador_default || 0) * 100).toFixed(1)}%)
+                        {c.nombreDisplay}
+                        {c.nivel && ` - ${c.nivel}`}
+                        {c.pct_colaborador_default && ` (${(c.pct_colaborador_default * 100).toFixed(1)}%)`}
                       </option>
                     ))}
                   </select>
@@ -650,7 +834,7 @@ export function VentaFormModal({
                     <p className="text-xs text-red-600 mt-1">{errors.colaborador_id}</p>
                   )}
                   {colaboradorSeleccionado && (
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1">
+                    <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
                       <Percent className="w-3 h-3" />
                       Comisión: {((colaboradorSeleccionado.pct_colaborador_default || 0) * 100).toFixed(1)}%
                     </p>
@@ -661,7 +845,7 @@ export function VentaFormModal({
 
             {/* Columna 3: Precios y Comisiones */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-pink-900 dark:text-pink-700 pb-2 border-b border-pink-200 dark:border-pink-400">
+              <h4 className="font-semibold text-slate-900 dark:text-slate-100 pb-2 border-b border-slate-200 dark:border-slate-600">
                 💰 Precios y Comisiones
               </h4>
 
@@ -671,12 +855,12 @@ export function VentaFormModal({
                   <input
                     type="number"
                     step="0.01"
-                    className="border rounded-lg px-3 py-2 w-full bg-slate-100 dark:bg-slate-700 focus:outline-none dark:border-darkAccent dark:text-darkText"
+                    className="border rounded-lg px-3 py-2 w-full bg-slate-100 dark:bg-slate-700 focus:outline-none dark:border-slate-600 dark:text-slate-100"
                     value={formStats.pvp || 0}
                     readOnly
                   />
                   {formStats.pvp === 0 && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    <p className="text-xs text-amber-600 mt-1">
                       ⚠️ Este producto no tiene PVP definido
                     </p>
                   )}
@@ -688,12 +872,12 @@ export function VentaFormModal({
                     <input
                       type="number"
                       step="0.01"
-                      className={`border rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                      className={`border rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                       value={formData.comision_base || 0}
                       onChange={(e) => updateField('comision_base', parseFloat(e.target.value) || 0)}
                     />
                     <select
-                      className={`border rounded-lg px-3 py-2 w-20 focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                      className={`border rounded-lg px-3 py-2 w-20 focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                       value={formData.comision_tipo || 'porcentaje'}
                       onChange={(e) => updateField('comision_tipo', e.target.value)}
                     >
@@ -702,7 +886,7 @@ export function VentaFormModal({
                     </select>
                   </div>
                   {formData.comision_base > 0 && (
-                    <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
                       <Euro className="w-3 h-3" />
                       {formData.comision_tipo === 'porcentaje' 
                         ? `${(formData.comision_base || 0).toFixed(1)}% del PVP`
@@ -720,7 +904,7 @@ export function VentaFormModal({
                       step="0.01"
                       min="0"
                       max="1"
-                      className={`border rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                      className={`border rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                       value={formData.comision_colaborador || 0}
                       onChange={(e) => updateField('comision_colaborador', parseFloat(e.target.value) || 0)}
                     />
@@ -736,7 +920,7 @@ export function VentaFormModal({
                   <input
                     type="number"
                     min="1"
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                     value={formData.cantidad || 1}
                     onChange={(e) => updateField('cantidad', parseInt(e.target.value) || 1)}
                   />
@@ -745,7 +929,7 @@ export function VentaFormModal({
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">Documento</label>
                   <input
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                     value={formData.documento || ''}
                     onChange={(e) => updateField('documento', e.target.value)}
                     maxLength="100"
@@ -755,7 +939,7 @@ export function VentaFormModal({
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">Numeración</label>
                   <input
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                     value={formData.numeracion || ''}
                     onChange={(e) => updateField('numeracion', e.target.value)}
                     maxLength="50"
@@ -765,7 +949,7 @@ export function VentaFormModal({
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">Observaciones</label>
                   <textarea
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                     rows="4"
                     value={formData.observaciones || ''}
                     onChange={(e) => updateField('observaciones', e.target.value)}
@@ -778,8 +962,8 @@ export function VentaFormModal({
 
           {/* Campos personalizados */}
           {customFields?.length > 0 && (
-            <div className="border-t border-pink-200 dark:border-pink-400 pt-6">
-              <h4 className="font-semibold text-pink-900 dark:text-pink-700 mb-4">
+            <div className="border-t border-slate-200 dark:border-slate-600 pt-6">
+              <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">
                 🎛️ Campos Personalizados
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -799,7 +983,7 @@ export function VentaFormModal({
                             hasError 
                               ? 'border-red-500 focus:ring-red-400' 
                               : 'focus:ring-yellow-400'
-                          } dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                          } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                           value={formData[fieldKey] || ''}
                           onChange={e => updateField(fieldKey, e.target.value)}
                           required={field.requerido}
@@ -813,7 +997,7 @@ export function VentaFormModal({
                             hasError 
                               ? 'border-red-500 focus:ring-red-400' 
                               : 'focus:ring-yellow-400'
-                          } dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                          } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                           value={formData[fieldKey] || ''}
                           onChange={e => updateField(fieldKey, e.target.value)}
                           required={field.requerido}
@@ -827,7 +1011,7 @@ export function VentaFormModal({
                             hasError 
                               ? 'border-red-500 focus:ring-red-400' 
                               : 'focus:ring-yellow-400'
-                          } dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                          } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                           value={formData[fieldKey] || ''}
                           onChange={e => updateField(fieldKey, e.target.value)}
                           required={field.requerido}
@@ -840,7 +1024,7 @@ export function VentaFormModal({
                             hasError 
                               ? 'border-red-500 focus:ring-red-400' 
                               : 'focus:ring-yellow-400'
-                          } dark:bg-darkInput dark:border-darkAccent dark:text-darkText`}
+                          } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
                           value={formData[fieldKey] || ''}
                           onChange={e => updateField(fieldKey, e.target.value)}
                           required={field.requerido}
@@ -862,11 +1046,11 @@ export function VentaFormModal({
           )}
 
           {/* Botones de acción */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-pink-200 dark:border-pink-400">
+          <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-600">
             <button
               type="button"
               onClick={handleClose}
-              className="px-8 py-3 border border-pink-200 dark:border-pink-400 rounded-xl text-pink-700 dark:text-pink-900 hover:bg-pink-100 dark:hover:bg-pink-300 transition-colors"
+              className="px-8 py-3 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               disabled={isSubmitting}
             >
               Cancelar
@@ -877,7 +1061,7 @@ export function VentaFormModal({
               className={`flex items-center gap-2 px-8 py-3 rounded-xl text-white transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                 isEditing 
                   ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700'
-                  : 'bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700'
+                  : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
               }`}
             >
               <Save className="w-4 h-4" />
@@ -892,4 +1076,5 @@ export function VentaFormModal({
     </div>
   );
 }
+
 export default VentaFormModal;

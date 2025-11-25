@@ -6,6 +6,7 @@ import { useData } from '../../context/AppContexts';
 import { computeVenta } from '../../utils/calculos';
 import { useVentasGestion } from '../../hooks/useVentasGestion';
 import { usePagination } from '../../hooks/usePagination';
+import Pagination from '../ui/Pagination';
 
 // Componentes consolidados
 import { VentasStats } from './VentasStats';
@@ -40,11 +41,8 @@ export default function VentasPage() {
   
   // Hook consolidado de gestión de ventas
   const {
-    // Datos
-    productos,
-    colaboradores,
-    zonas,
-    
+    // Datos desde allData
+    allData: { productos, colaboradores, zonas, operadores },
     // Operaciones CRUD
     addVenta,
     updateVenta,
@@ -54,14 +52,12 @@ export default function VentasPage() {
     updateProductPvp,
     isVentaBlocked,
     createInitialDraft,
-    
     // Filtros
     filtros,
     updateFilter,
     clearFilters,
     ventasFiltradas,
     exportarDatos,
-    
     // Selección
     selectedIds,
     handleSelect,
@@ -336,6 +332,24 @@ export default function VentasPage() {
     return <LoadingVentas />;
   }
 
+  // Helpers de resolución de nombres
+  const resolveProductoName = (id) => {
+    const prod = datosSafe.productos.find(p => p.id === id);
+    return prod?.nombre || id || "";
+  };
+  const resolveColaboradorName = (id) => {
+    const colab = datosSafe.colaboradores.find(c => c.id === id);
+    return colab?.nombre || id || "";
+  };
+  const resolveZonaName = (id) => {
+    const zona = datosSafe.zonas.find(z => z.id === id);
+    return zona?.nombre || id || "";
+  };
+  const resolveOperadorName = (id) => {
+    const op = entidadesSafe.operadores.find(o => o.id === id);
+    return op?.nombre || id || "";
+  };
+
   return (
     <div className="space-y-6">
       {/* Estadísticas */}
@@ -365,12 +379,27 @@ export default function VentasPage() {
         ventasSinPvp={estadisticas.ventasSinPvp}
       />
 
+      {/* Paginador superior */}
+      <Pagination
+        currentPage={pagination?.currentPage || 1}
+        pageSize={pagination?.pageSize || 25}
+        totalItems={pagination?.totalItems || 0}
+        totalPages={Math.ceil((pagination?.totalItems || 0) / (pagination?.pageSize || 25))}
+        onPageChange={pagination?.handlePageChange}
+        onPageSizeChange={pagination?.handlePageSizeChange}
+      />
+
       {/* Tabla con Paginación */}
       <VentasTable
         ventasCalc={pagination?.paginatedData || []}
         productos={datosSafe.productos}
         colaboradores={datosSafe.colaboradores}
         zonas={datosSafe.zonas}
+        operadores={entidadesSafe.operadores}
+        resolveProductoName={resolveProductoName}
+        resolveColaboradorName={resolveColaboradorName}
+        resolveZonaName={resolveZonaName}
+        resolveOperadorName={resolveOperadorName}
         selectedIds={selectedIds || []}
         onSelect={handleSelect}
         onSelectAll={handleSelectAll}
@@ -382,10 +411,20 @@ export default function VentasPage() {
         onDefinePvp={openPvpModal}
         isVentaBlocked={isVentaBlocked}
         isAdmin={isAdmin}
-        // Props de paginación
         currentPage={pagination?.currentPage || 1}
         pageSize={pagination?.pageSize || 25}
         totalItems={pagination?.totalItems || 0}
+        totalPages={Math.ceil((pagination?.totalItems || 0) / (pagination?.pageSize || 25))}
+        onPageChange={pagination?.handlePageChange}
+        onPageSizeChange={pagination?.handlePageSizeChange}
+      />
+
+      {/* Paginador inferior */}
+      <Pagination
+        currentPage={pagination?.currentPage || 1}
+        pageSize={pagination?.pageSize || 25}
+        totalItems={pagination?.totalItems || 0}
+        totalPages={Math.ceil((pagination?.totalItems || 0) / (pagination?.pageSize || 25))}
         onPageChange={pagination?.handlePageChange}
         onPageSizeChange={pagination?.handlePageSizeChange}
       />
@@ -402,6 +441,10 @@ export default function VentasPage() {
           operadores={entidadesSafe.operadores}
           colaboradores={datosSafe.colaboradores}
           zonas={datosSafe.zonas}
+          resolveProductoName={resolveProductoName}
+          resolveColaboradorName={resolveColaboradorName}
+          resolveZonaName={resolveZonaName}
+          resolveOperadorName={resolveOperadorName}
         />
       )}
 

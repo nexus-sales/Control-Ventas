@@ -34,8 +34,12 @@ const formatDate = (dateStr) => {
 };
 
 /**
- * Hook consolidado para gestión completa de ventas
- * Integra: filtros, selección múltiple, operaciones CRUD y exportación
+ * Hook CORREGIDO específicamente para funcionar con VentaFormModalNuevo.jsx
+ * 🎯 CORRECCIONES: 
+ * - Mejor resolución de nombres para mostrar en tablas
+ * - Datos enriquecidos para evitar búsquedas repetidas en componentes
+ * - Funciones de resolución que manejan tanto IDs legibles como crípticos
+ * - Eliminación de todos los warnings de ESLint
  */
 export function useVentasGestion(customFields = []) {
   const { 
@@ -58,15 +62,183 @@ export function useVentasGestion(customFields = []) {
     isProcessing: false,
   });
 
-  // =================== DATOS MEMOIZADOS ===================
-  // Usar SIEMPRE los datos del contexto, nunca mantener copia interna
-  const ventas = Array.isArray(data?.ventas) ? data.ventas : [];
-  const productos = Array.isArray(data?.productos) ? data.productos : [];
-  const colaboradores = Array.isArray(data?.colaboradores) ? data.colaboradores : [];
-  const zonas = Array.isArray(data?.zonas) ? data.zonas : [];
-  const operadores = Array.isArray(data?.operadores) ? data.operadores : [];
+  // =================== 🎯 DATOS MEMOIZADOS MEJORADOS ===================
+  // 🎯 MEJORA: Usar useMemo para evitar warnings de ESLint
+  const ventas = useMemo(() => 
+    Array.isArray(data?.ventas) ? data.ventas : [], 
+    [data?.ventas]
+  );
+  
+  const productos = useMemo(() => 
+    Array.isArray(data?.productos) ? data.productos : [], 
+    [data?.productos]
+  );
+  
+  const colaboradores = useMemo(() => 
+    Array.isArray(data?.colaboradores) ? data.colaboradores : [], 
+    [data?.colaboradores]
+  );
+  
+  const zonas = useMemo(() => 
+    Array.isArray(data?.zonas) ? data.zonas : [], 
+    [data?.zonas]
+  );
+  
+  const operadores = useMemo(() => 
+    Array.isArray(data?.operadores) ? data.operadores : [], 
+    [data?.operadores]
+  );
 
-  // =================== 🔍 FUNCIONES DE FILTRADO ===================
+  // 🎯 NUEVA: Helper para extraer nombre legible de un ID críptico
+  const extractReadableName = useCallback((id, fallback = '') => {
+    if (!id || typeof id !== 'string') return fallback;
+    
+    // Si tiene formato de ID generado automáticamente, extraer la parte legible
+    const patterns = [
+      /^(prod|colab|zona|oper|c)_([a-zA-Z0-9]+)_\d+/,  // Nuevo formato: prod_nombreproducto_1234
+      /^(prod|colab|zona|oper|c)_\d+_([a-zA-Z0-9]+)$/   // Formato críptico: c_176400078164_fzrk5j
+    ];
+    
+    for (const pattern of patterns) {
+      const match = id.match(pattern);
+      if (match) {
+        // Si el segundo grupo tiene contenido legible, usarlo
+        const namePart = match[2];
+        if (namePart && namePart.length > 2 && !/^\w{6}$/.test(namePart)) {
+          // Convertir camelCase o formato comprimido a legible
+          return namePart
+            .replace(/([a-z])([A-Z])/g, '$1 $2') // camelCase
+            .replace(/([a-z])(\d)/g, '$1 $2')    // letras seguidas de números
+            .toUpperCase();
+        }
+      }
+    }
+    
+    return id;
+  }, []);
+
+  // 🎯 MEJORA: Indexadores optimizados con nombres resueltos
+  const indexers = useMemo(() => ({
+    productos: Object.fromEntries(productos.map(p => [p.id, p])),
+    colaboradores: Object.fromEntries(colaboradores.map(c => [c.id, c])),
+    zonas: Object.fromEntries(zonas.map(z => [z.id, z])),
+    operadores: Object.fromEntries(operadores.map(o => [o.id, o])),
+  }), [productos, colaboradores, zonas, operadores]);
+
+  // 🎯 NUEVAS: Funciones de resolución inteligentes para componentes
+  const getNombreProducto = useCallback((producto_id) => {
+    if (!producto_id) return '';
+    
+    // 1. Buscar por ID exacto
+    const producto = indexers.productos[producto_id];
+    if (producto?.nombre && producto.nombre !== producto.id) {
+      return producto.nombre;
+    }
+    
+    // 2. Si no tiene nombre o el nombre es igual al ID, intentar extraer del ID
+    if (producto && (!producto.nombre || producto.nombre === producto.id)) {
+      const extractedName = extractReadableName(producto.id);
+      if (extractedName !== producto.id) {
+        return extractedName;
+      }
+    }
+    
+    // 3. Extraer directamente del ID si no se encontró el producto
+    const extractedName = extractReadableName(producto_id);
+    return extractedName !== producto_id ? extractedName : (producto_id || 'Sin producto');
+  }, [indexers.productos, extractReadableName]);
+
+  const getNombreColaborador = useCallback((colaborador_id) => {
+    if (!colaborador_id) return '';
+    
+    const colaborador = indexers.colaboradores[colaborador_id];
+    if (colaborador?.nombre && colaborador.nombre !== colaborador.id) {
+      return colaborador.nombre;
+    }
+    
+    if (colaborador && (!colaborador.nombre || colaborador.nombre === colaborador.id)) {
+      const extractedName = extractReadableName(colaborador.id);
+      if (extractedName !== colaborador.id) {
+        return extractedName;
+      }
+    }
+    
+    const extractedName = extractReadableName(colaborador_id);
+    return extractedName !== colaborador_id ? extractedName : (colaborador_id || 'Sin colaborador');
+  }, [indexers.colaboradores, extractReadableName]);
+
+  const getNombreZona = useCallback((zona_id) => {
+    if (!zona_id) return '';
+    
+    const zona = indexers.zonas[zona_id];
+    if (zona?.nombre && zona.nombre !== zona.id) {
+      return zona.nombre;
+    }
+    
+    if (zona && (!zona.nombre || zona.nombre === zona.id)) {
+      const extractedName = extractReadableName(zona.id);
+      if (extractedName !== zona.id) {
+        return extractedName;
+      }
+    }
+    
+    const extractedName = extractReadableName(zona_id);
+    return extractedName !== zona_id ? extractedName : (zona_id || 'Sin zona');
+  }, [indexers.zonas, extractReadableName]);
+
+  const getNombreOperador = useCallback((operador_id) => {
+    if (!operador_id) return '';
+    
+    const operador = indexers.operadores[operador_id];
+    if (operador?.nombre && operador.nombre !== operador.id) {
+      return operador.nombre;
+    }
+    
+    if (operador?.codigo && operador.codigo !== operador.id) {
+      return operador.codigo;
+    }
+    
+    if (operador && (!operador.nombre || operador.nombre === operador.id)) {
+      const extractedName = extractReadableName(operador.id);
+      if (extractedName !== operador.id) {
+        return extractedName;
+      }
+    }
+    
+    const extractedName = extractReadableName(operador_id);
+    return extractedName !== operador_id ? extractedName : '';
+  }, [indexers.operadores, extractReadableName]);
+
+  // 🎯 MEJORA: Función para enriquecer ventas con nombres precalculados
+  const enrichVenta = useCallback((venta) => {
+    if (!venta || typeof venta !== 'object') return venta;
+
+    const producto = indexers.productos[venta.producto_id];
+    const operador_id = producto?.operador_id || venta.operador_id;
+
+    return {
+      ...venta,
+      // 🎯 MEJORA: Nombres precalculados usando las funciones de resolución
+      productoNombre: getNombreProducto(venta.producto_id),
+      colaboradorNombre: getNombreColaborador(venta.colaborador_id),
+      zonaNombre: getNombreZona(venta.zona_id),
+      operadorNombre: getNombreOperador(operador_id),
+      
+      // 🎯 MEJORA: PVP resuelto correctamente
+      pvpResuelto: producto?.pvp || venta.pvp || 0,
+      
+      // 🎯 MEJORA: Datos adicionales útiles
+      colaboradorNivel: indexers.colaboradores[venta.colaborador_id]?.nivelId || '',
+      zonaActiva: indexers.zonas[venta.zona_id]?.activo ?? true,
+      productoActivo: producto?.activo ?? true,
+      operadorActivo: indexers.operadores[operador_id]?.activo ?? true,
+      
+      // 🎯 NUEVA: Información de operador desde producto
+      operador_id: operador_id,
+    };
+  }, [indexers, getNombreProducto, getNombreColaborador, getNombreZona, getNombreOperador]);
+
+  // =================== 🔍 FUNCIONES DE FILTRADO MEJORADAS ===================
   
   // Actualizar filtro específico
   const updateFilter = useCallback((key, value) => {
@@ -99,41 +271,52 @@ export function useVentasGestion(customFields = []) {
     }));
   }, []);
 
-  // 🎯 MEJORA: Ventas filtradas optimizadas
+  // 🎯 MEJORA: Ventas filtradas y enriquecidas optimizadas
   const ventasFiltradas = useMemo(() => {
     const { filtros } = state;
     if (!ventas.length) return [];
-    return ventas.filter((venta) => {
-      if (!venta?.id) return false;
-      const producto = productos.find(p => p?.id === venta.producto_id);
-      const pvpValue = producto?.pvp || venta.pvp || 0;
-      const fecha = venta.fecha?.slice(0, 10) || '';
-      // 🎯 MEJORA: Usar early return para mejor performance
-      if (filtros.operador_id && producto?.operador_id !== filtros.operador_id) return false;
-      if (filtros.colaborador_id && venta.colaborador_id !== filtros.colaborador_id) return false;
-      if (filtros.zona_id && venta.zona_id !== filtros.zona_id) return false;
-      if (filtros.producto_id && venta.producto_id !== filtros.producto_id) return false;
-      if (filtros.desde && fecha < filtros.desde) return false;
-      if (filtros.hasta && fecha > filtros.hasta) return false;
-      if (filtros.mesAno && fecha.slice(0, 7) !== filtros.mesAno) return false;
-      if (filtros.estado && venta.estado !== filtros.estado) return false;
-      if (filtros.sinPvp && pvpValue > 0) return false;
-      if (filtros.montoMin && pvpValue < Number(filtros.montoMin)) return false;
-      if (filtros.montoMax && pvpValue > Number(filtros.montoMax)) return false;
-      // Búsqueda de texto (optimizada)
-      if (filtros.texto) {
-        const searchTerm = filtros.texto.toLowerCase();
-        const searchableText = [
-          venta.cliente,
-          venta.cif,
-          venta.numeracion,
-          venta.documento
-        ].join(' ').toLowerCase();
-        if (!searchableText.includes(searchTerm)) return false;
-      }
-      return true;
-    });
-  }, [ventas, productos, state.filtros]);
+    
+    return ventas
+      .map(enrichVenta) // 🎯 MEJORA: Enriquecer primero
+      .filter((venta) => {
+        if (!venta?.id) return false;
+        
+        const producto = indexers.productos[venta.producto_id];
+        const pvpValue = venta.pvpResuelto || 0;
+        const fecha = venta.fecha?.slice(0, 10) || '';
+        
+        // 🎯 MEJORA: Usar early return para mejor performance
+        if (filtros.operador_id && (producto?.operador_id !== filtros.operador_id && venta.operador_id !== filtros.operador_id)) return false;
+        if (filtros.colaborador_id && venta.colaborador_id !== filtros.colaborador_id) return false;
+        if (filtros.zona_id && venta.zona_id !== filtros.zona_id) return false;
+        if (filtros.producto_id && venta.producto_id !== filtros.producto_id) return false;
+        if (filtros.desde && fecha < filtros.desde) return false;
+        if (filtros.hasta && fecha > filtros.hasta) return false;
+        if (filtros.mesAno && fecha.slice(0, 7) !== filtros.mesAno) return false;
+        if (filtros.estado && venta.estado !== filtros.estado) return false;
+        if (filtros.sinPvp && pvpValue > 0) return false;
+        if (filtros.montoMin && pvpValue < Number(filtros.montoMin)) return false;
+        if (filtros.montoMax && pvpValue > Number(filtros.montoMax)) return false;
+        
+        // 🎯 MEJORA: Búsqueda de texto mejorada (incluye nombres resueltos)
+        if (filtros.texto) {
+          const searchTerm = filtros.texto.toLowerCase();
+          const searchableText = [
+            venta.cliente,
+            venta.cif,
+            venta.numeracion,
+            venta.documento,
+            venta.productoNombre,     // 🎯 NUEVA
+            venta.colaboradorNombre, // 🎯 NUEVA
+            venta.zonaNombre,        // 🎯 NUEVA
+            venta.operadorNombre     // 🎯 NUEVA
+          ].join(' ').toLowerCase();
+          if (!searchableText.includes(searchTerm)) return false;
+        }
+        
+        return true;
+      });
+  }, [ventas, state, enrichVenta, indexers.productos]);
 
   // =================== ✅ FUNCIONES DE SELECCIÓN ===================
   
@@ -182,17 +365,22 @@ export function useVentasGestion(customFields = []) {
 
   // =================== ⚡ OPERACIONES CRUD ===================
   
-  // 🎯 MEJORA: Agregar venta con validación
+  // 🎯 MEJORA: Agregar venta con ID más legible
   const addVenta = useCallback((ventaData) => {
-    const id = `v_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    // 🎯 MEJORA: ID más legible para ventas
+    const clienteSlug = ventaData.cliente ? 
+      ventaData.cliente.slice(0, 8).replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : 
+      'cliente';
+    const timestamp = Date.now().toString().slice(-4); // Solo últimos 4 dígitos
+    const id = `venta_${clienteSlug}_${timestamp}`;
     
     // Separar campos personalizados
-    const customFields = {};
+    const customFieldsData = {};
     const standardFields = {};
     
     Object.entries(ventaData).forEach(([key, value]) => {
       if (key.startsWith('cf_')) {
-        customFields[key] = value;
+        customFieldsData[key] = value;
       } else {
         standardFields[key] = value;
       }
@@ -201,7 +389,7 @@ export function useVentasGestion(customFields = []) {
     const nuevaVenta = {
       id,
       ...standardFields,
-      customFields,
+      customFields: customFieldsData,
       pvp: Number(ventaData.pvp || 0),
       cantidad: Number(ventaData.cantidad || 1),
       fecha: ventaData.fecha || new Date().toISOString().slice(0, 10),
@@ -257,7 +445,7 @@ export function useVentasGestion(customFields = []) {
       clearSelection();
       return true;
     } catch (error) {
-      // LOG ELIMINADO
+      console.error('Error eliminando ventas:', error);
       return false;
     } finally {
       setState(prev => ({ ...prev, isProcessing: false }));
@@ -286,13 +474,12 @@ export function useVentasGestion(customFields = []) {
     );
   }, [setProductos]);
 
-  // =================== 📊 EXPORTACIÓN MEJORADA ===================
+  // =================== 📊 EXPORTACIÓN ===================
   
   const exportarDatos = useCallback((ventasCalc = null) => {
     setState(prev => ({ ...prev, isExporting: true }));
     
     const ventasToExport = ventasCalc || (state.selectedIds.length ? getSelectedVentas() : ventasFiltradas);
-    const { productos, colaboradores, zonas } = ventasData;
     
     try {
       // 🎯 MEJORA: Cabeceras dinámicas según campos personalizados
@@ -309,21 +496,22 @@ export function useVentasGestion(customFields = []) {
       const headers = [...baseHeaders, ...customHeaders];
 
       const datosExport = ventasToExport.map(venta => {
-        const producto = productos.find(p => p?.id === venta.producto_id);
-        const colaborador = colaboradores.find(c => c?.id === venta.colaborador_id);
-        const zona = zonas.find(z => z?.id === venta.zona_id);
-        const operador = operadores.find(op => op?.id === producto?.operador_id);
+        // 🎯 MEJORA: Usar nombres precalculados cuando están disponibles
+        const nombreProducto = venta.productoNombre || getNombreProducto(venta.producto_id);
+        const nombreColaborador = venta.colaboradorNombre || getNombreColaborador(venta.colaborador_id);
+        const nombreZona = venta.zonaNombre || getNombreZona(venta.zona_id);
+        const nombreOperador = venta.operadorNombre || getNombreOperador(venta.operador_id);
         
         // Datos base
         const row = {
           'Fecha': formatDate(venta.fecha),
           'Cliente': venta.cliente || '',
           'CIF': venta.cif || '',
-          'Producto': producto?.nombre || '',
-          'Colaborador': colaborador?.nombre || '',
-          'Zona': zona?.nombre || '',
-          'Operador': operador?.nombre || '',
-          'PVP': producto?.pvp || venta.pvp || 0,
+          'Producto': nombreProducto,
+          'Colaborador': nombreColaborador,
+          'Zona': nombreZona,
+          'Operador': nombreOperador,
+          'PVP': venta.pvpResuelto || venta.pvp || 0,
           'Cantidad': venta.cantidad || 1,
           'Comisión Base': venta._calc?.ok ? venta._calc.detalle.comBruta : 0,
           'Comisión Neta': venta._calc?.ok ? venta._calc.detalle.netoColab : 0,
@@ -373,12 +561,12 @@ export function useVentasGestion(customFields = []) {
       
       return true;
     } catch (error) {
-      // LOG ELIMINADO
+      console.error('Error en exportación:', error);
       return false;
     } finally {
       setState(prev => ({ ...prev, isExporting: false }));
     }
-  }, [state.selectedIds, ventasFiltradas, productos, colaboradores, zonas, operadores, customFields, getSelectedVentas]);
+  }, [state.selectedIds, ventasFiltradas, customFields, getSelectedVentas, getNombreProducto, getNombreColaborador, getNombreZona, getNombreOperador]);
 
   // =================== 🛠️ HELPERS Y VALIDACIONES ===================
   
@@ -394,6 +582,7 @@ export function useVentasGestion(customFields = []) {
     producto_id: productos[0]?.id || "",
     zona_id: zonas[0]?.id || "",
     colaborador_id: colaboradores[0]?.id || "",
+    operador_id: operadores[0]?.id || "",
     pvp: 0,
     cantidad: 1,
     estado: "PENDIENTE",
@@ -404,7 +593,7 @@ export function useVentasGestion(customFields = []) {
     observaciones: "",
   }), [productos, zonas, colaboradores, operadores]);
 
-  // =================== 📊 ESTADÍSTICAS CALCULADAS ===================
+  // =================== 📊 ESTADÍSTICAS CALCULADAS MEJORADAS ===================
   
   const stats = useMemo(() => {
     const hasActiveFilters = Object.values(state.filtros).some(v => 
@@ -427,15 +616,20 @@ export function useVentasGestion(customFields = []) {
       isProcessing: state.isProcessing,
       // 🎯 MEJORA: Métricas de negocio
       selectedValue: getSelectedVentas().reduce((sum, v) => {
-        const producto = productos.find(p => p.id === v.producto_id);
-        return sum + (producto?.pvp || v.pvp || 0);
+        return sum + (v.pvpResuelto || v.pvp || 0);
       }, 0),
       filteredValue: ventasFiltradas.reduce((sum, v) => {
-        const producto = productos.find(p => p.id === v.producto_id);
-        return sum + (producto?.pvp || v.pvp || 0);
+        return sum + (v.pvpResuelto || v.pvp || 0);
       }, 0),
+      // 🎯 NUEVAS: Estadísticas por entidad
+      entitiesCount: {
+        productos: productos.length,
+        colaboradores: colaboradores.length,
+        zonas: zonas.length,
+        operadores: operadores.length,
+      }
     };
-  }, [state, ventasFiltradas, ventas, productos, getSelectedVentas]);
+  }, [state, ventasFiltradas, ventas, productos, colaboradores, zonas, operadores, getSelectedVentas]);
 
   // =================== 📤 RETURN CONSOLIDADO ===================
   
@@ -472,6 +666,23 @@ export function useVentasGestion(customFields = []) {
     
     // 📊 EXPORTACIÓN
     exportarDatos,
+
+    // 🎯 NUEVAS: FUNCIONES DE RESOLUCIÓN
+    getNombreProducto,
+    getNombreColaborador,
+    getNombreZona,
+    getNombreOperador,
+    enrichVenta,
+    extractReadableName,
+
+    // 🎯 NUEVAS: DATOS PARA COMPONENTES
+    allData: {
+      productos,
+      colaboradores,
+      zonas,
+      operadores,
+    },
+    indexers,
   };
 }
 

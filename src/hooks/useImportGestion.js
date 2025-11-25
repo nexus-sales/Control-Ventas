@@ -20,15 +20,57 @@ const detectSeparator = (line) => {
   return counts[0][1] > 0 ? counts[0][0] : ",";
 };
 
-// Normalización para búsquedas case-insensitive
+// 🎯 MEJORA: Normalización mejorada para búsquedas case-insensitive
 const normalizeNameSearch = (name) => {
-  if (!name || typeof name !== "string") return name;
+  if (!name || typeof name !== "string") return "";
   return name
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/['`´']/g, "")
     .trim()
     .toUpperCase();
+};
+
+// 🎯 CORRECCIÓN CRÍTICA: Generador de IDs únicos sin duplicados
+let globalIdCounter = Date.now() % 10000; // Contador único basado en timestamp
+
+const generateReadableId = (prefix, name, existingIds = new Set()) => {
+  // Crear base legible del nombre
+  const nameBase = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .trim()
+    .replace(/\s+/g, '')
+    .toLowerCase()
+    .slice(0, 8); // Máximo 8 caracteres para dejar espacio
+
+  // SOLUCIÓN: Timestamp completo + contador incremental para garantizar unicidad
+  globalIdCounter += 1;
+  const now = Date.now();
+  const uniqueSuffix = `${now.toString().slice(-8)}_${globalIdCounter.toString().padStart(4, '0')}`;
+  
+  let candidateId = `${prefix}_${nameBase}_${uniqueSuffix}`;
+  
+  // Verificación adicional contra existingIds
+  let attempt = 1;
+  while (existingIds.has(candidateId)) {
+    candidateId = `${prefix}_${nameBase}_${uniqueSuffix}_${attempt}`;
+    attempt++;
+    if (attempt > 50) {
+      // Fallback extremo para casos raros
+      candidateId = `${prefix}_${nameBase}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      break;
+    }
+  }
+  
+  // Registrar el nuevo ID
+  existingIds.add(candidateId);
+  
+  // Log para debug (opcional)
+  console.log(`✅ ID único generado: ${candidateId}`);
+  
+  return candidateId;
 };
 
 // Helper para formatear fecha
@@ -48,41 +90,51 @@ const formatDate = (dateStr) => {
 };
 
 /**
- * Hook consolidado para gestión completa de importación y campos personalizados
- * Integra: importación Excel/CSV, campos personalizados dinámicos, exportación avanzada
+ * Hook CORREGIDO para gestión completa de importación
+ * 🎯 CORRECCIÓN PRINCIPAL: IDs legibles y únicos + Sin warnings ESLint
+ * Mantiene toda la funcionalidad existente pero con IDs comprensibles y únicos
  */
 export function useImportGestion({
-  modulo = "ventas", // Para campos personalizados
-  // onImportSuccess es referenciado por componentes externos, mantenemos compatibilidad
-  // eslint-disable-next-line no-unused-vars
-  onImportSuccess,
-  // Props adicionales para futura extensibilidad
-  // eslint-disable-next-line no-unused-vars
-  ...props
+  modulo = "ventas",
 } = {}) {
   // =================== CONTEXTO Y DATOS ===================
 
   const { 
-    // data no se usa directamente pero se mantiene para compatibilidad
-    // eslint-disable-next-line no-unused-vars
     data, 
     setVentas, 
     setProductos, 
     setOperadores, 
     setColaboradores, 
     setZonas, 
-    productos = [], 
-    operadores = [], 
-    colaboradores = [], 
-    zonas = [] 
   } = useData();
 
-  const autoCreacionDisponible = !!(
+  // 🎯 MEJORA: Memoizar datos para evitar warnings de ESLint
+  const productos = useMemo(() => 
+    Array.isArray(data?.productos) ? data.productos : [], 
+    [data?.productos]
+  );
+  
+  const operadores = useMemo(() => 
+    Array.isArray(data?.operadores) ? data.operadores : [], 
+    [data?.operadores]
+  );
+  
+  const colaboradores = useMemo(() => 
+    Array.isArray(data?.colaboradores) ? data.colaboradores : [], 
+    [data?.colaboradores]
+  );
+  
+  const zonas = useMemo(() => 
+    Array.isArray(data?.zonas) ? data.zonas : [], 
+    [data?.zonas]
+  );
+
+  const autoCreacionDisponible = useMemo(() => !!(
     setProductos &&
     setOperadores &&
     setColaboradores &&
     setZonas
-  );
+  ), [setProductos, setOperadores, setColaboradores, setZonas]);
 
   // =================== ESTADO CONSOLIDADO ===================
 
@@ -140,7 +192,7 @@ export function useImportGestion({
 
   useEffect(() => {
     loadCustomFields();
-  }, [modulo, loadCustomFields]);
+  }, [loadCustomFields]);
 
   const saveCustomFields = useCallback(
     (fields) => {
@@ -166,38 +218,49 @@ export function useImportGestion({
     [modulo]
   );
 
-  // =================== 📊 DATOS MEMOIZADOS ===================
+  // =================== 📊 DATOS MEMOIZADOS MEJORADOS ===================
 
   const indexers = useMemo(
-    () => ({
-      productos: {
-        byId: Object.fromEntries(productos.map((p) => [p.id, p])),
-        byName: Object.fromEntries(
-          productos.map((p) => [normalizeNameSearch(p.nombre), p])
-        ),
-      },
-      zonas: {
-        byId: Object.fromEntries(zonas.map((z) => [z.id, z])),
-        byName: Object.fromEntries(
-          zonas.map((z) => [normalizeNameSearch(z.nombre), z])
-        ),
-      },
-      colaboradores: {
-        byId: Object.fromEntries(colaboradores.map((c) => [c.id, c])),
-        byName: Object.fromEntries(
-          colaboradores.map((c) => [normalizeNameSearch(c.nombre), c])
-        ),
-      },
-      operadores: {
-        byId: Object.fromEntries(operadores.map((o) => [o.id, o])),
-        byName: Object.fromEntries(
-          operadores.map((o) => [normalizeNameSearch(o.nombre || ""), o])
-        ),
-        byCodigo: Object.fromEntries(
-          operadores.map((o) => [normalizeNameSearch(o.codigo || ""), o])
-        ),
-      },
-    }),
+    () => {
+      // 🎯 MEJORA: Seguimiento de IDs existentes para evitar duplicados
+      const allExistingIds = new Set([
+        ...productos.map(p => p.id),
+        ...colaboradores.map(c => c.id),
+        ...zonas.map(z => z.id),
+        ...operadores.map(o => o.id)
+      ]);
+
+      return {
+        productos: {
+          byId: Object.fromEntries(productos.map((p) => [p.id, p])),
+          byName: Object.fromEntries(
+            productos.map((p) => [normalizeNameSearch(p.nombre), p])
+          ),
+        },
+        zonas: {
+          byId: Object.fromEntries(zonas.map((z) => [z.id, z])),
+          byName: Object.fromEntries(
+            zonas.map((z) => [normalizeNameSearch(z.nombre), z])
+          ),
+        },
+        colaboradores: {
+          byId: Object.fromEntries(colaboradores.map((c) => [c.id, c])),
+          byName: Object.fromEntries(
+            colaboradores.map((c) => [normalizeNameSearch(c.nombre), c])
+          ),
+        },
+        operadores: {
+          byId: Object.fromEntries(operadores.map((o) => [o.id, o])),
+          byName: Object.fromEntries(
+            operadores.map((o) => [normalizeNameSearch(o.nombre || ""), o])
+          ),
+          byCodigo: Object.fromEntries(
+            operadores.map((o) => [normalizeNameSearch(o.codigo || ""), o])
+          ),
+        },
+        existingIds: allExistingIds, // 🎯 NUEVO: Para evitar duplicados
+      };
+    },
     [productos, operadores, colaboradores, zonas]
   );
 
@@ -229,10 +292,7 @@ export function useImportGestion({
     });
 
     return { total: rows.length, valid, invalid, warnings };
-  }, [
-    state,
-    indexers,
-  ]);
+  }, [state, indexers]);
 
   // =================== 📥 FUNCIONES DE CARGA DE ARCHIVOS ===================
 
@@ -391,16 +451,10 @@ export function useImportGestion({
         resolverNombres: state.resolverNombres,
       });
     },
-    [
-      state.rows,
-      state.mapping,
-      state.crearAutomaticamente,
-      state.resolverNombres,
-      indexers,
-    ]
+    [state, indexers]
   );
 
-  // =================== 📤 IMPORTACIÓN CONSOLIDADA ===================
+  // =================== 📤 IMPORTACIÓN CORREGIDA CON IDS LEGIBLES ===================
 
   const importarDatos = useCallback(
     async (modo = "normal") => {
@@ -413,15 +467,75 @@ export function useImportGestion({
         const erroresDetallados = [];
         let rechazadas = 0;
 
-        // Buffers para auto-creación
+        // 🎯 MEJORA: Buffers con IDs legibles y prevención de duplicados
         const productosToCreateByName = {};
         const zonasToCreateByName = {};
         const colaboradoresToCreateByName = {};
+        const operadoresToCreateByName = {};
 
         const productosNuevos = new Set();
         const zonasNuevas = new Set();
         const colaboradoresNuevos = new Set();
-        const operadoresNuevos = new Set(); // reservado por si más adelante creas operadores
+        const operadoresNuevos = new Set();
+
+        // 🎯 NUEVA: Helper para crear entidad con ID legible
+        const createEntityWithReadableId = (type, name, additionalData = {}) => {
+          const prefixMap = {
+            productos: 'prod',
+            colaboradores: 'colab',
+            zonas: 'zona',
+            operadores: 'oper'
+          };
+          
+          const newId = generateReadableId(
+            prefixMap[type], 
+            name, 
+            indexers.existingIds
+          );
+          
+          const baseData = {
+            id: newId,
+            nombre: name.trim(),
+            activo: true,
+          };
+
+          // Agregar datos específicos por tipo
+          switch(type) {
+            case 'colaboradores':
+              return {
+                ...baseData,
+                nivelId: 'NIVEL_COLABORADOR',
+                pct_colaborador_default: 0.15,
+                tipo_fiscal: 'Autónomo',
+                irpf_retencion: 'Exento',
+                ...additionalData
+              };
+            case 'productos':
+              return {
+                ...baseData,
+                codigo: name.slice(0, 10).toUpperCase(),
+                pvp: Number(additionalData.pvp || 50.0),
+                comision_tipo: 'porcentaje',
+                comision_valor: 15.0,
+                ...additionalData
+              };
+            case 'zonas':
+              return {
+                ...baseData,
+                descripcion: `Zona ${name}`,
+                ...additionalData
+              };
+            case 'operadores':
+              return {
+                ...baseData,
+                codigo: name.slice(0, 10).toUpperCase(),
+                sector: 'telefonia',
+                ...additionalData
+              };
+            default:
+              return { ...baseData, ...additionalData };
+          }
+        };
 
         for (let index = 0; index < state.rows.length; index++) {
           const row = state.rows[index];
@@ -453,13 +567,10 @@ export function useImportGestion({
           if (!colaborador_id && state.crearAutomaticamente) {
             const norm = normalizeNameSearch(colaboradorNombre);
             if (!colaboradoresToCreateByName[norm]) {
-              const newId = `c_${Date.now()}_${Math.random()
-                .toString(36)
-                .slice(2, 8)}`;
-              colaboradoresToCreateByName[norm] = {
-                id: newId,
-                nombre: colaboradorNombre,
-              };
+              colaboradoresToCreateByName[norm] = createEntityWithReadableId(
+                'colaboradores',
+                colaboradorNombre
+              );
               colaboradoresNuevos.add(colaboradorNombre);
             }
             colaborador_id = colaboradoresToCreateByName[norm].id;
@@ -471,10 +582,10 @@ export function useImportGestion({
           if (!zona_id && state.crearAutomaticamente && zonaNombre) {
             const norm = normalizeNameSearch(zonaNombre);
             if (!zonasToCreateByName[norm]) {
-              const newId = `zona_${Date.now()}_${Math.random()
-                .toString(36)
-                .slice(2, 8)}`;
-              zonasToCreateByName[norm] = { id: newId, nombre: zonaNombre };
+              zonasToCreateByName[norm] = createEntityWithReadableId(
+                'zonas',
+                zonaNombre
+              );
               zonasNuevas.add(zonaNombre);
             }
             zona_id = zonasToCreateByName[norm].id;
@@ -489,13 +600,13 @@ export function useImportGestion({
           if (!producto_id && state.crearAutomaticamente && productoNombre) {
             const norm = normalizeNameSearch(productoNombre);
             if (!productosToCreateByName[norm]) {
-              const newId = `prod_${Date.now()}_${Math.random()
-                .toString(36)
-                .slice(2, 8)}`;
-              productosToCreateByName[norm] = {
-                id: newId,
-                nombre: productoNombre,
-              };
+              productosToCreateByName[norm] = createEntityWithReadableId(
+                'productos',
+                productoNombre,
+                {
+                  pvp: Number(parseNumber(get("pvp")) || 50.0),
+                }
+              );
               productosNuevos.add(productoNombre);
             }
             producto_id = productosToCreateByName[norm].id;
@@ -507,6 +618,20 @@ export function useImportGestion({
           // -------- OPERADOR --------
           const operadorNombre = get("operador_id");
           let operador_id = resolveId(operadorNombre, indexers.operadores);
+          if (!operador_id && state.crearAutomaticamente && operadorNombre) {
+            const norm = normalizeNameSearch(operadorNombre);
+            if (!operadoresToCreateByName[norm]) {
+              operadoresToCreateByName[norm] = createEntityWithReadableId(
+                'operadores',
+                operadorNombre
+              );
+              operadoresNuevos.add(operadorNombre);
+            }
+            operador_id = operadoresToCreateByName[norm].id;
+          }
+          if (!operador_id && operadores[0]?.id) {
+            operador_id = operadores[0].id;
+          }
 
           if (!colaborador_id || !zona_id) {
             rechazadas++;
@@ -521,8 +646,12 @@ export function useImportGestion({
             continue;
           }
 
+          // 🎯 MEJORA: ID de venta también más legible
+          const clienteSlug = cliente.slice(0, 8).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          const ventaId = generateReadableId('venta', clienteSlug, indexers.existingIds);
+
           const ventaBase = {
-            id: `import_${Date.now()}_${index}`,
+            id: ventaId,
             fecha,
             cliente: cliente.slice(0, 255),
             cif: (get("cif") || "").slice(0, 20),
@@ -542,16 +671,16 @@ export function useImportGestion({
 
           // Campos personalizados
           if (state.customFields.length > 0) {
-            const customFields = {};
+            const customFieldsData = {};
             state.customFields.forEach((field) => {
               const fieldValue = get(`cf_${field.id}`) || get(field.nombre) || "";
               if (fieldValue) {
-                customFields[`cf_${field.id}`] = fieldValue;
+                customFieldsData[`cf_${field.id}`] = fieldValue;
               }
             });
 
-            if (Object.keys(customFields).length > 0) {
-              ventaBase.customFields = customFields;
+            if (Object.keys(customFieldsData).length > 0) {
+              ventaBase.customFields = customFieldsData;
             }
           }
 
@@ -571,8 +700,21 @@ export function useImportGestion({
           nuevasVentas.push(ventaFinal);
         }
 
-        // Auto-creación efectiva de entidades después del bucle
+        // 🎯 MEJORA: Auto-creación con orden correcto y mejor logging
         if (state.crearAutomaticamente && autoCreacionDisponible) {
+          console.log('🎯 Creando entidades con IDs legibles:', {
+            operadores: Object.keys(operadoresToCreateByName).length,
+            productos: Object.keys(productosToCreateByName).length,
+            zonas: Object.keys(zonasToCreateByName).length,
+            colaboradores: Object.keys(colaboradoresToCreateByName).length,
+          });
+
+          if (setOperadores && Object.keys(operadoresToCreateByName).length > 0) {
+            setOperadores((prev) => [
+              ...Object.values(operadoresToCreateByName),
+              ...prev,
+            ]);
+          }
           if (setProductos && Object.keys(productosToCreateByName).length > 0) {
             setProductos((prev) => [
               ...Object.values(productosToCreateByName),
@@ -596,13 +738,15 @@ export function useImportGestion({
           }
         }
 
-        // Guardar ventas
+        // Guardar ventas con delay para asegurar que las entidades se crearon
         if (nuevasVentas.length > 0 && setVentas) {
-          setVentas((prev) => {
-            const idsNuevas = new Set(nuevasVentas.map((v) => v.id));
-            const prevFiltrado = prev.filter((v) => !idsNuevas.has(v.id));
-            return [...nuevasVentas, ...prevFiltrado];
-          });
+          setTimeout(() => {
+            setVentas((prev) => {
+              const idsNuevas = new Set(nuevasVentas.map((v) => v.id));
+              const prevFiltrado = prev.filter((v) => !idsNuevas.has(v.id));
+              return [...nuevasVentas, ...prevFiltrado];
+            });
+          }, 200);
         }
 
         const resumen = {
@@ -614,18 +758,32 @@ export function useImportGestion({
           modo,
           timestamp: new Date().toISOString(),
 
-          // Resumen auto-creación
+          // 🎯 MEJORA: Resumen detallado con ejemplos de IDs legibles
           productosCreados: productosNuevos.size,
           productosNuevos: Array.from(productosNuevos),
+          productosIds: Object.values(productosToCreateByName).map(p => p.id),
           colaboradoresCreados: colaboradoresNuevos.size,
           colaboradoresNuevos: Array.from(colaboradoresNuevos),
+          colaboradoresIds: Object.values(colaboradoresToCreateByName).map(c => c.id),
           zonasCreadas: zonasNuevas.size,
           zonasNuevas: Array.from(zonasNuevas),
+          zonasIds: Object.values(zonasToCreateByName).map(z => z.id),
           operadoresCreados: operadoresNuevos.size,
           operadoresNuevos: Array.from(operadoresNuevos),
+          operadoresIds: Object.values(operadoresToCreateByName).map(o => o.id),
         };
 
         setState((prev) => ({ ...prev, resumenImportacion: resumen }));
+
+        // 🎯 NUEVO: Log de resultado para debug
+        console.log('✅ Importación completada con IDs legibles:', {
+          ventasCreadas: resumen.ventasCreadas,
+          ejemplosIds: {
+            productos: resumen.productosIds.slice(0, 3),
+            colaboradores: resumen.colaboradoresIds.slice(0, 3),
+            zonas: resumen.zonasIds.slice(0, 3),
+          }
+        });
 
         return resumen;
       } finally {
@@ -637,11 +795,13 @@ export function useImportGestion({
       indexers,
       zonas,
       productos,
+      operadores,
       setVentas,
       autoCreacionDisponible,
       setProductos,
       setZonas,
       setColaboradores,
+      setOperadores,
       resolveId,
     ]
   );
@@ -881,6 +1041,7 @@ export function useImportGestion({
     resolveId,
     normalizeNameSearch,
     formatDate,
+    generateReadableId,
   };
 }
 

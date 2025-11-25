@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/hooks';
+import { useAuth } from '../../context/AppContexts';
 import Loading from '../common/Loading';
 import AccessDeniedScreen from './AccessDeniedScreen';
 import { checkUserPermission } from '../../utils/accessControl';
