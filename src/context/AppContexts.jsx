@@ -56,6 +56,12 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(async () => {
     setUser(null);
+    // Limpiar datos sensibles del localStorage
+    localStorage.clear();
+    // Redirigir al login/inicio
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
     return { error: null };
   }, []);
 
