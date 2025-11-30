@@ -11,11 +11,11 @@ import { LoginRateLimit, formatTime } from '../../utils/authValidation';
 import '../../styles/login-animations.css';
 
 export default function LoginScreen() {
+      // ...existing code...
     const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isEmailValid, setIsEmailValid] = useState(false);
-  const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
@@ -29,6 +29,7 @@ export default function LoginScreen() {
   const [registerError, setRegisterError] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [nombre, setNombre] = useState('');
+  // ...existing code...
   const { login, registerUser } = useAuth();
 
   // Verificar rate limiting y cargar email recordado al cargar el componente
@@ -132,9 +133,16 @@ export default function LoginScreen() {
   }
 
   return (
-    <div className="login-bg min-h-screen flex items-center justify-center">
-      <Card className="w-full max-w-md mx-auto p-6 animate-fadeIn">
-        <SectionTitle>Acceso</SectionTitle>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 via-indigo-50 to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
+      {/* Elementos decorativos de fondo */}
+      <div className="absolute inset-0 opacity-10 dark:opacity-5">
+        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-500 rounded-full blur-3xl animate-pulse-slow"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-emerald-500 rounded-full blur-3xl animate-pulse-slow animate-delay-300"></div>
+        <div className="absolute top-3/4 left-3/4 w-24 h-24 bg-indigo-500 rounded-full blur-3xl animate-pulse-slow animate-delay-500"></div>
+      </div>
+
+      <Card className="w-full max-w-md mx-auto p-6 animate-fadeIn relative z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+        <SectionTitle className="text-gray-900 dark:text-gray-100">Acceso</SectionTitle>
         <form
           className="space-y-4"
           onSubmit={async (e) => {
@@ -193,8 +201,7 @@ export default function LoginScreen() {
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              disabled={isBlocked}
-              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 transition-colors duration-200"
+              className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-2 cursor-pointer"
             />
             <label 
               htmlFor="remember-me" 
@@ -208,7 +215,7 @@ export default function LoginScreen() {
           {remainingAttempts < 5 && remainingAttempts > 0 && !isBlocked && (
             <div className="text-orange-600 dark:text-orange-400 text-sm bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg border border-orange-200 dark:border-orange-800 animate-slideUp animate-pulse-slow">
               <div className="flex items-center">
-                <svg className="w-4 h-4 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-2 text-orange-500 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
                 Te quedan {remainingAttempts} intentos
@@ -220,7 +227,7 @@ export default function LoginScreen() {
           {isBlocked && (
             <div className="text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800 animate-slideUp animate-shake">
               <div className="flex items-center mb-2">
-                <svg className="w-4 h-4 mr-2 text-red-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-2 text-red-500 dark:text-red-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 Cuenta temporalmente bloqueada
@@ -235,7 +242,7 @@ export default function LoginScreen() {
           {error && (
             <div className="text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800 animate-shake animate-slideUp">
               <div className="flex items-center">
-                <svg className="w-4 h-4 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-2 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 {error}
@@ -250,20 +257,18 @@ export default function LoginScreen() {
                       try {
                         // Limpiar flag de modo offline
                         localStorage.removeItem('__app_offline_mode');
-                        // LOG ELIMINADO
                         
                         // Recargar la página
                         window.location.reload();
                       } catch (error) {
-                        // LOG ELIMINADO
                         alert('Error al intentar restaurar conectividad. Intenta recargar la página manualmente.');
                       }
                     }}
-                    className="w-full px-3 py-2 text-xs bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-colors duration-200 font-medium"
+                    className="w-full px-3 py-2 text-xs bg-yellow-500 dark:bg-yellow-600 hover:bg-yellow-600 dark:hover:bg-yellow-700 text-white rounded-lg transition-colors duration-200 font-medium"
                   >
                     🔧 Forzar Reconexión (Emergency Fix)
                   </button>
-                  <p className="text-xs text-red-500 mt-1 text-center">
+                  <p className="text-xs text-red-500 dark:text-red-400 mt-1 text-center">
                     Si el problema persiste, verifica tu conexión a internet
                   </p>
                 </div>
@@ -275,12 +280,12 @@ export default function LoginScreen() {
             type="submit"
             disabled={isSubmitting || isBlocked || !isEmailValid || !password.trim()}
             className={`
-              px-4 py-2 rounded-xl text-white font-medium transition-all duration-300 transform
+              w-full px-4 py-2 rounded-xl text-white font-medium transition-all duration-300 transform
               ${loginSuccess 
-                ? 'bg-green-600 scale-105 shadow-lg' 
+                ? 'bg-green-600 dark:bg-green-700 scale-105 shadow-lg' 
                 : (isSubmitting || isBlocked || !isEmailValid || !password.trim())
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 hover:scale-105 hover:shadow-lg focus:ring-2 focus:ring-blue-200'
+                  ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+                  : 'bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 hover:scale-105 hover:shadow-lg focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800'
               }
             `}
             aria-label="Entrar al sistema"
@@ -323,7 +328,7 @@ export default function LoginScreen() {
           {!showRegister && (
             <button
               type="button"
-              className="w-full mt-2 text-blue-600 hover:underline text-sm"
+              className="w-full mt-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline text-sm transition-colors duration-200"
               onClick={() => setShowRegister(true)}
             >
               ¿No tienes cuenta? Regístrate aquí
@@ -332,12 +337,12 @@ export default function LoginScreen() {
 
           {/* Formulario de registro */}
           {showRegister && (
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 animate-fadeIn">
-              <h3 className="text-lg font-semibold mb-2">Registro de usuario</h3>
+            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 animate-fadeIn">
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Registro de usuario</h3>
               <div className="mb-2">
                 <input
                   type="text"
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors duration-200"
                   placeholder="Nombre completo"
                   value={nombre}
                   onChange={e => setNombre(e.target.value)}
@@ -346,7 +351,7 @@ export default function LoginScreen() {
               <div className="mb-2">
                 <input
                   type="email"
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors duration-200"
                   placeholder="Email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -355,7 +360,7 @@ export default function LoginScreen() {
               <div className="mb-2">
                 <input
                   type="password"
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors duration-200"
                   placeholder="Contraseña"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -363,20 +368,24 @@ export default function LoginScreen() {
               </div>
               <button
                 type="button"
-                className="w-full bg-blue-600 text-white py-2 rounded mt-2 hover:bg-blue-700"
+                className="w-full bg-blue-600 dark:bg-blue-700 text-white py-2 rounded-lg mt-2 hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-200"
                 onClick={handleRegister}
               >
                 Registrar usuario
               </button>
               {registerError && (
-                <div className="text-red-600 text-sm mt-2">{registerError}</div>
+                <div className="text-red-600 dark:text-red-400 text-sm mt-2 bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800">
+                  {registerError}
+                </div>
               )}
               {registerSuccess && (
-                <div className="text-green-600 text-sm mt-2">Usuario registrado correctamente.</div>
+                <div className="text-green-600 dark:text-green-400 text-sm mt-2 bg-green-50 dark:bg-green-900/20 p-2 rounded border border-green-200 dark:border-green-800">
+                  Usuario registrado correctamente.
+                </div>
               )}
               <button
                 type="button"
-                className="w-full mt-2 text-gray-600 hover:underline text-xs"
+                className="w-full mt-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:underline text-xs transition-colors duration-200"
                 onClick={() => setShowRegister(false)}
               >
                 Cancelar

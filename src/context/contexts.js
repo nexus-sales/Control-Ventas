@@ -1,6 +1,8 @@
+// src/context/contexts.js
 import { createContext } from 'react';
 
-export const AuthContext = createContext();
-export const DataContext = createContext();
-export const ThemeContext = createContext();
-export const AppContext = createContext();
+// =================== CONTEXTOS ===================
+export const AuthContext = createContext(null);
+export const DataContext = createContext(null);
+export const ThemeContext = createContext(null);
+export const AppContext = createContext(null);

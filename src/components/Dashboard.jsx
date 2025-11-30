@@ -24,11 +24,19 @@ export default function Dashboard() {
   // const navigate = useNavigate(); // Eliminado: no se usa
   const { data, dataInitialized } = useData();
   
-  const ventas = Array.isArray(data?.ventas) ? data.ventas : [];
-  const productos = Array.isArray(data?.productos) ? data.productos : [];
-  const operadores = Array.isArray(data?.operadores) ? data.operadores : [];
-  const colaboradores = Array.isArray(data?.colaboradores) ? data.colaboradores : [];
-  const zonas = Array.isArray(data?.zonas) ? data.zonas : [];
+  // Filtrar solo datos "reales"
+  const ventas = Array.isArray(data?.ventas) ? data.ventas.filter(v => v._calc?.ok && !v.prueba && !v.duplicada) : [];
+  const productos = Array.isArray(data?.productos) ? data.productos.filter((p, idx, arr) => p.activo !== false && arr.findIndex(x => x.id === p.id) === idx) : [];
+  const operadores = Array.isArray(data?.operadores) ? data.operadores.filter((o, idx, arr) => o.activo !== false && arr.findIndex(x => x.id === o.id) === idx) : [];
+  const colaboradores = Array.isArray(data?.colaboradores) ? data.colaboradores.filter((c, idx, arr) => c.activo !== false && arr.findIndex(x => x.id === c.id) === idx) : [];
+  const zonas = Array.isArray(data?.zonas)
+    ? data.zonas.filter(
+        (z, idx, arr) =>
+          z.activo !== false &&
+          (z.nombre === 'Canarias' || z.nombre === 'Península') &&
+          arr.findIndex(x => x.nombre === z.nombre) === idx
+      )
+    : [];
 
   const total = ventas.length;
   const ventasCalculadas = ventas.filter(v => v._calc?.ok);

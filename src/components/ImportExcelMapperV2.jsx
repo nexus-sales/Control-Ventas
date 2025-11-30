@@ -271,7 +271,7 @@ export default function ImportExcelMapperV2({
         if (onImportSuccess) {
           try {
             await onImportSuccess(resultado);
-          } catch (reloadError) {
+          } catch {
             setToast({
               message:
                 "Importación exitosa, pero error recargando interfaz. Recarga la página.",
@@ -311,7 +311,7 @@ export default function ImportExcelMapperV2({
         if (onImportSuccess) {
           try {
             await onImportSuccess(resultado);
-          } catch (reloadError) {
+          } catch {
             setToast({
               message:
                 "Importación exitosa, pero error recargando interfaz. Recarga la página.",

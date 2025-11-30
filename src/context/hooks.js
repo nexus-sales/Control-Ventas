@@ -1,3 +1,4 @@
+// src/context/hooks.js
 import { useContext } from 'react';
 import { AuthContext, DataContext, ThemeContext, AppContext } from './contexts';
 
@@ -44,31 +45,30 @@ export const useAppContexts = () => {
     data,
     theme,
     app,
-    isReady: auth.isLogged && data.dataInitialized,
-    hasAccess: auth.hasAccess,
-    totalRecords: data.dataMetrics.totalRecords,
+    isReady: auth.isAuthenticated && data.dataInitialized,
+    hasAccess: auth.isAuthenticated,
+    totalRecords: Object.values(data.data).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0),
     debug: () => ({
       auth: {
-        isLogged: auth.isLogged,
-        userRole: auth.userRole,
-        permissions: Object.keys(auth.permissions).length
+        isAuthenticated: auth.isAuthenticated,
+        user: auth.user?.email || 'N/A'
       },
       data: {
         initialized: data.dataInitialized,
-        totalRecords: data.dataMetrics.totalRecords,
-        lastSync: data.lastSync
+        totalRecords: Object.values(data.data).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0),
+        collections: Object.keys(data.data).map(key => ({
+          name: key,
+          count: Array.isArray(data.data[key]) ? data.data[key].length : 0
+        }))
       },
       theme: {
         current: theme.isDark ? 'dark' : 'light',
-        preference: theme.themePreference,
-        customActive: theme.customTheme?.name
+        theme: theme.theme
       },
       app: {
         notifications: app.notifications.length,
-        globalLoading: app.globalLoading,
-        config: app.appConfig
-      },
-      metrics: app.getAppStats().metrics
+        isOnline: app.isOnline
+      }
     })
   };
 };

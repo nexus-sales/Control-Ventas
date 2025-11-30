@@ -12,7 +12,7 @@ import {
 // QUICK ACTIONS COMPONENT
 // ============================
 
-function QuickActionButton({ icon: Icon, label, onClick, color = "bg-sky-500", description }) {
+function QuickActionButton({ label, onClick, color = "bg-sky-500", description }) {
   return (
     <Tooltip.Root delayDuration={200}>
       <Tooltip.Trigger asChild>
@@ -111,7 +111,7 @@ export function QuickActions({ onNewVenta, onImportExcel, onExportData, onViewAn
 // QUICK STATS COMPONENT
 // ============================
 
-function StatCard({ icon: Icon, title, value, subtitle, trend, color = "text-slate-600", bgColor = "bg-slate-50" }) {
+function StatCard({ title, value, subtitle, trend, color = "text-slate-600", bgColor = "bg-slate-50" }) {
   // Descripciones para tooltips según el título
   const tooltipDescriptions = {
     'Facturación': 'Suma total facturada este mes, incluyendo todas las ventas registradas.',
@@ -231,7 +231,7 @@ export function QuickStats({ stats = [] }) {
 // SMART ALERTS COMPONENT
 // ============================
 
-function Alert({ type, icon: Icon, title, message, action, priority = 'normal' }) {
+function Alert({ type, title, message, action, priority = 'normal' }) {
   const styles = {
     error: 'bg-red-50 border-red-200 text-red-800',
     warning: 'bg-amber-50 border-amber-200 text-amber-800',
@@ -292,13 +292,7 @@ export function SmartAlerts({ alerts = [], maxVisible = 5 }) {
   const displayAlerts = alerts.length > 0 ? alerts.slice(0, maxVisible) : defaultAlerts;
 
   // Generar alertas inteligentes basadas en datos (esta lógica se puede expandir)
-  const generateSmartAlerts = useMemo(() => {
-    const smartAlerts = [];
-    
-    // Esta función se puede expandir para generar alertas basadas en datos reales
-    // Por ahora, retornamos las alertas proporcionadas o las por defecto
-    return displayAlerts;
-  }, [displayAlerts]);
+    const generateSmartAlerts = useMemo(() => displayAlerts, [displayAlerts]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">

@@ -1,3 +1,4 @@
+// src/context/constants.js
 import { THEME_CONFIG } from '../config/env';
 
 export const THEME_MODES = THEME_CONFIG.THEMES;

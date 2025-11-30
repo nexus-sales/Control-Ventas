@@ -32,44 +32,41 @@ function usePWAInstall() {
 
 export function Header() {
   const { installable, promptInstall } = usePWAInstall();
-  // ...existing code...
 
   return (
-    <header className="sticky top-0 z-10 bg-white/70 dark:bg-gray-900/70 backdrop-blur border-b border-slate-200 dark:border-gray-700 transition-colors duration-300">
+    <header className="sticky top-0 z-10 bg-white/70 dark:bg-gray-800/80 backdrop-blur border-b border-slate-200 dark:border-gray-700 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-2">
+        {/* Buscador */}
         <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-gray-700 rounded-xl flex-1 transition-colors duration-300">
           <Search className="w-4 h-4 text-gray-500 dark:text-gray-400" />
           <input
-            className="bg-transparent outline-none text-sm w-full text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+            className="bg-transparent outline-none text-sm w-full text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
             placeholder="Buscar… (Ctrl+/)"
           />
         </div>
         
+        {/* Botón de notificaciones */}
+        <button className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-gray-700 text-slate-600 dark:text-gray-400 transition-colors duration-200">
+          <Bell className="w-5 h-5" />
+        </button>
+        
         {/* Botón de dark mode */}
         <DarkModeToggle />
         
-        {/* Eliminado botón de sincronización Supabase */}
-        
+        {/* Botón de instalación PWA */}
         {installable && (
-          return (
-            <header className="w-full flex items-center justify-between px-4 py-2 border-b border-pink-200 dark:border-pink-400 bg-pink-50 dark:bg-pink-200">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={onToggleSidebar}
-                  className="p-2 rounded-lg hover:bg-pink-100 dark:hover:bg-pink-300"
-                >
-                  <Menu className="w-5 h-5 text-pink-700 dark:text-pink-900" />
-                </button>
-                <span className="font-bold text-pink-700 dark:text-pink-900">Control Ventas</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-pink-700 dark:text-pink-900">{user?.name}</span>
-                <button
-                  onClick={onLogout}
-                  className="px-3 py-1 rounded-lg bg-pink-200 hover:bg-pink-300 dark:bg-pink-400 dark:hover:bg-pink-500 text-pink-900 dark:text-pink-50"
-                >
-                  Salir
-                </button>
-              </div>
-            </header>
-          );
+          <button
+            onClick={promptInstall}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium transition-colors duration-200"
+            title="Instalar aplicación"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Instalar App</span>
+          </button>
+        )}
+      </div>
+    </header>
+  );
+}
+
+export default Header;

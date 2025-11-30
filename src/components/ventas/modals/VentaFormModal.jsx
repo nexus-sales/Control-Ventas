@@ -140,13 +140,7 @@ export function VentaFormModal({
   }, [productosData, resolveProductoName]);
 
   // 🎯 MEJORA: Detectar modo desarrollo de forma segura
-  const isDevMode = useMemo(() => {
-    try {
-      return typeof process !== 'undefined' && process.env?.NODE_ENV === 'development';
-    } catch {
-      return false;
-    }
-  }, []);
+  const isDevMode = useMemo(() => false, []);
 
   // 🎯 MEJORA: Log de debug para verificar datos (solo en desarrollo)
   useEffect(() => {

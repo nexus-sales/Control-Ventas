@@ -169,7 +169,7 @@ const ZonasSection = React.memo(({ zonas = [] }) => (
       </div>
     ) : (
       <div className="grid gap-3">
-        {zonas.map(zona => (
+        {Array.from(new Map(zonas.map(z => [z.nombre, z])).values()).map(zona => (
           <div key={zona.id} className="p-4 rounded-xl bg-slate-50 dark:bg-darkCard border border-slate-200 dark:border-darkAccent/30 hover:shadow-md transition-all">
             <div className="font-semibold text-slate-800 dark:text-darkText">{zona.nombre}</div>
             {zona.descripcion && (
@@ -457,7 +457,7 @@ export default function ConfigSections({ zonas = [] }) {
         const data = JSON.parse(raw);
         setEmpresa(data);
       }
-    } catch (error) {
+    } catch {
       // LOG ELIMINADO
     }
   }, []);
@@ -468,7 +468,7 @@ export default function ConfigSections({ zonas = [] }) {
       const newData = { ...prev, ...data };
       try {
         localStorage.setItem("empresaData", JSON.stringify(newData));
-      } catch (error) {
+      } catch {
         // LOG ELIMINADO
       }
       return newData;

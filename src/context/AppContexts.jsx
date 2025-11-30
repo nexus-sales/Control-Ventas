@@ -1,40 +1,26 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+// src/context/AppContexts.jsx
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
-// =================== CONTEXTOS ===================
-export const AuthContext = createContext(null);
-export const DataContext = createContext(null);
-export const ThemeContext = createContext(null);
-export const AppContext = createContext(null);
+// Importar contextos desde contexts.js
+import { AuthContext, DataContext, ThemeContext, AppContext } from './contexts';
 
-// =================== CONFIGURACIÓN ===================
-const AUTH_BYPASS = import.meta.env.VITE_AUTH_BYPASS === 'true';
+// Importar constantes y helpers
+import { AUTH_BYPASS, MOCK_USER } from '../constants';
+import { getFromStorage, saveToStorage } from '../utils/storage';
 
-const MOCK_USER = {
-  id: 'mock-user-id',
-  email: 'admin@test.com',
-  nombre: 'Usuario Admin',
-  rol: 'admin'
-};
-
-// =================== STORAGE HELPERS ===================
-const getFromStorage = (key, defaultValue = null) => {
-  try {
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : defaultValue;
-  } catch (error) {
-    console.error(`Error reading from localStorage (${key}):`, error);
-    return defaultValue;
-  }
-};
-
-const saveToStorage = (key, value) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-    return true;
-  } catch (error) {
-    console.error(`Error saving to localStorage (${key}):`, error);
-    return false;
-  }
+// =================== STORAGE KEYS (fuera del componente) ===================
+const STORAGE_KEYS = {
+  ventas: 'cv_ventas_v3',
+  colaboradores: 'cv_colaboradores_v3',
+  clientes: 'cv_clientes_v3',
+  productos: 'cv_productos_v3',
+  operadores: 'cv_operadores_v3',
+  zonas: 'cv_zonas_v3',
+  niveles: 'cv_niveles_v3',
+  reglas: 'cv_reglas_v3',
+  liquidaciones: 'cv_liquidaciones_v3',
+  decomisiones: 'cv_decomisiones_v3',
+  empresas: 'cv_empresas_v3'
 };
 
 // =================== 🔐 AUTH PROVIDER ===================
@@ -83,10 +69,10 @@ export function AuthProvider({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando autenticación...</p>
+          <p className="text-slate-600 dark:text-gray-400">Cargando autenticación...</p>
         </div>
       </div>
     );
@@ -119,21 +105,6 @@ export function DataProvider({ children }) {
   const [isDataLoading, setIsDataLoading] = useState(false);
   const initRef = useRef(false);
 
-  // Claves correctas que existen en localStorage después de la migración
-  const STORAGE_KEYS = {
-    ventas: 'cv_ventas_v3',
-    colaboradores: 'cv_colaboradores_v3',
-    clientes: 'cv_clientes_v3',
-    productos: 'cv_productos_v3',
-    operadores: 'cv_operadores_v3',
-    zonas: 'cv_zonas_v3',
-    niveles: 'cv_niveles_v3',
-    reglas: 'cv_reglas_v3',
-    liquidaciones: 'cv_liquidaciones_v3',
-    decomisiones: 'cv_decomisiones_v3',
-    empresas: 'cv_empresas_v3'
-  };
-
   // Función para cargar datos desde localStorage
   const loadAllData = useCallback(async () => {
     console.log('📊 DataProvider: Cargando datos...');
@@ -160,7 +131,7 @@ export function DataProvider({ children }) {
     } finally {
       setIsDataLoading(false);
     }
-  }, []);
+  }, []); // Sin dependencias porque STORAGE_KEYS es constante
 
   // Función para guardar una colección
   const saveCollectionData = useCallback((collection, newData) => {
@@ -171,7 +142,7 @@ export function DataProvider({ children }) {
     }
 
     return saveToStorage(key, newData);
-  }, []);
+  }, []); // Sin dependencias porque STORAGE_KEYS es constante
 
   // Setters para cada colección
   const createSetter = useCallback((collection) => {
@@ -358,47 +329,9 @@ export function AppContextProvider({ children }) {
   );
 }
 
-// =================== HOOKS ===================
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth debe ser usado dentro de AppContextProvider');
-  }
-  return context;
-};
+// =================== RE-EXPORTAR HOOKS ===================
+// Re-exportar hooks desde hooks.js para mantener compatibilidad
+export { useAuth, useData, useTheme, useApp, useAppContexts } from './hooks';
 
-export const useData = () => {
-  const context = useContext(DataContext);
-  if (!context) {
-    throw new Error('useData debe ser usado dentro de AppContextProvider');
-  }
-  return context;
-};
-
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme debe ser usado dentro de AppContextProvider');
-  }
-  return context;
-};
-
-export const useApp = () => {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp debe ser usado dentro de AppContextProvider');
-  }
-  return context;
-};
-
-export const useAppContexts = () => {
-  const auth = useAuth();
-  const data = useData();
-  const theme = useTheme();
-  const app = useApp();
-
-  return { auth, data, theme, app };
-};
-
-// =================== EXPORTS ===================
+// =================== DEFAULT EXPORT ===================
 export default AppContextProvider;

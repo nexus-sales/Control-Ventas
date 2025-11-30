@@ -9,7 +9,7 @@ import { useAuthGestion } from '../../hooks/useAuthGestion';
 // --- OfflineStatus Widget ---
 function OfflineStatus() {
   const { isOnline, pendingChanges, lastSyncTime, createEmergencyBackup, getOfflineInfo } = useOfflineSync();
-  const { offlineMode, offlineReason, activateOfflineMode, deactivateOfflineMode } = useAuthGestion();
+  const { offlineMode, offlineReason } = useAuthGestion();
   const [isExpanded, setIsExpanded] = useState(false);
   const offlineInfo = getOfflineInfo ? getOfflineInfo() : { storageSizeKB: 0 };
   const status = useMemo(() => {

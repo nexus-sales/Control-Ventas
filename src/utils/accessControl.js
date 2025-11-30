@@ -160,7 +160,7 @@ export class AccessRequestManager {
     try {
       const requests = localStorage.getItem(this.STORAGE_KEY);
       return requests ? JSON.parse(requests) : [];
-    } catch (error) {
+    } catch {
       // LOG ELIMINADO
       return [];
     }
@@ -186,7 +186,7 @@ export class AccessRequestManager {
         return true;
       }
       return false;
-    } catch (error) {
+    } catch {
       // LOG ELIMINADO
       return false;
     }
@@ -203,7 +203,7 @@ export class AccessRequestManager {
         return true;
       }
       return false;
-    } catch (error) {
+    } catch {
       // LOG ELIMINADO
       return false;
     }

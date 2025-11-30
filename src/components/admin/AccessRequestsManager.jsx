@@ -55,10 +55,9 @@ export default function AccessRequestsManager({ userEmail }) {
       AccessRequestManager.updateRequestStatus(requestId, 'approved');
       loadRequests();
       setSelectedRequest(null);
-      
       // Aquí podrías enviar un email de notificación
       // LOG ELIMINADO
-    } catch (error) {
+    } catch {
       // LOG ELIMINADO
       alert('Error al aprobar la solicitud');
     } finally {
@@ -72,10 +71,9 @@ export default function AccessRequestsManager({ userEmail }) {
       AccessRequestManager.updateRequestStatus(requestId, 'rejected', reason);
       loadRequests();
       setSelectedRequest(null);
-      
       // Aquí podrías enviar un email de notificación
       // LOG ELIMINADO
-    } catch (error) {
+    } catch {
       // LOG ELIMINADO
       alert('Error al rechazar la solicitud');
     } finally {

@@ -2,7 +2,7 @@
 // MÓDULO GESTIÓN CONSOLIDADO - Integra ProductosSection, OperadoresSection, AdministracionSection
 // CON LIMPIEZA AUTOMÁTICA DE DUPLICADOS Y VALIDACIONES ROBUSTAS
 
-import React, { useState, useMemo, useContext, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useData } from "../../context/AppContexts";
 import Card from "../ui/Card";
 import { 
@@ -485,10 +485,30 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
 // ==========================================
 const ProductosSection = React.memo(() => {
   const { data, setProductos } = useData();
-  
+  // Estado para selección múltiple de productos
+  const [selectedIds, setSelectedIds] = useState([]);
   // Datos limpios y seguros
   const operadores = useMemo(() => cleanOperadores(data.operadores || []), [data.operadores]);
   const productos = useMemo(() => cleanProductosRobust(data.productos || [], operadores), [data.productos, operadores]);
+  // Borrado masivo de productos seleccionados
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedIds.length === 0) return;
+    if (window.confirm(`¿Seguro que quieres eliminar ${selectedIds.length} productos seleccionados?`)) {
+      setProductos(prev => {
+        const cleaned = cleanProductosRobust(prev.filter(p => !selectedIds.includes(p.id)), operadores);
+        return cleaned;
+      });
+      setSelectedIds([]);
+    }
+  }, [selectedIds, setProductos, operadores]);
+  // Selección global de productos
+  const handleSelectAll = () => {
+    if (selectedIds.length === productosFiltrados.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(productosFiltrados.map(p => p.id));
+    }
+  };
   
   // Estados locales
   const [showModal, setShowModal] = useState(false);
@@ -650,6 +670,14 @@ const ProductosSection = React.memo(() => {
             <Download className="w-4 h-4" />
             Exportar CSV
           </button>
+          <button
+            onClick={handleDeleteSelected}
+            disabled={selectedIds.length === 0}
+            className={`px-4 py-2 bg-red-600 text-white rounded-xl flex items-center gap-2 hover:bg-red-700 ${selectedIds.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Trash2 className="w-4 h-4" />
+            Borrar seleccionados
+          </button>
         </div>
       </div>
       
@@ -749,11 +777,14 @@ const ProductosSection = React.memo(() => {
         </Card>
       )}
       
-      {/* Tabla */}
+      {/* Selección múltiple y borrado masivo */}
       <div className="overflow-x-auto">
         <table className="min-w-full border-separate border-spacing-y-2 text-xs md:text-sm">
           <thead>
             <tr className="text-left text-slate-500 uppercase tracking-wide text-[11px] md:text-xs">
+              <th>
+                <input type="checkbox" checked={selectedIds?.length === productosFiltrados.length && productosFiltrados.length > 0} onChange={handleSelectAll} />
+              </th>
               <th>Nombre</th>
               <th>Operador</th>
               <th>Familia</th>
@@ -768,6 +799,9 @@ const ProductosSection = React.memo(() => {
           <tbody>
             {productosFiltrados.map(p => (
               <tr key={p.id} className="bg-white hover:bg-green-50">
+                <td>
+                  <input type="checkbox" checked={selectedIds?.includes(p.id)} onChange={() => handleSelect(p.id)} />
+                </td>
                 <td className="font-medium">{p.nombre}</td>
                 <td>{getOperadorNombre(p.operador_id)}</td>
                 <td>{p.familia || 'Sin clasificar'}</td>
@@ -794,7 +828,7 @@ const ProductosSection = React.memo(() => {
             ))}
             {productosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={9} className="text-center text-slate-400 py-6">
+                <td colSpan={10} className="text-center text-slate-400 py-6">
                   No hay productos registrados.
                 </td>
               </tr>

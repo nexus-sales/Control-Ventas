@@ -43,10 +43,6 @@ export const detectarZonaPorCP = (codigoPostal) => {
 };
 export const esZonaValida = (zonaId) => Object.keys(ZONAS_FISCALES).includes(zonaId);
 export const getEstadisticasZonas = (ventas = []) => {
-  const stats = {
-    canarias: { ventas: 0, volumen: 0, impuestos: 0 },
-    peninsula: { ventas: 0, volumen: 0, impuestos: 0 }
-  };
-  // ... lógica de estadísticas ...
-  return stats;
+  // ...existing code...
 };
+// ...existing code...

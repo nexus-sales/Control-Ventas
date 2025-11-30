@@ -9,7 +9,7 @@ import { Header } from './Header';
  * - Área de contenido principal
  * Mejora la consistencia visual y facilita la gestión de layout global.
  */
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AppContexts';
 import { Home, BarChart3, Euro, Users, Settings, SlidersHorizontal } from 'lucide-react';

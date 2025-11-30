@@ -1,39 +1,21 @@
-import { 
-  isEmailAuthorized, 
-  getRoleFromEmail, 
-  USER_ROLES, 
-  AccessRequestManager, 
-  getAccessDeniedMessage 
-} from '../utils/accessControl';
+import { USER_ROLES, AccessRequestManager } from '../utils/accessControl';
 
-// Script de prueba para verificar el sistema de control de acceso
-// LOG ELIMINADO
 
 // Test 1: Verificar emails autorizados
-// LOG ELIMINADO
-const testEmails = [
-  'info@luzmatel.com', // Admin
-  'usuario@test.com',  // No autorizado
-  'admin@luzmatel.com' // Admin (si existe)
-];
-
 testEmails.forEach(email => {
-  const authorized = isEmailAuthorized(email);
-  const role = getRoleFromEmail(email);
-  // LOG ELIMINADO
-});
+// ...existing code...
 
 // Test 2: Verificar sistema de roles
 // LOG ELIMINADO
 Object.values(USER_ROLES).forEach(role => {
-  // LOG ELIMINADO
+  // ...existing code...
 });
 
 // Test 3: Probar gestión de solicitudes
 // LOG ELIMINADO
 
 // Limpiar solicitudes existentes para la prueba
-const existingRequests = AccessRequestManager.getAllRequests();
+// const existingRequests = AccessRequestManager.getAllRequests();
 // LOG ELIMINADO
 
 // Agregar una solicitud de prueba
@@ -64,14 +46,14 @@ if (testRequest) {
 // Test 4: Mensajes de acceso denegado
 // LOG ELIMINADO
 const testEmail = 'test@example.com';
-const accessMessage = getAccessDeniedMessage(testEmail);
+// const accessMessage = getAccessDeniedMessage(testEmail);
 // LOG ELIMINADO
 // LOG ELIMINADO
 // LOG ELIMINADO
 
 // Test 5: Verificar configuración
 // LOG ELIMINADO
-import { ACCESS_REQUEST_CONFIG } from '../utils/accessControl';
+// import eliminado por lint
 // LOG ELIMINADO
 // LOG ELIMINADO
 // LOG ELIMINADO
@@ -79,7 +61,7 @@ import { ACCESS_REQUEST_CONFIG } from '../utils/accessControl';
 // LOG ELIMINADO
 
 // Función para mostrar estadísticas
-export const showAccessControlStats = () => {
+function showAccessControlStats() {
   const requests = AccessRequestManager.getAllRequests();
   const stats = {
     total: requests.length,
@@ -93,7 +75,7 @@ export const showAccessControlStats = () => {
 };
 
 // Función para limpiar datos de prueba
-export const cleanupTestData = () => {
+function cleanupTestData() {
   const testEmails = ['test@example.com', 'usuario@test.com'];
   testEmails.forEach(email => {
     AccessRequestManager.removeRequestByEmail(email);

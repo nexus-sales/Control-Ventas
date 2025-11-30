@@ -93,6 +93,7 @@ export function VentaDetailModal({
               }`}
               onClick={() => setActiveTab('info')}
             >
+                const [activeTab, setActiveTab] = useState('info');
               Información
             </button>
             <button

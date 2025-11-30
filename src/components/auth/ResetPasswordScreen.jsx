@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// Eliminado: Supabase no se usa en modo local
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
 import PasswordInput from '../ui/PasswordInput';
@@ -13,7 +12,6 @@ export default function ResetPasswordScreen() {
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
 
   useEffect(() => {
     // Verificar si tenemos los parámetros necesarios para el reset
@@ -24,7 +22,6 @@ export default function ResetPasswordScreen() {
       setMessage('Enlace de recuperación inválido o expirado.');
       return;
     }
-    // Eliminado: lógica de Supabase, solo mostrar mensaje de no disponible
     setMessage('Funcionalidad de recuperación de contraseña no disponible en modo local.');
   }, [searchParams]);
 
@@ -45,7 +42,6 @@ export default function ResetPasswordScreen() {
     setMessage('');
 
     try {
-      // Eliminado: lógica de Supabase, solo mostrar mensaje de no disponible
       setMessage('Funcionalidad de actualización de contraseña no disponible en modo local.');
       setIsSuccess(false);
     } finally {
@@ -55,19 +51,19 @@ export default function ResetPasswordScreen() {
 
   const handlePasswordChange = (e) => {
     setPassword(e.target.value);
-    setMessage(''); // Limpiar mensaje al cambiar contraseña
+    setMessage('');
   };
 
   const handleConfirmPasswordChange = (e) => {
     setConfirmPassword(e.target.value);
-    setMessage(''); // Limpiar mensaje al cambiar confirmación
+    setMessage('');
   };
 
   return (
     <div className="min-h-screen grid place-items-center bg-gradient-to-b from-sky-50 to-emerald-50 dark:from-gray-900 dark:to-gray-800">
-      <Card>
+      <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <div className="text-center mb-6">
-          <SectionTitle>Nueva Contraseña</SectionTitle>
+          <SectionTitle className="text-gray-900 dark:text-gray-100">Nueva Contraseña</SectionTitle>
           <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
             Ingresa tu nueva contraseña
           </p>
@@ -93,19 +89,19 @@ export default function ResetPasswordScreen() {
                 className={`
                   w-full px-3 py-2 border rounded-xl transition-colors duration-200
                   ${confirmPassword && password !== confirmPassword
-                    ? 'border-red-500 focus:border-red-500 focus:ring-red-200'
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-200 dark:focus:ring-red-800'
                     : confirmPassword && password === confirmPassword
-                      ? 'border-green-500 focus:border-green-500 focus:ring-green-200'
-                      : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                      ? 'border-green-500 focus:border-green-500 focus:ring-green-200 dark:focus:ring-green-800'
+                      : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-200 dark:focus:ring-blue-800'
                   }
                   focus:outline-none focus:ring-2 focus:ring-opacity-50
-                  dark:bg-gray-800 dark:border-gray-600 dark:text-white
+                  bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
                 `}
                 required
               />
               
               {confirmPassword && password !== confirmPassword && (
-                <p className="text-red-500 text-sm flex items-center">
+                <p className="text-red-500 dark:text-red-400 text-sm flex items-center">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -114,7 +110,7 @@ export default function ResetPasswordScreen() {
               )}
               
               {confirmPassword && password === confirmPassword && (
-                <p className="text-green-500 text-sm flex items-center">
+                <p className="text-green-500 dark:text-green-400 text-sm flex items-center">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -140,8 +136,8 @@ export default function ResetPasswordScreen() {
               className={`
                 px-4 py-2 rounded-xl text-white font-medium transition-all duration-200
                 ${(!isPasswordValid || password !== confirmPassword || isSubmitting)
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-200'
+                  ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+                  : 'bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800'
                 }
               `}
             >
@@ -162,7 +158,7 @@ export default function ResetPasswordScreen() {
           <div className="w-80 text-center space-y-4">
             <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
               <div className="flex items-center justify-center mb-2">
-                <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-8 h-8 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>

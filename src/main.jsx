@@ -33,7 +33,7 @@ if ("serviceWorker" in navigator) {
       onRegisteredSW(swUrl, registration) {
         console.info("[PWA] Service worker registrado", swUrl, registration);
       },
-      onRegisterError(error) {
+      onRegisterError() {
         // LOG ELIMINADO
       },
     });

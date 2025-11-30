@@ -227,6 +227,12 @@ export function useAuthGestion(user = null) {
         message: 'Has cerrado sesión correctamente.'
       }
     }));
+    // Limpiar datos sensibles del localStorage
+    localStorage.clear();
+    // Redirigir al login/inicio
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
   }, []);
 
   // =================== 🔍 FUNCIONES DE VERIFICACIÓN ===================

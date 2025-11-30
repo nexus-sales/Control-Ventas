@@ -282,11 +282,7 @@ export function VentasTable({
   );
 
   const isDevMode = useMemo(() => {
-    try {
-      return typeof process !== 'undefined' && process.env?.NODE_ENV === 'development';
-    } catch {
-      return false;
-    }
+    return false;
   }, []);
 
   if (!hasValidData) {
@@ -327,7 +323,7 @@ export function VentasTable({
 
       {/* Paginación SUPERIOR */}
       {onPageChange && totalPages > 1 && (
-        <div className="mb-4 p-3 bg-slate-50 dark:bg-gray-700 rounded-lg">
+        <div className="mb-4 p-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
             {/* Información de registros */}
             <div className="text-slate-600 dark:text-gray-300">
@@ -631,7 +627,7 @@ export function VentasTable({
 
       {/* Información de debug SOLO en desarrollo */}
       {isDevMode && (
-        <div className="mt-4 p-2 bg-slate-50 dark:bg-gray-700 rounded text-xs text-slate-600 dark:text-gray-400">
+        <div className="mt-4 p-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded text-xs text-slate-600 dark:text-gray-400">
           <strong>Debug Info:</strong> Productos: {productos.length}, 
           Colaboradores: {colaboradores.length}, 
           Zonas: {zonas.length}, 
@@ -647,28 +643,30 @@ export function VentasTable({
 
       {/* Paginación inferior */}
       {onPageChange && totalPages > 1 && (
-        <div className="mt-4 flex justify-between items-center text-sm text-slate-600 dark:text-gray-300">
-          <div>
-            Mostrando {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalItems)} de {totalItems} ventas
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage <= 1}
-              className="px-3 py-1 border border-slate-300 dark:border-gray-600 rounded disabled:opacity-50 text-slate-700 dark:text-gray-200 hover:bg-slate-100 dark:hover:bg-gray-700"
-            >
-              Anterior
-            </button>
-            <span className="px-3 py-1 text-slate-700 dark:text-gray-200">
-              Página {currentPage} de {totalPages}
-            </span>
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage >= totalPages}
-              className="px-3 py-1 border border-slate-300 dark:border-gray-600 rounded disabled:opacity-50 text-slate-700 dark:text-gray-200 hover:bg-slate-100 dark:hover:bg-gray-700"
-            >
-              Siguiente
-            </button>
+        <div className="mt-4 p-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
+            <div className="text-slate-600 dark:text-gray-300">
+              Mostrando {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalItems)} de {totalItems} ventas
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-3 py-1 border border-slate-300 dark:border-gray-600 rounded disabled:opacity-50 text-slate-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-slate-100 dark:hover:bg-gray-600"
+              >
+                Anterior
+              </button>
+              <span className="px-3 py-1 text-slate-700 dark:text-gray-200">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className="px-3 py-1 border border-slate-300 dark:border-gray-600 rounded disabled:opacity-50 text-slate-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-slate-100 dark:hover:bg-gray-600"
+              >
+                Siguiente
+              </button>
+            </div>
           </div>
         </div>
       )}

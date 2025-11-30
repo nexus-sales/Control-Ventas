@@ -10,13 +10,11 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
     reason: '',
     email: email || ''
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [requestSent, setRequestSent] = useState(false);
+  const [isSubmitting] = useState(false);
+  const [requestSent] = useState(false);
 
   // Usar accessInfo si está disponible, sino usar el mensaje por defecto
   const accessMessage = accessInfo || getAccessDeniedMessage(email);
-
-    // Removed request form logic as it is not used in local mode
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -24,6 +22,11 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleRequestAccess = (e) => {
+    e.preventDefault();
+    // Implementación de solicitud de acceso
   };
 
   return (
@@ -35,7 +38,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
         <div className="absolute top-3/4 left-3/4 w-24 h-24 bg-yellow-500 rounded-full blur-3xl animate-pulse-slow animate-delay-500"></div>
       </div>
 
-      <Card className="animate-slideUp card-shadow hover-lift smooth-transition relative z-10 max-w-md">
+      <Card className="animate-slideUp card-shadow hover-lift smooth-transition relative z-10 max-w-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         {!showRequestForm && !requestSent ? (
           <div className="text-center">
             {/* Icono de acceso denegado */}
@@ -57,7 +60,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
             </p>
 
             {email && (
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg mb-6">
+              <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg mb-6 border border-gray-200 dark:border-gray-700">
                 <p className="text-xs text-gray-500 dark:text-gray-400">Email:</p>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{email}</p>
               </div>
@@ -67,7 +70,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
             <div className="space-y-3">
               <button
                 onClick={() => setShowRequestForm(true)}
-                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors duration-200 flex items-center justify-center"
+                className="w-full px-4 py-2 bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-xl transition-colors duration-200 flex items-center justify-center"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -90,7 +93,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
               {onRetry && (
                 <button
                   onClick={onRetry}
-                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors duration-200 mb-3"
+                  className="w-full px-4 py-2 bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-xl transition-colors duration-200 mb-3"
                 >
                   Intentar de Nuevo
                 </button>
@@ -99,7 +102,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
               {onBackToLogin && (
                 <button
                   onClick={onBackToLogin}
-                  className="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl transition-colors duration-200"
+                  className="w-full px-4 py-2 bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-xl transition-colors duration-200"
                 >
                   ← Volver al Login
                 </button>
@@ -109,7 +112,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
         ) : showRequestForm && !requestSent ? (
           <div>
             <div className="text-center mb-6">
-              <SectionTitle>Solicitar Acceso</SectionTitle>
+              <SectionTitle className="text-gray-900 dark:text-gray-100">Solicitar Acceso</SectionTitle>
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
                 Completa la información para solicitar acceso al sistema
               </p>
@@ -125,7 +128,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
                   name="email"
                   value={requestData.email}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white transition-colors duration-200"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors duration-200"
                   required
                   readOnly={!!email}
                 />
@@ -140,7 +143,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
                   name="name"
                   value={requestData.name}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white transition-colors duration-200"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors duration-200"
                   required
                 />
               </div>
@@ -154,7 +157,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
                   value={requestData.reason}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white transition-colors duration-200 resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors duration-200 resize-none"
                   placeholder="Describe por qué necesitas acceso al sistema..."
                   required
                 />
@@ -164,7 +167,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl transition-colors duration-200 flex items-center justify-center"
+                  className="flex-1 px-4 py-2 bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-blue-400 dark:disabled:bg-blue-800 text-white rounded-xl transition-colors duration-200 flex items-center justify-center"
                 >
                   {isSubmitting ? (
                     <>
@@ -182,7 +185,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
                 <button
                   type="button"
                   onClick={() => setShowRequestForm(false)}
-                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl transition-colors duration-200"
+                  className="px-4 py-2 bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-xl transition-colors duration-200"
                 >
                   Cancelar
                 </button>
@@ -208,7 +211,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
               Tu solicitud de acceso ha sido enviada correctamente. El administrador la revisará y te contactará pronto.
             </p>
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-6">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-6 border border-blue-200 dark:border-blue-800">
               <p className="text-sm text-blue-700 dark:text-blue-300">
                 <strong>Próximos pasos:</strong><br />
                 1. El administrador revisará tu solicitud<br />
@@ -221,7 +224,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
               {onRetry && (
                 <button
                   onClick={onRetry}
-                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors duration-200"
+                  className="w-full px-4 py-2 bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-xl transition-colors duration-200"
                 >
                   Intentar de Nuevo
                 </button>
@@ -230,7 +233,7 @@ export default function AccessDeniedScreen({ email, accessInfo, onRetry, onBackT
               {onBackToLogin && (
                 <button
                   onClick={onBackToLogin}
-                  className="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl transition-colors duration-200"
+                  className="w-full px-4 py-2 bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-xl transition-colors duration-200"
                 >
                   ← Volver al Login
                 </button>

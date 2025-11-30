@@ -15,7 +15,7 @@ export default function ImportExcelMapperWrapper() {
   } = useData();
 
   // Callback de éxito: fuerza recarga global de datos tras importar
-  const onImportSuccess = async (result) => {
+    const onImportSuccess = async () => {
     if (typeof refreshData === 'function') {
       await refreshData();
     }

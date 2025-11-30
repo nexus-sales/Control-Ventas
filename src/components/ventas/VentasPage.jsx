@@ -42,7 +42,7 @@ export default function VentasPage() {
   // Hook consolidado de gestión de ventas
   const {
     // Datos desde allData
-    allData: { productos, colaboradores, zonas, operadores },
+    allData: { productos, colaboradores, zonas },
     // Operaciones CRUD
     addVenta,
     updateVenta,
@@ -132,7 +132,7 @@ export default function VentasPage() {
             reglas: entidadesSafe.reglas,
           }),
         };
-      } catch (error) {
+      } catch {
         // LOG ELIMINADO
         return {
           ...venta,
@@ -140,7 +140,7 @@ export default function VentasPage() {
           zonaNombre: venta?.zona_id || '',
           colaboradorNombre: venta?.colaborador_id || '',
           operadorNombre: venta?.operador_id || '',
-          _calc: { ok: false, error: error.message },
+          _calc: { ok: false },
         };
       }
     });
@@ -183,7 +183,7 @@ export default function VentasPage() {
         if (venta?._calc?.ok) {
           comisionesTotal += venta._calc.detalle?.comBruta || 0;
         }
-      } catch (error) {
+      } catch {
         // LOG ELIMINADO
       }
     });
@@ -291,12 +291,18 @@ export default function VentasPage() {
     
     // Procesar parámetros de filtros
     for (const [key, value] of params.entries()) {
-      if (key === 'estado' || key === 'colaborador' || key === 'zona') {
-        filtrosUrl[key] = value.split(',');
-      } else if (key === 'sinPvp') {
-        filtrosUrl[key] = value === 'true';
-      } else if (key !== 'titulo') {
-        filtrosUrl[key] = value;
+      // Mapear claves de la URL a las esperadas por el estado de filtros
+      let filtroKey = key;
+      if (key === 'operador') filtroKey = 'operador_id';
+      if (key === 'colaborador') filtroKey = 'colaborador_id';
+      if (key === 'zona') filtroKey = 'zona_id';
+      // Asignar como string para selects
+      if (['estado', 'colaborador_id', 'operador_id', 'zona_id', 'producto_id'].includes(filtroKey)) {
+        filtrosUrl[filtroKey] = value;
+      } else if (filtroKey === 'sinPvp') {
+        filtrosUrl[filtroKey] = value === 'true';
+      } else if (filtroKey !== 'titulo') {
+        filtrosUrl[filtroKey] = value;
       }
     }
     

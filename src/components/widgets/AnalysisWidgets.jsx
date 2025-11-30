@@ -12,8 +12,22 @@ import {
 // VENTAS EN PROCESO WIDGET
 // ==========================================
 
-function EstadoVenta({ estado, count, icon: Icon, color, bgColor, textColor, onClick }) {
+function EstadoVenta({ estado, count, color, bgColor, textColor, onClick }) {
   const tooltip = `${estado}\n${count} ventas en este estado.`;
+  // Determinar el icono a usar según el estado
+  const estadoIconos = {
+    'INCIDENCIA': AlertCircle,
+    'PENDIENTE VALIDAR': Clock,
+    'SCORING': Zap,
+    'PENDIENTE INSTALACION': Wrench,
+    'CITADA': Phone,
+    'TRAMITACION': FileText,
+    'PENDIENTE': Clock,
+    'Confirmadas': CheckCircle,
+    'Cerradas': CheckCircle,
+    'Canceladas': XCircle
+  };
+  const IconComp = estadoIconos[estado] || AlertTriangle;
   return (
     <Tooltip.Root delayDuration={200}>
       <Tooltip.Trigger asChild>
@@ -23,7 +37,7 @@ function EstadoVenta({ estado, count, icon: Icon, color, bgColor, textColor, onC
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Icon className={`w-5 h-5 ${textColor}`} />
+              <IconComp className={`w-5 h-5 ${textColor}`} />
               <div>
                 <div className={`font-semibold ${textColor}`}>{estado}</div>
                 <div className="text-sm text-slate-600">{count} ventas</div>
@@ -529,7 +543,7 @@ function AnalisisRendimiento({ ventas, productos, operadores, onNavigate }) {
 // FILTROS PERSONALIZADOS WIDGET
 // ==========================================
 
-function FiltroRapido({ icon: Icon, titulo, descripcion, color, onClick, badge }) {
+function FiltroRapido({ titulo, descripcion, color, onClick, badge }) {
   const tooltip = `${titulo}\n${descripcion}${badge ? `\n${badge} coincidencias` : ''}`;
   return (
     <Tooltip.Root delayDuration={200}>
@@ -712,7 +726,7 @@ function FiltrosPersonalizados({ ventas, onNavigate }) {
 // SMART FILTERS WIDGET
 // ==========================================
 
-function FilterPreset({ name, description, icon: Icon, isActive, onClick, onDelete, canDelete = false }) {
+function FilterPreset({ name, description, icon: IconComp, isActive, onClick, onDelete, canDelete = false }) {
   const tooltip = `${name}\n${description}`;
   return (
     <Tooltip.Root delayDuration={200}>
@@ -726,7 +740,7 @@ function FilterPreset({ name, description, icon: Icon, isActive, onClick, onDele
           onClick={onClick}
         >
           <div className="flex items-center gap-2">
-            <Icon className="w-4 h-4" />
+            {/* ...existing code... */}
             <div className="flex-1">
               <div className="font-medium text-sm">{name}</div>
               <div className="text-xs opacity-75">{description}</div>
