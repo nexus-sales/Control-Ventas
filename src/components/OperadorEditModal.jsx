@@ -53,8 +53,8 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
       return;
     }
 
-    // Si no existe id, será null para que el padre genere uno
-    let operadorId = draft.id || null;
+    // Si no existe id, generamos uno único (UUID simple)
+    let operadorId = draft.id || `op-${Date.now()}-${Math.floor(Math.random()*10000)}`;
 
     const cleanedData = {
       ...draft,
@@ -71,7 +71,6 @@ export default function OperadorEditModal({ operador, onSave, onClose }) {
       }
     };
 
-    // LOG ELIMINADO
     onSave(cleanedData, true);
   };
 
