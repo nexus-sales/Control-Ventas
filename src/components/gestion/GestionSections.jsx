@@ -302,10 +302,13 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
   
   const handleSave = useCallback(() => {
     if (!validate()) return;
-    
+
+    // Generar id único si no existe
+    let operadorId = form.id || `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
     const cleanForm = {
       ...form,
-      id: form.id || `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: operadorId,
       nombre: form.nombre.trim(),
       codigo: form.codigo?.trim().toUpperCase() || '',
       reglas_decomision: {
@@ -315,9 +318,10 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
       },
       fecha_actualizacion: new Date().toISOString()
     };
-    
-    onSave(cleanForm);
-    onClose();
+
+    // Guardar y cerrar
+    onSave(cleanForm, true);
+    setTimeout(() => { onClose(); }, 100); // Pequeño delay para asegurar persistencia visual
   }, [form, validate, onSave, onClose]);
 
   return (
