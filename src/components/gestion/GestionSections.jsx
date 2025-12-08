@@ -17,12 +17,12 @@ import { saveAs } from "file-saver";
 
 // Limpieza robusta de operadores
 const cleanOperadores = (operadores = []) => {
+  // Solo filtrar si hay duplicados exactos de id
   const seen = new Set();
   return operadores.filter(op => {
     if (!op?.id || !op?.nombre) return false;
-    const key = `${op.nombre.toLowerCase().trim()}_${op.sector || 'sin-sector'}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
+    if (seen.has(op.id)) return false;
+    seen.add(op.id);
     return true;
   });
 };
@@ -301,7 +301,10 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
   }, [form]);
   
   const handleSave = useCallback(() => {
-    if (!validate()) return;
+    if (!validate()) {
+      alert('Validación fallida. Revisa los campos.');
+      return;
+    }
 
     // Generar id único si no existe
     let operadorId = form.id || `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -318,6 +321,10 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
       },
       fecha_actualizacion: new Date().toISOString()
     };
+
+    // LOG VISUAL Y DE CONSOLA
+    alert('Guardando operador: ' + JSON.stringify(cleanForm, null, 2));
+    console.log('Guardando operador:', cleanForm);
 
     // Guardar y cerrar
     onSave(cleanForm, true);
@@ -946,18 +953,29 @@ const OperadoresSection = React.memo(() => {
   const handleSave = useCallback((operadorData) => {
     if (operadorExists(operadorData.nombre, operadorData.id)) {
       setError(`Ya existe un operador con el nombre "${operadorData.nombre}"`);
+      alert('Ya existe un operador con ese nombre.');
       return;
     }
-    
+
+    // LOG VISUAL Y DE CONSOLA
+    alert('onSave recibido en GestionSections: ' + JSON.stringify(operadorData, null, 2));
+    console.log('onSave recibido en GestionSections:', operadorData);
+
     if (operadorData.id) {
       setOperadores(prev => {
         const cleaned = cleanOperadores(prev);
-        return cleaned.map(o => o.id === operadorData.id ? operadorData : o);
+        const result = cleaned.map(o => o.id === operadorData.id ? operadorData : o);
+        alert('setOperadores (edit): ' + JSON.stringify(result, null, 2));
+        console.log('setOperadores (edit):', result);
+        return result;
       });
     } else {
       setOperadores(prev => {
         const cleaned = cleanOperadores(prev);
-        return [...cleaned, operadorData];
+        const result = [...cleaned, operadorData];
+        alert('setOperadores (new): ' + JSON.stringify(result, null, 2));
+        console.log('setOperadores (new):', result);
+        return result;
       });
     }
     setError("");
