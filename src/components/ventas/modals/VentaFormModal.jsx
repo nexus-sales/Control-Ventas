@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Edit3, X, Save, Euro, Percent, AlertCircle, CheckCircle } from 'lucide-react';
 import { SECTORES, FAMILIAS_POR_SECTOR } from '../../../utils/constants';
-import { useImportGestion } from '../../../hooks/useImportGestion';
+import { getColaboradorComision } from '../../../utils/calculos';
 
 // Estados válidos para ventas
 const ESTADOS_VALIDOS = [
@@ -22,165 +22,317 @@ const ESTADOS_VALIDOS = [
   "BAJA",
 ];
 
-/**
- * 🎯 MODAL CORREGIDO para crear y editar ventas
- * CORRECCIONES: Dropdowns funcionales, mejor resolución de entidades, validaciones mejoradas, sin warnings ESLint
- */
-export function VentaFormModal({ 
-  isOpen, 
-  onClose, 
+const normalizeFactor = (valor) => {
+  if (valor === null || valor === undefined) return null;
+  const numeric = Number(valor);
+  if (!isFinite(numeric) || numeric <= 0) return null;
+  return numeric > 1 ? numeric / 100 : numeric;
+};
+
+const resolveColaboradorFactorForProduct = (colaborador, producto) => {
+  if (!colaborador || !producto) return null;
+  const sector = producto.sector ? String(producto.sector).toUpperCase() : '';
+
+  if (sector === 'TELEFONIA') {
+    const factorTelefonia = normalizeFactor(
+      colaborador.pctTelefonia ?? colaborador.comisionFactorBase ?? colaborador.pct_colaborador_default
+    );
+    if (factorTelefonia !== null) return factorTelefonia;
+  }
+
+  if (sector === 'ENERGIA') {
+    const factorEnergia = normalizeFactor(
+      colaborador.pctEnergia ?? colaborador.comisionFactorBase ?? colaborador.pct_colaborador_default
+    );
+    if (factorEnergia !== null) return factorEnergia;
+  }
+
+  const fallback = normalizeFactor(
+    colaborador.comisionFactorBase ?? colaborador.pct_colaborador_default ?? colaborador.pct_telefonia
+  );
+
+  return fallback;
+};
+
+const pickComisionSnapshot = (producto, fechaVenta) => {
+  const lista = Array.isArray(producto?.comisiones_historial) ? [...producto.comisiones_historial] : [];
+  if (!lista.length) return { snap: null, vigenciaOK: (!producto?.comision_vigencia_desde || fechaVenta >= producto.comision_vigencia_desde) && (!producto?.comision_vigencia_hasta || fechaVenta <= producto.comision_vigencia_hasta) };
+
+  const normalizadas = lista
+    .map((item) => ({
+      ...item,
+      desde: item.desde || item.comision_vigencia_desde || '',
+      hasta: item.hasta || item.comision_vigencia_hasta || '',
+    }))
+    .sort((a, b) => (b.desde || '').localeCompare(a.desde || ''));
+
+  const match = normalizadas.find((item) =>
+    (!item.desde || fechaVenta >= item.desde) && (!item.hasta || fechaVenta <= item.hasta)
+  );
+
+  const chosen = match || normalizadas[0];
+  const vigenciaOK = (!chosen.desde || fechaVenta >= chosen.desde) && (!chosen.hasta || fechaVenta <= chosen.hasta);
+  return { snap: chosen, vigenciaOK };
+};
+
+const computeComisionProducto = (producto, formData) => {
+  if (!producto) {
+    return { base: 0, tipo: 'porcentaje', vigenciaOK: true, origen: 'sin producto' };
+  }
+
+  const fechaVenta = formData?.fecha || new Date().toISOString().slice(0, 10);
+  const { snap, vigenciaOK: vigenciaHist } = pickComisionSnapshot(producto, fechaVenta);
+  const ref = snap || producto;
+  const sector = ref.sector ? String(ref.sector).toUpperCase() : (producto.sector ? String(producto.sector).toUpperCase() : '');
+
+  let tipo = ref.comision_tipo || (ref.comision_porcentaje ? 'porcentaje' : 'fijo');
+  let base = ref.comision_valor || ref.comision_fija || ref.comision_porcentaje || 0;
+  let origen = snap ? 'historial' : 'base producto';
+  let vigenciaOK = snap ? vigenciaHist : (
+    (!ref.comision_vigencia_desde || fechaVenta >= ref.comision_vigencia_desde) &&
+    (!ref.comision_vigencia_hasta || fechaVenta <= ref.comision_vigencia_hasta)
+  );
+
+  if (sector === 'TELEFONIA') {
+    const clienteTipo = (formData?.cliente_tipo || 'NUEVO').toUpperCase();
+    const tipoActivacion = (formData?.tipo_activacion || 'ALTA').toUpperCase();
+
+    const candidataCliente = clienteTipo === 'NUEVO'
+      ? ref.comision_cliente_nuevo
+      : ref.comision_cliente_existente;
+
+    const candidataActivacion = tipoActivacion === 'PORTABILIDAD'
+      ? ref.comision_portabilidad
+      : ref.comision_alta_nueva;
+
+    const candidatos = [
+      candidataActivacion,
+      candidataCliente,
+      ref.comision_valor,
+      ref.comision_fija,
+      ref.comision_porcentaje,
+    ];
+
+    const firstDefined = candidatos.find(v => v !== null && v !== undefined && v !== '');
+    if (firstDefined !== undefined) {
+      base = Number(firstDefined) || 0;
+      origen = 'telefonia';
+    }
+  }
+
+  if (sector === 'ENERGIA' || sector === 'SEGURIDAD') {
+    base = ref.comision_valor || ref.comision_fija || ref.comision_porcentaje || base;
+    tipo = ref.comision_tipo || tipo;
+    origen = snap ? 'historial' : 'vigencia producto';
+  }
+
+  return { base, tipo, vigenciaOK, origen };
+};
+export function VentaFormModal({
+  isOpen,
+  onClose,
   onSave,
-  venta = null, // null = New, objeto = Edit
-  createInitialDraft,
-  productos = [],
-  operadores = [],
+  venta,
   colaboradores = [],
   zonas = [],
-  // 🎯 NUEVAS: Props para helpers de resolución del hook
-  resolveProductoName,
+  operadores = [],
+  productos = [],
+  niveles = [],
+  customFields = [],
+  createInitialDraft,
   resolveColaboradorName,
   resolveZonaName,
   resolveOperadorName,
+  resolveProductoName
 }) {
-  // Estado para cambios sin guardar y envío
-  const [isDirty, setIsDirty] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Obtener campos personalizados del módulo ventas
-  const { customFields = [] } = useImportGestion({ modulo: "ventas" });
-
-  // =================== ESTADO Y CONFIGURACIÓN ===================
-
-  // Determinar si es modo edición
-  const isEditing = useMemo(() => !!venta, [venta]);
-
-  // Estado del formulario SIEMPRE inicializado
+  // Estado principal del formulario
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 🎯 MEJORA: Memoizar arrays de datos para evitar warnings
+  // Detectar si es edición o alta
+  const isEditing = !!(venta && venta.id);
+
+  // Memoizar arrays de datos
   const productosData = useMemo(() => productos || [], [productos]);
   const operadoresData = useMemo(() => operadores || [], [operadores]);
   const colaboradoresData = useMemo(() => colaboradores || [], [colaboradores]);
   const zonasData = useMemo(() => zonas || [], [zonas]);
+  const nivelesData = useMemo(() => niveles || [], [niveles]);
 
-  // 🎯 MEJORA: Filtrar y preparar colaboradores asegurando que tengan nombre
-  const colaboradoresDisponibles = useMemo(() => {
-    if (!Array.isArray(colaboradoresData) || colaboradoresData.length === 0) {
-      console.warn('VentaFormModal: No se recibieron colaboradores o array vacío');
-      return [];
-    }
-
-    return colaboradoresData
-      .filter(c => {
-        // Verificar que tenga ID y nombre
-        if (!c?.id) {
-          console.warn('Colaborador sin ID:', c);
-          return false;
-        }
-        
-        // Intentar obtener el nombre usando diferentes métodos
-        const nombre = c.nombre || 
-                      (resolveColaboradorName ? resolveColaboradorName(c.id) : null) ||
-                      c.id; // Usar ID como fallback
-        
-        return nombre && nombre.trim().length > 0;
-      })
-      .map(c => ({
-        ...c,
-        // Normalizar nombre para el dropdown
-        nombreDisplay: c.nombre || 
-                      (resolveColaboradorName ? resolveColaboradorName(c.id) : null) ||
-                      c.id,
-      }))
-      .sort((a, b) => a.nombreDisplay.localeCompare(b.nombreDisplay));
-  }, [colaboradoresData, resolveColaboradorName]);
-
-  // 🎯 MEJORA: Filtrar y preparar otros datos también
+  // Filtrar y preparar zonas asegurando que tengan nombre
   const zonasDisponibles = useMemo(() => {
-    if (!Array.isArray(zonasData)) return [];
-    
-    return zonasData
-      .filter(z => z?.id && (z.nombre || z.id))
-      .map(z => ({
-        ...z,
-        nombreDisplay: z.nombre || 
-                      (resolveZonaName ? resolveZonaName(z.id) : null) ||
-                      z.id,
+    if (!Array.isArray(zonasData) || zonasData.length === 0) return [];
+
+    const normalizeKey = (value) =>
+      value
+        ? value
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9]+/g, ' ')
+            .trim()
+            .toLowerCase()
+        : '';
+
+    const uniqueMap = new Map();
+
+    zonasData.forEach((zona) => {
+      if (!zona?.id) return;
+      const resolvedName = zona.nombre || (resolveZonaName ? resolveZonaName(zona.id) : '') || zona.id;
+      const keyBase = normalizeKey(resolvedName);
+      const codePart = zona.codigo ? `|${zona.codigo.toLowerCase()}` : '';
+      const mapKey = keyBase ? `${keyBase}${codePart}` : zona.id.toLowerCase();
+      if (!uniqueMap.has(mapKey)) {
+        uniqueMap.set(mapKey, { zona, resolvedName });
+      }
+    });
+
+    return Array.from(uniqueMap.values())
+      .map(({ zona, resolvedName }) => ({
+        ...zona,
+        nombreDisplay: resolvedName || zona.id,
       }))
       .sort((a, b) => a.nombreDisplay.localeCompare(b.nombreDisplay));
   }, [zonasData, resolveZonaName]);
 
+  // Filtrar y preparar colaboradores asegurando que tengan nombre
+  const colaboradoresDisponibles = useMemo(() => {
+    if (!Array.isArray(colaboradoresData) || colaboradoresData.length === 0) return [];
+    return colaboradoresData
+      .filter(c => c?.id && (c.nombre || (resolveColaboradorName && resolveColaboradorName(c.id)) || c.id))
+      .map(c => {
+        const nivelInfo = nivelesData.find(n => n.id === (c.nivel || c.nivelId));
+        return {
+          ...c,
+          nombreDisplay: c.nombre || (resolveColaboradorName ? resolveColaboradorName(c.id) : c.id),
+          nivelInfo,
+          pctTelefonia: c.pct_telefonia ?? nivelInfo?.pct_telefonia ?? null,
+          pctEnergia: c.pct_energia ?? nivelInfo?.pct_energia ?? null,
+          fijoSeguridad: c.fijo_seguridad ?? nivelInfo?.fijo_seguridad ?? null,
+          comisionFactorBase: c.pct_colaborador_default ?? nivelInfo?.pct_colaborador_default ?? null,
+        };
+      })
+      .sort((a, b) => a.nombreDisplay.localeCompare(b.nombreDisplay));
+  }, [colaboradoresData, nivelesData, resolveColaboradorName]);
+
+  // Log de depuración para colaboradores (después de inicializar los hooks)
+  useEffect(() => {
+    if (isOpen) {
+      console.log('Colaboradores recibidos:', colaboradores);
+      console.log('Colaboradores disponibles:', colaboradoresDisponibles);
+    }
+  }, [isOpen, colaboradores, colaboradoresDisponibles]);
+
   const operadoresDisponibles = useMemo(() => {
     if (!Array.isArray(operadoresData)) return [];
-    
     return operadoresData
       .filter(o => o?.id && (o.nombre || o.codigo || o.id))
       .map(o => ({
         ...o,
-        nombreDisplay: o.nombre || o.codigo || 
-                      (resolveOperadorName ? resolveOperadorName(o.id) : null) ||
-                      o.id,
+        nombreDisplay: o.nombre || (resolveOperadorName ? resolveOperadorName(o.id) : o.id)
       }))
       .sort((a, b) => a.nombreDisplay.localeCompare(b.nombreDisplay));
   }, [operadoresData, resolveOperadorName]);
 
   const productosDisponibles = useMemo(() => {
     if (!Array.isArray(productosData)) return [];
-    
     return productosData
-      .filter(p => p?.id && (p.nombre || p.codigo || p.id))
+      .filter(p => p?.id && (p.nombre || (resolveProductoName && resolveProductoName(p.id)) || p.id))
       .map(p => ({
         ...p,
-        nombreDisplay: p.nombre || p.codigo ||
-                      (resolveProductoName ? resolveProductoName(p.id) : null) ||
-                      p.id,
+        nombreDisplay: p.nombre || (resolveProductoName ? resolveProductoName(p.id) : p.id)
       }))
       .sort((a, b) => a.nombreDisplay.localeCompare(b.nombreDisplay));
   }, [productosData, resolveProductoName]);
 
-  // 🎯 MEJORA: Detectar modo desarrollo de forma segura
-  const isDevMode = useMemo(() => false, []);
+  // Validaciones
+  const validationErrors = useMemo(() => {
+    const errors = {};
+    if (!formData.cliente || !formData.cliente.trim()) errors.cliente = 'El cliente es obligatorio';
+    if (!formData.fecha) errors.fecha = 'La fecha es obligatoria';
+    if (!formData.colaborador_id) errors.colaborador_id = 'El colaborador es obligatorio';
+    if (!formData.zona_id) errors.zona_id = 'La zona es obligatoria';
+    customFields?.forEach(field => {
+      const key = `cf_${field.id}`;
+      if (field.requerido && !formData[key]) errors[key] = 'Campo obligatorio';
+    });
+    return errors;
+  }, [formData, customFields]);
 
-  // 🎯 MEJORA: Log de debug para verificar datos (solo en desarrollo)
-  useEffect(() => {
-    if (isOpen && isDevMode) {
-      console.log('🎯 VentaFormModal Debug:', {
-        colaboradoresRecibidos: colaboradoresData.length,
-        colaboradoresDisponibles: colaboradoresDisponibles.length,
-        zonasDisponibles: zonasDisponibles.length,
-        operadoresDisponibles: operadoresDisponibles.length,
-        productosDisponibles: productosDisponibles.length,
-        resolverFunctions: {
-          resolveColaboradorName: !!resolveColaboradorName,
-          resolveZonaName: !!resolveZonaName,
-          resolveOperadorName: !!resolveOperadorName,
-          resolveProductoName: !!resolveProductoName,
-        }
-      });
+  // Estadísticas del formulario
+  const formStats = useMemo(() => {
+    const pvpValue = Number(formData.pvp) || 0;
+    const comisionBase = Number(formData.comision_base) || 0;
+    const pctColaborador = Number(formData.comision_colaborador) || 0;
+    const tipoComision = formData.comision_tipo || 'porcentaje';
+
+    const colaborador = colaboradoresDisponibles.find(c => c.id === formData.colaborador_id);
+    const producto = productosDisponibles.find(p => p.id === formData.producto_id);
+
+    let comisionEstimada = 0;
+
+    if (comisionBase > 0 && colaborador && producto && nivelesData.length > 0) {
+      const parte = getColaboradorComision(colaborador, nivelesData, comisionBase, producto);
+      if (Number.isFinite(parte)) {
+        comisionEstimada = parte;
+      }
     }
-  }, [isOpen, isDevMode, colaboradoresData.length, colaboradoresDisponibles.length, zonasDisponibles.length, operadoresDisponibles.length, productosDisponibles.length, resolveColaboradorName, resolveZonaName, resolveOperadorName, resolveProductoName]);
 
-  // Producto seleccionado (después de inicializar formData)
+    if (comisionEstimada === 0 && comisionBase > 0 && pctColaborador > 0) {
+      if (tipoComision === 'porcentaje') {
+        const comisionProducto = (pvpValue * comisionBase) / 100;
+        comisionEstimada = comisionProducto * pctColaborador;
+      } else if (tipoComision === 'fijo') {
+        comisionEstimada = comisionBase * pctColaborador;
+      }
+    }
+
+    return {
+      pvp: pvpValue,
+      comisionEstimada,
+      hasErrors: Object.keys(validationErrors).length > 0,
+      isComplete: !!(formData.cliente && formData.fecha && formData.colaborador_id && formData.zona_id),
+      hasMissingData: colaboradoresDisponibles.length === 0 || zonasDisponibles.length === 0,
+    };
+  }, [formData, colaboradoresDisponibles, productosDisponibles, nivelesData, zonasDisponibles.length, validationErrors]);
+
+  // Producto, colaborador, operador y zona seleccionados
   const productoSeleccionado = useMemo(() =>
     productosDisponibles.find(p => p.id === formData.producto_id),
     [productosDisponibles, formData.producto_id]
   );
-
   const colaboradorSeleccionado = useMemo(() =>
     colaboradoresDisponibles.find(c => c.id === formData.colaborador_id),
     [colaboradoresDisponibles, formData.colaborador_id]
   );
-  
-  const operadorSeleccionado = useMemo(() => 
-    operadoresDisponibles.find(o => o.id === formData.operador_id), 
+  const operadorSeleccionado = useMemo(() =>
+    operadoresDisponibles.find(o => o.id === formData.operador_id),
     [operadoresDisponibles, formData.operador_id]
   );
-
-  const zonaSeleccionada = useMemo(() => 
-    zonasDisponibles.find(z => z.id === formData.zona_id), 
+  const zonaSeleccionada = useMemo(() =>
+    zonasDisponibles.find(z => z.id === formData.zona_id),
     [zonasDisponibles, formData.zona_id]
   );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!formData.colaborador_id || !formData.producto_id) return;
+
+    const colaborador = colaboradoresDisponibles.find(c => c.id === formData.colaborador_id);
+    const producto = productosDisponibles.find(p => p.id === formData.producto_id);
+    if (!colaborador || !producto) return;
+
+    const factor = resolveColaboradorFactorForProduct(colaborador, producto);
+    const actual = Number(formData.comision_colaborador ?? 0);
+
+    if (factor !== null && factor > 0 && (!Number.isFinite(actual) || actual <= 0)) {
+      setFormData(prev => ({
+        ...prev,
+        comision_colaborador: factor,
+      }));
+    }
+  }, [isOpen, formData.colaborador_id, formData.producto_id, formData.comision_colaborador, colaboradoresDisponibles, productosDisponibles]);
 
   // Productos filtrados por operador
   const productosFiltrados = useMemo(() => {
@@ -193,34 +345,49 @@ export function VentaFormModal({
     return formData.sector ? FAMILIAS_POR_SECTOR[formData.sector] || [] : [];
   }, [formData.sector]);
 
-  // 🎯 MEJORA: Inicialización inteligente del formulario al abrir el modal
+  // Inicialización del formulario
   useEffect(() => {
     if (isOpen) {
       if (isEditing && venta) {
-        // Modo edición: usar datos de la venta
-        setFormData({ ...venta });
+        setFormData({
+          cliente_tipo: venta?.cliente_tipo || 'NUEVO',
+          tipo_activacion: venta?.tipo_activacion || 'ALTA',
+          comision_fuera_vigencia: venta?.comision_fuera_vigencia || false,
+          ...venta,
+        });
       } else if (createInitialDraft && typeof createInitialDraft === 'function') {
-        // Modo creación: usar draft inicial
         const draft = createInitialDraft();
-        
-        // 🎯 MEJORA: Selección automática inteligente de colaborador
+        draft.cliente_tipo = draft.cliente_tipo || 'NUEVO';
+        draft.tipo_activacion = draft.tipo_activacion || 'ALTA';
+        draft.comision_fuera_vigencia = false;
         if (colaboradoresDisponibles.length > 0 && !draft.colaborador_id) {
           const primerColaborador = colaboradoresDisponibles[0];
           draft.colaborador_id = primerColaborador.id;
-          draft.comision_colaborador = primerColaborador.pct_colaborador_default || 0.15;
         }
-        
-        // 🎯 MEJORA: Selección automática de zona y operador si hay solo uno
-        if (zonasDisponibles.length === 1) {
-          draft.zona_id = zonasDisponibles[0].id;
+        if (zonasDisponibles.length === 1) draft.zona_id = zonasDisponibles[0].id;
+        if (operadoresDisponibles.length === 1) draft.operador_id = operadoresDisponibles[0].id;
+        if (draft.producto_id && productosDisponibles.length > 0) {
+          const producto = productosDisponibles.find(p => p.id === draft.producto_id);
+          if (producto) {
+            draft.pvp = producto.pvp || 0;
+            const { base, tipo, vigenciaOK } = computeComisionProducto(producto, draft);
+            draft.comision_tipo = tipo || producto.comision_tipo || 'fijo';
+            draft.comision_base = Number(base) || 0;
+            draft.comision_fija = tipo === 'fijo' ? Number(base) || 0 : 0;
+            draft.comision_porcentaje = tipo === 'porcentaje' ? Number(base) || 0 : 0;
+            draft.comision_fuera_vigencia = !vigenciaOK;
+          }
         }
-        if (operadoresDisponibles.length === 1) {
-          draft.operador_id = operadoresDisponibles[0].id;
+        const colabDraft = colaboradoresDisponibles.find(c => c.id === draft.colaborador_id);
+        const productoDraft = productosDisponibles.find(p => p.id === draft.producto_id);
+        const factorDraft = resolveColaboradorFactorForProduct(colabDraft, productoDraft);
+        if (factorDraft !== null && factorDraft > 0) {
+          draft.comision_colaborador = factorDraft;
+        } else if (!draft.comision_colaborador && colabDraft) {
+          draft.comision_colaborador = colabDraft.comisionFactorBase ?? 0;
         }
-        
         setFormData(draft);
       } else {
-        // Fallback: formulario vacío con valores predeterminados
         const emptyForm = {
           fecha: new Date().toISOString().slice(0, 10),
           cliente: "",
@@ -228,164 +395,130 @@ export function VentaFormModal({
           estado: "Confirmada",
           cantidad: 1,
           pvp: 0,
+          comision_base: 0,
+          comision_tipo: 'porcentaje',
+          comision_fija: 0,
+          comision_porcentaje: 0,
+          cliente_tipo: 'NUEVO',
+          tipo_activacion: 'ALTA',
+          comision_fuera_vigencia: false,
         };
-        
-        // Selección automática si hay datos disponibles
         if (colaboradoresDisponibles.length > 0) {
           emptyForm.colaborador_id = colaboradoresDisponibles[0].id;
-          emptyForm.comision_colaborador = colaboradoresDisponibles[0].pct_colaborador_default || 0.15;
         }
-        if (zonasDisponibles.length > 0) {
-          emptyForm.zona_id = zonasDisponibles[0].id;
+        if (zonasDisponibles.length > 0) emptyForm.zona_id = zonasDisponibles[0].id;
+        if (operadoresDisponibles.length > 0) emptyForm.operador_id = operadoresDisponibles[0].id;
+        if (productosDisponibles.length > 0) {
+          const producto = productosDisponibles[0];
+          emptyForm.producto_id = producto.id;
+          const { base, tipo, vigenciaOK } = computeComisionProducto(producto, emptyForm);
+          emptyForm.comision_base = Number(base) || 0;
+          emptyForm.comision_tipo = tipo || 'porcentaje';
+          emptyForm.comision_fija = tipo === 'fijo' ? Number(base) || 0 : 0;
+          emptyForm.comision_porcentaje = tipo === 'porcentaje' ? Number(base) || 0 : 0;
+          emptyForm.comision_fuera_vigencia = !vigenciaOK;
         }
-        if (operadoresDisponibles.length > 0) {
-          emptyForm.operador_id = operadoresDisponibles[0].id;
+        const colabEmpty = colaboradoresDisponibles.find(c => c.id === emptyForm.colaborador_id);
+        const productoEmpty = productosDisponibles.find(p => p.id === emptyForm.producto_id) || productosDisponibles[0];
+        const factorEmpty = resolveColaboradorFactorForProduct(colabEmpty, productoEmpty);
+        if (factorEmpty !== null && factorEmpty > 0) {
+          emptyForm.comision_colaborador = factorEmpty;
+        } else if (!emptyForm.comision_colaborador && colabEmpty) {
+          emptyForm.comision_colaborador = colabEmpty.comisionFactorBase ?? 0;
         }
-        
         setFormData(emptyForm);
       }
-      
       setErrors({});
       setIsDirty(false);
       setIsSubmitting(false);
     }
-  }, [isOpen, isEditing, venta, createInitialDraft, colaboradoresDisponibles, zonasDisponibles, operadoresDisponibles]);
+  }, [isOpen, isEditing, venta, createInitialDraft, colaboradoresDisponibles, zonasDisponibles, operadoresDisponibles, productosDisponibles]);
 
-  // 🎯 MEJORA: Validaciones en tiempo real
-  const validationErrors = useMemo(() => {
-    const newErrors = {};
-    
-    // Campos requeridos
-    if (!formData.cliente?.trim()) newErrors.cliente = "Cliente es obligatorio";
-    if (!formData.fecha) newErrors.fecha = "Fecha es obligatoria";
-    if (!formData.colaborador_id) {
-      if (colaboradoresDisponibles.length === 0) {
-        newErrors.colaborador_id = "No hay colaboradores disponibles - verifica que existan colaboradores con nombres válidos";
-      } else {
-        newErrors.colaborador_id = "Colaborador es obligatorio";
-      }
-    }
-    if (!formData.zona_id) {
-      if (zonasDisponibles.length === 0) {
-        newErrors.zona_id = "No hay zonas disponibles - verifica que existan zonas en el sistema";
-      } else {
-        newErrors.zona_id = "Zona es obligatoria";
-      }
-    }
-    
-    // Validaciones de negocio
-    if (formData.cliente && formData.cliente.length > 255) {
-      newErrors.cliente = "Cliente no puede exceder 255 caracteres";
-    }
-    
-    if (formData.cif && formData.cif.length > 20) {
-      newErrors.cif = "CIF no puede exceder 20 caracteres";
-    }
-    
-    // Validar campos personalizados requeridos
-    customFields?.filter(f => f.requerido).forEach(field => {
-      const fieldKey = `cf_${field.id}`;
-      if (!formData[fieldKey]?.trim()) {
-        newErrors[fieldKey] = `${field.nombre} es obligatorio`;
-      }
-    });
-    
-    return newErrors;
-  }, [formData, customFields, colaboradoresDisponibles.length, zonasDisponibles.length]);
-
-  // 🎯 MEJORA: Información calculada del formulario
-  const formStats = useMemo(() => {
-    const pvpValue = productoSeleccionado?.pvp || formData.pvp || 0;
-    const comisionBase = formData.comision_base || productoSeleccionado?.comision_valor || 0;
-    const tipoComision = formData.comision_tipo || productoSeleccionado?.comision_tipo || 'porcentaje';
-    const pctColaborador = formData.comision_colaborador || colaboradorSeleccionado?.pct_colaborador_default || 0;
-    
-    // Cálculo estimado de comisión
-    let comisionEstimada = 0;
-    if (tipoComision === 'porcentaje') {
-      comisionEstimada = (pvpValue * comisionBase / 100) * pctColaborador;
-    } else {
-      comisionEstimada = comisionBase * pctColaborador;
-    }
-    
-    return {
-      pvp: pvpValue,
-      comisionEstimada: comisionEstimada,
-      hasErrors: Object.keys(validationErrors).length > 0,
-      isComplete: !!(formData.cliente && formData.fecha && formData.colaborador_id && formData.zona_id),
-      hasMissingData: colaboradoresDisponibles.length === 0 || zonasDisponibles.length === 0,
-    };
-  }, [formData, productoSeleccionado, colaboradorSeleccionado, validationErrors, colaboradoresDisponibles.length, zonasDisponibles.length]);
-
-  // =================== HANDLERS DEL FORMULARIO ===================
-  
-  // 🎯 MEJORA: Handler genérico para actualizar campos
+  // Handlers
   const updateField = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setIsDirty(true);
-    
-    // Limpiar error del campo cuando se modifica
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
   }, [errors]);
 
-  // Handler específico para producto
   const handleProductChange = useCallback((productoId) => {
     const producto = productosDisponibles.find(p => p.id === productoId);
-    setFormData(prev => ({
-      ...prev,
-      producto_id: productoId,
-      operador_id: producto?.operador_id || prev.operador_id,
-      pvp: producto?.pvp || 0,
-      comision_base: producto?.comision_valor || prev.comision_base || 15.0,
-      comision_tipo: producto?.comision_tipo || prev.comision_tipo || 'porcentaje'
-    }));
+    setFormData(prev => {
+      const colaborador = colaboradoresDisponibles.find(c => c.id === prev.colaborador_id);
+      const nuevoFactor = resolveColaboradorFactorForProduct(colaborador, producto);
+      const { base, tipo, vigenciaOK } = computeComisionProducto(producto, { ...prev, fecha: prev.fecha, cliente_tipo: prev.cliente_tipo, tipo_activacion: prev.tipo_activacion });
+      return {
+        ...prev,
+        producto_id: productoId,
+        operador_id: producto?.operador_id || prev.operador_id,
+        sector: producto?.sector || prev.sector,
+        pvp: producto?.pvp || 0,
+        comision_base: Number(base) || 0,
+        comision_tipo: tipo || producto?.comision_tipo || prev.comision_tipo || 'porcentaje',
+        comision_fija: (tipo || producto?.comision_tipo) === 'fijo' ? Number(base) || 0 : 0,
+        comision_porcentaje: (tipo || producto?.comision_tipo) === 'porcentaje' ? Number(base) || 0 : 0,
+        comision_fuera_vigencia: !vigenciaOK,
+        comision_colaborador: nuevoFactor ?? prev.comision_colaborador ?? 0
+      };
+    });
     setIsDirty(true);
-  }, [productosDisponibles]);
+  }, [productosDisponibles, colaboradoresDisponibles]);
 
-  // Handler específico para operador
   const handleOperadorChange = useCallback((operadorId) => {
     setFormData(prev => ({
       ...prev,
       operador_id: operadorId,
-      // En modo creación, limpiar producto
       ...(isEditing ? {} : { producto_id: '' })
     }));
     setIsDirty(true);
   }, [isEditing]);
 
-  // Handler específico para colaborador
   const handleColaboradorChange = useCallback((colaboradorId) => {
-    const colaborador = colaboradoresDisponibles.find(c => c.id === colaboradorId);
-    setFormData(prev => ({
-      ...prev,
-      colaborador_id: colaboradorId,
-      comision_colaborador: colaborador?.pct_colaborador_default || prev.comision_colaborador || 0.15
-    }));
+    const nuevoColaborador = colaboradoresDisponibles.find(c => c.id === colaboradorId);
+    setFormData(prev => {
+      const producto = productosDisponibles.find(p => p.id === prev.producto_id);
+      const nuevoFactor = resolveColaboradorFactorForProduct(nuevoColaborador, producto);
+      return {
+        ...prev,
+        colaborador_id: colaboradorId,
+        comision_colaborador: nuevoFactor ?? nuevoColaborador?.comisionFactorBase ?? prev.comision_colaborador ?? 0.15
+      };
+    });
     setIsDirty(true);
-  }, [colaboradoresDisponibles]);
+  }, [colaboradoresDisponibles, productosDisponibles]);
 
-  // 🎯 MEJORA: Handler para sectores con validación
   const handleSectorChange = useCallback((sector) => {
     setFormData(prev => ({
       ...prev,
       sector,
-      familia: '', // Limpiar familia al cambiar sector
+      familia: '',
+      cliente_tipo: sector === 'TELEFONIA' ? prev.cliente_tipo || 'NUEVO' : prev.cliente_tipo,
+      tipo_activacion: sector === 'TELEFONIA' ? prev.tipo_activacion || 'ALTA' : prev.tipo_activacion,
     }));
     setIsDirty(true);
   }, []);
 
-  // =================== SUBMIT Y VALIDACIÓN ===================
-  
-  // 🎯 MEJORA: Submit con validación completa
+  // Recalcula la comisión base cuando cambia fecha, tipo de cliente o activación (y hay producto seleccionado)
+  useEffect(() => {
+    if (!formData.producto_id) return;
+    const producto = productosDisponibles.find(p => p.id === formData.producto_id);
+    if (!producto) return;
+    const { base, tipo, vigenciaOK } = computeComisionProducto(producto, formData);
+    setFormData(prev => ({
+      ...prev,
+      comision_base: Number(base) || 0,
+      comision_tipo: tipo || prev.comision_tipo || producto.comision_tipo || 'porcentaje',
+      comision_fija: (tipo || producto.comision_tipo) === 'fijo' ? Number(base) || 0 : 0,
+      comision_porcentaje: (tipo || producto.comision_tipo) === 'porcentaje' ? Number(base) || 0 : 0,
+      comision_fuera_vigencia: !vigenciaOK,
+    }));
+  }, [formData.fecha, formData.cliente_tipo, formData.tipo_activacion, formData.producto_id, productosDisponibles]);
+
+  // Submit
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    
-    // Validar errores
     setErrors(validationErrors);
     if (formStats.hasErrors) {
-      // Scroll al primer error
       const firstErrorField = document.querySelector('.border-red-500');
       if (firstErrorField) {
         firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -393,20 +526,21 @@ export function VentaFormModal({
       }
       return;
     }
-    
     setIsSubmitting(true);
-    
     try {
-      // Preparar datos para envío
       const dataToSave = { ...formData };
-      
-      // Asegurar tipos correctos
       dataToSave.pvp = Number(dataToSave.pvp || 0);
       dataToSave.cantidad = Number(dataToSave.cantidad || 1);
       dataToSave.comision_base = Number(dataToSave.comision_base || 0);
       dataToSave.comision_colaborador = Number(dataToSave.comision_colaborador || 0);
-      
-      // Separar campos personalizados
+      dataToSave.comision_fija = Number(dataToSave.comision_fija ?? productoSeleccionado?.comision_fija ?? 0);
+      dataToSave.comision_porcentaje = Number(dataToSave.comision_porcentaje ?? productoSeleccionado?.comision_porcentaje ?? 0);
+      dataToSave.comision_tipo = dataToSave.comision_tipo ?? productoSeleccionado?.comision_tipo ?? 'fijo';
+      dataToSave.cliente_tipo = dataToSave.cliente_tipo || 'NUEVO';
+      dataToSave.tipo_activacion = dataToSave.tipo_activacion || 'ALTA';
+      dataToSave.comision_fuera_vigencia = !!formData.comision_fuera_vigencia;
+      dataToSave.comision_vigencia_aplicada_desde = productoSeleccionado?.comision_vigencia_desde || null;
+      dataToSave.comision_vigencia_aplicada_hasta = productoSeleccionado?.comision_vigencia_hasta || null;
       const customFieldsData = {};
       Object.keys(dataToSave).forEach(key => {
         if (key.startsWith('cf_')) {
@@ -414,39 +548,28 @@ export function VentaFormModal({
           delete dataToSave[key];
         }
       });
-      
       if (Object.keys(customFieldsData).length > 0) {
         dataToSave.customFields = customFieldsData;
       }
-      
-      // Llamar función de guardado
       if (isEditing) {
         await onSave(formData.id, dataToSave);
       } else {
         await onSave(dataToSave);
       }
-      
-      // Cerrar modal si el guardado fue exitoso
       onClose();
-      
     } catch (error) {
-      console.error('Error guardando venta:', error);
       setErrors({ submit: error.message || 'Error al guardar la venta' });
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, validationErrors, formStats.hasErrors, isEditing, onSave, onClose]);
+  }, [formData, validationErrors, formStats.hasErrors, isEditing, onSave, onClose, productoSeleccionado]);
 
-  // 🎯 MEJORA: Confirmar cierre con cambios sin guardar
   const handleClose = useCallback(() => {
-    if (isDirty && !window.confirm('¿Seguro que quieres cerrar? Los cambios no guardados se perderán.')) {
-      return;
-    }
+    if (isDirty && !window.confirm('¿Seguro que quieres cerrar? Los cambios no guardados se perderán.')) return;
     onClose();
   }, [isDirty, onClose]);
 
-  // =================== RENDER ===================
-  
+  // Render
   if (!isOpen) return null;
 
   const modalTitle = isEditing ? 'Editar Venta' : 'Registrar Nueva Venta';
@@ -456,7 +579,6 @@ export function VentaFormModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-7xl max-h-[90vh] overflow-y-auto">
-        
         {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-slate-800 pb-4 mb-6 border-b border-slate-200 dark:border-slate-600">
           <div className="flex items-center justify-between">
@@ -472,8 +594,7 @@ export function VentaFormModal({
               <X className="w-5 h-5 text-slate-700 dark:text-slate-300" />
             </button>
           </div>
-          
-          {/* 🏆 MEJORA: Indicadores de estado mejorados */}
+          {/* Indicadores de estado */}
           <div className="mt-4 flex items-center gap-4 text-sm">
             <div className={`flex items-center gap-1 ${formStats.isComplete ? 'text-emerald-600' : 'text-amber-500'}`}>
               <CheckCircle className="w-4 h-4" />
@@ -496,14 +617,13 @@ export function VentaFormModal({
               </div>
             )}
           </div>
-
-          {/* 🎯 MEJORA: Alertas de datos faltantes */}
+          {/* Alertas de datos faltantes */}
           {formStats.hasMissingData && (
             <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-orange-800">
-                  <strong>Atención:</strong> 
+                  <strong>Atención:</strong>
                   {colaboradoresDisponibles.length === 0 && " No hay colaboradores válidos en el sistema."}
                   {zonasDisponibles.length === 0 && " No hay zonas válidas en el sistema."}
                   {" Verifica que existan entidades con nombres válidos antes de crear ventas."}
@@ -512,9 +632,7 @@ export function VentaFormModal({
             </div>
           )}
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-6" aria-label={`Formulario para ${isEditing ? 'editar' : 'crear'} venta`}>
-          
           {/* Error general */}
           {errors.submit && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -526,16 +644,13 @@ export function VentaFormModal({
               </div>
             </div>
           )}
-
           {/* Layout principal */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
             {/* Columna 1: Información del Cliente */}
             <div className="space-y-4">
               <h4 className="font-semibold text-slate-900 dark:text-slate-100 pb-2 border-b border-slate-200 dark:border-slate-600">
                 📋 Información del Cliente
               </h4>
-
               <div>
                 <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-cliente">
                   Cliente *
@@ -557,7 +672,6 @@ export function VentaFormModal({
                   <p className="text-xs text-red-600 mt-1">{errors.cliente}</p>
                 )}
               </div>
-              
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-cif">
@@ -601,7 +715,6 @@ export function VentaFormModal({
                   )}
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-idpedido">
@@ -630,7 +743,6 @@ export function VentaFormModal({
                   />
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-telfijo">
@@ -660,13 +772,11 @@ export function VentaFormModal({
                 </div>
               </div>
             </div>
-
             {/* Columna 2: Detalles del Servicio */}
             <div className="space-y-4">
               <h4 className="font-semibold text-slate-900 dark:text-slate-100 pb-2 border-b border-slate-200 dark:border-slate-600">
                 🛍️ Detalles del Servicio
               </h4>
-
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -698,7 +808,6 @@ export function VentaFormModal({
                     </div>
                   )}
                 </div>
-
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">
                     Operador ({operadoresDisponibles.length} disponibles)
@@ -727,7 +836,6 @@ export function VentaFormModal({
                     </p>
                   )}
                 </div>
-
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">
                     Producto ({productosFiltrados.length} disponibles)
@@ -754,8 +862,42 @@ export function VentaFormModal({
                       PVP: {productoSeleccionado.pvp ? `${productoSeleccionado.pvp}€` : 'No definido'}
                     </p>
                   )}
+                  {productoSeleccionado && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Comisión vigente: {productoSeleccionado.comision_vigencia_desde || '—'} → {productoSeleccionado.comision_vigencia_hasta || '—'}
+                    </p>
+                  )}
+                  {formData.comision_fuera_vigencia && (
+                    <p className="text-xs text-amber-600 mt-1">⚠️ La fecha de la venta queda fuera de la vigencia definida en el producto.</p>
+                  )}
                 </div>
 
+                { (formData.sector || productoSeleccionado?.sector || '').toUpperCase() === 'TELEFONIA' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm text-slate-500 dark:text-slate-400">Tipo de cliente</label>
+                      <select
+                        className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                        value={formData.cliente_tipo || 'NUEVO'}
+                        onChange={(e) => updateField('cliente_tipo', e.target.value)}
+                      >
+                        <option value="NUEVO">Nuevo</option>
+                        <option value="EXISTENTE">Existente</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-500 dark:text-slate-400">Tipo activación</label>
+                      <select
+                        className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                        value={formData.tipo_activacion || 'ALTA'}
+                        onChange={(e) => updateField('tipo_activacion', e.target.value)}
+                      >
+                        <option value="ALTA">Alta nueva</option>
+                        <option value="PORTABILIDAD">Portabilidad</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm text-slate-500 dark:text-slate-400">
@@ -800,7 +942,6 @@ export function VentaFormModal({
                     </select>
                   </div>
                 </div>
-
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">
                     Colaborador * ({colaboradoresDisponibles.length} disponibles)
@@ -836,13 +977,11 @@ export function VentaFormModal({
                 </div>
               </div>
             </div>
-
             {/* Columna 3: Precios y Comisiones */}
             <div className="space-y-4">
               <h4 className="font-semibold text-slate-900 dark:text-slate-100 pb-2 border-b border-slate-200 dark:border-slate-600">
                 💰 Precios y Comisiones
               </h4>
-
               <div className="space-y-3">
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">PVP del Producto</label>
@@ -859,9 +998,8 @@ export function VentaFormModal({
                     </p>
                   )}
                 </div>
-
                 <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">Comisión Base del Producto</label>
+                  <label className="text-sm text-slate-500 dark:text-slate-400">Comisión Base</label>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -888,10 +1026,17 @@ export function VentaFormModal({
                       }
                     </p>
                   )}
+                  {formStats.comisionEstimada > 0 && (
+                    <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
+                      <Euro className="w-3 h-3" />
+                      {/* Eliminado Parte colaborador */}
+                    </p>
+                  )}
                 </div>
-
                 <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">Comisión Colaborador</label>
+                  <label className="text-sm text-slate-500 dark:text-slate-400">
+                    Comisión Colaborador
+                  </label>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -904,11 +1049,28 @@ export function VentaFormModal({
                     />
                     <span className="flex items-center px-3 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">%</span>
                   </div>
+                  {formStats.comisionEstimada > 0 && (
+                    <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                      <p className="text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
+                        <span className="font-medium">Comisión estimada del colaborador:</span>
+                        <span className="font-bold text-lg">{formStats.comisionEstimada.toFixed(2)}€</span>
+                      </p>
+                      {formData.comision_tipo === 'porcentaje' && (
+                        <p className="text-xs text-green-600 dark:text-green-500 mt-1">
+                          {(formData.comision_base || 0).toFixed(1)}% de {formStats.pvp.toFixed(2)}€ × {((formData.comision_colaborador || 0) * 100).toFixed(1)}% colaborador
+                        </p>
+                      )}
+                      {formData.comision_tipo === 'fijo' && (
+                        <p className="text-xs text-green-600 dark:text-green-500 mt-1">
+                          {(formData.comision_base || 0).toFixed(2)}€ fijos × {((formData.comision_colaborador || 0) * 100).toFixed(1)}% colaborador
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Valor entre 0 y 1 (ej: 0.08 = 8%)
                   </p>
                 </div>
-
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">Cantidad</label>
                   <input
@@ -919,7 +1081,6 @@ export function VentaFormModal({
                     onChange={(e) => updateField('cantidad', parseInt(e.target.value) || 1)}
                   />
                 </div>
-
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">Documento</label>
                   <input
@@ -929,7 +1090,6 @@ export function VentaFormModal({
                     maxLength="100"
                   />
                 </div>
-
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">Numeración</label>
                   <input
@@ -939,7 +1099,6 @@ export function VentaFormModal({
                     maxLength="50"
                   />
                 </div>
-
                 <div>
                   <label className="text-sm text-slate-500 dark:text-slate-400">Observaciones</label>
                   <textarea
@@ -953,7 +1112,6 @@ export function VentaFormModal({
               </div>
             </div>
           </div>
-
           {/* Campos personalizados */}
           {customFields?.length > 0 && (
             <div className="border-t border-slate-200 dark:border-slate-600 pt-6">
@@ -964,7 +1122,6 @@ export function VentaFormModal({
                 {customFields.map((field) => {
                   const fieldKey = `cf_${field.id}`;
                   const hasError = !!errors[fieldKey];
-                  
                   return (
                     <div key={field.id}>
                       <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor={`customfield-${field.id}`}>
@@ -1038,7 +1195,6 @@ export function VentaFormModal({
               </div>
             </div>
           )}
-
           {/* Botones de acción */}
           <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-600">
             <button

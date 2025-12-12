@@ -3,7 +3,7 @@ export const LS_KEYS = {
   colaboradores: "appcv_colaboradores",
   niveles: "appcv_niveles",
   operadores: "appcv_operadores",
-  productos: "appcv_productos",
+  productos: "cv_productos_v3",
   zonas: "appcv_zonas",
   reglas: "appcv_reglas",
   liquidaciones: "appcv_liquidaciones",

@@ -14,14 +14,14 @@ export function VentasActions({
     <div className="space-y-4">
       {/* Aviso si hay productos sin PVP */}
       {ventasSinPvp > 0 && isAdmin && (
-        <Card className="bg-amber-50 border-amber-200">
+        <Card className="bg-amber-50 border-amber-200 dark:bg-amber-900/30 dark:border-amber-700/60">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-300 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-amber-800 font-medium">
+              <p className="text-amber-800 dark:text-amber-100 font-medium">
                 Atención: Productos sin PVP definido
               </p>
-              <p className="text-amber-700 text-sm mt-1">
+              <p className="text-amber-700 dark:text-amber-200 text-sm mt-1">
                 Hay {ventasSinPvp} ventas con productos que no tienen PVP definido. 
                 Puedes definir el PVP haciendo clic en el botón de edición en la columna PVP de cada venta.
               </p>
@@ -33,7 +33,7 @@ export function VentasActions({
       {/* Acciones principales */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <h3 className="text-lg font-semibold text-slate-800">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
             Gestión de Ventas ({ventasCount})
           </h3>
             {/* Eliminado texto de Supabase conectado */}

@@ -29,6 +29,8 @@ export function VentaDetailModal({
   zonas = [],
   isVentaBlocked
 }) {
+  const [activeTab, setActiveTab] = useState('info');
+
   if (!isOpen || !venta) return null;
 
   // Funciones para obtener nombres por ID o desde campos precalculados
@@ -63,7 +65,11 @@ export function VentaDetailModal({
     return estilos[estado] || "bg-slate-100 text-slate-700";
   };
 
-  const [activeTab, setActiveTab] = useState('info');
+  // Calcular comisiones correctamente
+  const comisionBase = venta._calc?.detalle?.comBase || producto?.comision_valor || 0;
+  const comisionBruta = venta._calc?.detalle?.comBruta || 0;
+  const comisionNeta = venta._calc?.detalle?.netoColab || 0;
+  const irpf = venta._calc?.detalle?.irpf || 0;
 
   return (
     <div className="fixed inset-0 bg-pink-200/40 dark:bg-pink-900/60 flex items-center justify-center p-4 z-50">
@@ -93,7 +99,6 @@ export function VentaDetailModal({
               }`}
               onClick={() => setActiveTab('info')}
             >
-                const [activeTab, setActiveTab] = useState('info');
               Información
             </button>
             <button
@@ -224,23 +229,33 @@ export function VentaDetailModal({
                     </div>
                     <div>
                       <label className="text-sm text-slate-500">
-                        Comisión Base
+                        Comisión Base del Producto
                       </label>
-                      <p className="font-medium text-slate-800">
-                        {producto?.comision_base
-                          ? `${producto.comision_base.toFixed(2)}€`
-                          : "0.00€"}
+                      <p className="font-medium text-slate-800 text-lg text-indigo-600">
+                        {comisionBase > 0 ? `${comisionBase.toFixed(2)}€` : "0.00€"}
                       </p>
+                      {producto?.comision_tipo && (
+                        <p className="text-xs text-slate-500">
+                          Tipo: {producto.comision_tipo} 
+                          {producto.comision_tipo === 'porcentaje' ? 
+                            ` (${producto.comision_valor || 0}% del PVP)` :
+                            ` (${producto.comision_valor || 0}€ fijos)`
+                          }
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm text-slate-500">
                         Comisión Comercial
                       </label>
                       <p className="font-medium text-slate-800 text-lg text-emerald-600">
-                        {venta._calc?.ok
-                          ? `${venta._calc.detalle.netoColab.toFixed(2)}€`
-                          : "0.00€"}
+                        {comisionNeta > 0 ? `${comisionNeta.toFixed(2)}€` : "0.00€"}
                       </p>
+                      {venta._calc?.detalle && (
+                        <p className="text-xs text-slate-500">
+                          Neto después de IRPF ({(venta._calc.detalle.irpf_pct * 100).toFixed(1)}%)
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm text-slate-500">Estado</label>
@@ -274,15 +289,25 @@ export function VentaDetailModal({
                   </h4>
                   <div className="bg-slate-50 p-4 rounded-lg space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-slate-600">Comisión Bruta:</span>
-                      <span className="font-medium">
-                        {venta._calc.detalle.comBruta.toFixed(2)}€
+                      <span className="text-slate-600">Comisión Base del Producto:</span>
+                      <span className="font-medium text-indigo-600">
+                        {comisionBase.toFixed(2)}€
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-600">IRPF:</span>
+                      <span className="text-slate-600">Comisión Bruta Total:</span>
+                      <span className="font-medium">
+                        {comisionBruta.toFixed(2)}€
+                      </span>
+                    </div>
+                       <div className="flex justify-between">
+                         <span className="text-slate-600">{/* Eliminado Parte del Colaborador */}</span>
+                         <span className="font-medium">{/* Eliminado Parte del Colaborador */}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">IRPF ({(venta._calc.detalle.irpf_pct * 100).toFixed(1)}%):</span>
                       <span className="font-medium text-red-600">
-                        -{venta._calc.detalle.irpf.toFixed(2)}€
+                        -{irpf.toFixed(2)}€
                       </span>
                     </div>
                     <div className="flex justify-between border-t border-slate-200 pt-2">
@@ -290,9 +315,23 @@ export function VentaDetailModal({
                         Neto Colaborador:
                       </span>
                       <span className="font-bold text-emerald-600">
-                        {venta._calc.detalle.netoColab.toFixed(2)}€
+                        {comisionNeta.toFixed(2)}€
                       </span>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Debug info si no hay cálculos */}
+              {!venta._calc?.ok && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-red-800 mb-2">Error en Cálculos</h4>
+                  <p className="text-red-700 text-sm">
+                    No se pudieron calcular las comisiones. 
+                    {venta._calc?.error && ` Error: ${venta._calc.error}`}
+                  </p>
+                  <div className="mt-2 text-xs text-red-600">
+                    <p>IDs: Producto={venta.producto_id}, Colaborador={venta.colaborador_id}, Zona={venta.zona_id}</p>
                   </div>
                 </div>
               )}

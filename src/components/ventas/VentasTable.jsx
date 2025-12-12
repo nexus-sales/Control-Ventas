@@ -321,128 +321,6 @@ export function VentasTable({
         </div>
       </div>
 
-      {/* Paginación SUPERIOR */}
-      {onPageChange && totalPages > 1 && (
-        <div className="mb-4 p-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
-            {/* Información de registros */}
-            <div className="text-slate-600 dark:text-gray-300">
-              Mostrando{" "}
-              <span className="font-semibold text-slate-900 dark:text-gray-100">
-                {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalItems)}
-              </span>
-              {" "}de{" "}
-              <span className="font-semibold text-slate-900 dark:text-gray-100">{totalItems}</span> ventas
-              {totalPages > 1 && (
-                <span className="ml-2 text-slate-500 dark:text-gray-400">
-                  (Página {currentPage} de {totalPages})
-                </span>
-              )}
-            </div>
-            
-            {/* Controles de navegación */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePageChange(1)}
-                disabled={currentPage <= 1}
-                className="px-2 py-1 border border-slate-300 dark:border-gray-600 rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-gray-600 transition-colors text-slate-700 dark:text-gray-200"
-                title="Primera página"
-              >
-                ««
-              </button>
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage <= 1}
-                className="px-3 py-1 border border-slate-300 dark:border-gray-600 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-gray-600 transition-colors text-slate-700 dark:text-gray-200"
-                title="Página anterior"
-              >
-                ‹ Anterior
-              </button>
-              
-              {/* Páginas cercanas */}
-              {totalPages <= 7 ? (
-                [...Array(totalPages)].map((_, i) => {
-                  const page = i + 1;
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`px-3 py-1 border rounded text-sm transition-colors ${
-                        page === currentPage
-                          ? 'bg-blue-500 text-white border-blue-500 dark:bg-blue-600 dark:border-blue-600'
-                          : 'border-slate-300 dark:border-gray-600 hover:bg-slate-100 dark:hover:bg-gray-600 text-slate-700 dark:text-gray-200'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  );
-                })
-              ) : (
-                <>
-                  {currentPage > 3 && (
-                    <>
-                      <button
-                        onClick={() => handlePageChange(1)}
-                        className="px-3 py-1 border border-slate-300 dark:border-gray-600 rounded text-sm hover:bg-slate-100 dark:hover:bg-gray-600 transition-colors text-slate-700 dark:text-gray-200"
-                      >
-                        1
-                      </button>
-                      {currentPage > 4 && <span className="px-2 text-slate-500 dark:text-gray-400">...</span>}
-                    </>
-                  )}
-                  
-                  {[-2, -1, 0, 1, 2].map(offset => {
-                    const page = currentPage + offset;
-                    if (page < 1 || page > totalPages) return null;
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-1 border rounded text-sm transition-colors ${
-                          page === currentPage
-                            ? 'bg-blue-500 text-white border-blue-500 dark:bg-blue-600 dark:border-blue-600'
-                            : 'border-slate-300 dark:border-gray-600 hover:bg-slate-100 dark:hover:bg-gray-600 text-slate-700 dark:text-gray-200'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    );
-                  })}
-                  
-                  {currentPage < totalPages - 2 && (
-                    <>
-                      {currentPage < totalPages - 3 && <span className="px-2 text-slate-500 dark:text-gray-400">...</span>}
-                      <button
-                        onClick={() => handlePageChange(totalPages)}
-                        className="px-3 py-1 border border-slate-300 dark:border-gray-600 rounded text-sm hover:bg-slate-100 dark:hover:bg-gray-600 transition-colors text-slate-700 dark:text-gray-200"
-                      >
-                        {totalPages}
-                      </button>
-                    </>
-                  )}
-                </>
-              )}
-              
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage >= totalPages}
-                className="px-3 py-1 border border-slate-300 dark:border-gray-600 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-gray-600 transition-colors text-slate-700 dark:text-gray-200"
-                title="Página siguiente"
-              >
-                Siguiente ›
-              </button>
-              <button
-                onClick={() => handlePageChange(totalPages)}
-                disabled={currentPage >= totalPages}
-                className="px-2 py-1 border border-slate-300 dark:border-gray-600 rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-gray-600 transition-colors text-slate-700 dark:text-gray-200"
-                title="Última página"
-              >
-                »»
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="overflow-x-auto">
         <table
@@ -477,7 +355,8 @@ export function VentasTable({
           <tbody>
             {ventasCalc.map((venta, idx) => {
               const estadoLabel = venta.estado || "SIN ESTADO";
-              const comisionBase = venta._calc?.detalle?.comBruta || 0;
+              const comisionBase = venta._calc?.detalle?.comBase || 0;
+              const comisionBruta = venta._calc?.detalle?.comBruta || 0;
               const neto = venta._calc?.detalle?.netoColab || 0;
               
               const nombreProducto = getNombreProducto(venta);
@@ -546,12 +425,20 @@ export function VentasTable({
                   </td>
                   <td className="px-2 md:px-4 py-3 align-middle text-right font-semibold text-slate-900 dark:text-gray-100">
                     {formatCurrency(pvpValue)}
-                    {!venta.pvp && pvpValue > 0 && (
-                      <div className="text-[10px] text-blue-500 dark:text-blue-400">desde producto</div>
-                    )}
+                    {/* Eliminada referencia 'desde producto' y bloque condicional vacío */}
                   </td>
                   <td className="px-2 md:px-4 py-3 align-middle text-right text-indigo-600 dark:text-indigo-400 font-semibold">
                     {formatCurrency(comisionBase)}
+                    {comisionBruta !== comisionBase && (
+                      <div className="text-[10px] text-slate-500 dark:text-gray-400">
+                        Comisión total: {formatCurrency(comisionBruta)}
+                      </div>
+                    )}
+                    {venta._calc?.detalle?.parteColab !== undefined && (
+                      <div className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                        {/* Eliminado Parte colaborador */}
+                      </div>
+                    )}
                   </td>
                   <td className="px-2 md:px-4 py-3 align-middle text-right text-emerald-600 dark:text-emerald-400 font-semibold">
                     {formatCurrency(neto)}
@@ -641,35 +528,6 @@ export function VentasTable({
         </div>
       )}
 
-      {/* Paginación inferior */}
-      {onPageChange && totalPages > 1 && (
-        <div className="mt-4 p-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
-            <div className="text-slate-600 dark:text-gray-300">
-              Mostrando {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalItems)} de {totalItems} ventas
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage <= 1}
-                className="px-3 py-1 border border-slate-300 dark:border-gray-600 rounded disabled:opacity-50 text-slate-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-slate-100 dark:hover:bg-gray-600"
-              >
-                Anterior
-              </button>
-              <span className="px-3 py-1 text-slate-700 dark:text-gray-200">
-                Página {currentPage} de {totalPages}
-              </span>
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage >= totalPages}
-                className="px-3 py-1 border border-slate-300 dark:border-gray-600 rounded disabled:opacity-50 text-slate-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-slate-100 dark:hover:bg-gray-600"
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </Card>
   );
 }

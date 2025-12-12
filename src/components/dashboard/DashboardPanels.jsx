@@ -253,26 +253,54 @@ function KPIsPanel({ kpis, hayDatos, total, ticketMedio, facturacionTotal, byEst
 // ==========================================
 
 function PipelinePanel({ byEstado, total }) {
-  const estados = [
-    { label: "Borradores", count: byEstado.Borrador || 0, color: "bg-amber-300 dark:bg-amber-600", textColor: "text-amber-800 dark:text-amber-200" },
-    { label: "Confirmadas", count: byEstado.Confirmada || 0, color: "bg-emerald-300 dark:bg-emerald-600", textColor: "text-emerald-800 dark:text-emerald-200" },
-    { label: "Cerradas", count: byEstado.Cerrada || 0, color: "bg-sky-300 dark:bg-sky-600", textColor: "text-sky-800 dark:text-sky-200" },
-    { label: "Liquidadas", count: byEstado.Liquidada || 0, color: "bg-purple-300 dark:bg-purple-600", textColor: "text-purple-800 dark:text-purple-200" },
-  ];
+  const palette = {
+    Borrador: { bg: "bg-amber-300 dark:bg-amber-600", text: "text-amber-800 dark:text-amber-200", label: "Borradores" },
+    Confirmada: { bg: "bg-emerald-300 dark:bg-emerald-600", text: "text-emerald-800 dark:text-emerald-200", label: "Confirmadas" },
+    Cerrada: { bg: "bg-sky-300 dark:bg-sky-600", text: "text-sky-800 dark:text-sky-200", label: "Cerradas" },
+    Liquidada: { bg: "bg-purple-300 dark:bg-purple-600", text: "text-purple-800 dark:text-purple-200", label: "Liquidadas" },
+    Instalada: { bg: "bg-cyan-300 dark:bg-cyan-600", text: "text-cyan-800 dark:text-cyan-200", label: "Instaladas" },
+    Activa: { bg: "bg-lime-300 dark:bg-lime-600", text: "text-lime-800 dark:text-lime-200", label: "Activas" },
+    Pendiente: { bg: "bg-orange-300 dark:bg-orange-600", text: "text-orange-800 dark:text-orange-200", label: "Pendientes" },
+  };
+
+  const baseOrder = ["Borrador", "Confirmada", "Cerrada", "Liquidada", "Instalada", "Activa", "Pendiente"];
+
+  const orderedEntries = Object.entries(byEstado)
+    .filter(([, count]) => typeof count === "number")
+    .sort((a, b) => b[1] - a[1]);
+
+  const ensuredEntries = orderedEntries.length > 0
+    ? orderedEntries
+    : baseOrder.map((key) => [key, byEstado[key] || 0]);
+
+  const displayEstados = ensuredEntries
+    .concat(
+      baseOrder
+        .filter((key) => ensuredEntries.every(([label]) => label !== key))
+        .map((key) => [key, byEstado[key] || 0]),
+    )
+    .slice(0, 4);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {estados.map((item) => (
-        <div key={item.label} className="text-center p-4 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-700 dark:to-gray-800 rounded-xl">
-          <div className={`w-12 h-12 mx-auto mb-2 rounded-full ${item.color} flex items-center justify-center`}>
-            <span className={`text-lg font-bold ${item.textColor}`}>{item.count}</span>
+      {displayEstados.map(([estado, count]) => {
+        const paletteEstado = palette[estado] || {
+          bg: "bg-slate-300 dark:bg-slate-600",
+          text: "text-slate-800 dark:text-slate-200",
+          label: estado,
+        };
+        return (
+          <div key={estado} className="text-center p-4 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-700 dark:to-gray-800 rounded-xl">
+            <div className={`w-12 h-12 mx-auto mb-2 rounded-full ${paletteEstado.bg} flex items-center justify-center`}>
+              <span className={`text-lg font-bold ${paletteEstado.text}`}>{count}</span>
+            </div>
+            <p className="text-sm font-medium text-slate-700 dark:text-gray-200">{paletteEstado.label}</p>
+            <p className="text-xs text-slate-500 dark:text-gray-400">
+              {total > 0 ? ((count / total) * 100).toFixed(1) : 0}% del total
+            </p>
           </div>
-          <p className="text-sm font-medium text-slate-700 dark:text-gray-200">{item.label}</p>
-          <p className="text-xs text-slate-500 dark:text-gray-400">
-            {total > 0 ? ((item.count / total) * 100).toFixed(1) : 0}% del total
-          </p>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -504,17 +532,20 @@ function GeoDistributionPanel({ byZona }) {
 // ==========================================
 
 function EvolucionTemporalPanel({ evolucionTemporal, periodoEvolucion, hayDatos }) {
+  const maxFacturacion = evolucionTemporal.length
+    ? Math.max(...evolucionTemporal.map(([, data]) => data.facturacion))
+    : 0;
+
   return (
-    <div className="h-80 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4">
+    <div className="min-h-[20rem] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 space-y-4">
       {evolucionTemporal.length > 0 ? (
-        <div className="h-full flex flex-col">
-          <div className="text-xs text-slate-500 dark:text-gray-400 mb-4">
+        <div className="flex flex-col gap-3">
+          <div className="text-xs text-slate-500 dark:text-gray-400">
             {periodoEvolucion === 'anual' ? 'Por años' : periodoEvolucion === 'trimestral' ? 'Por trimestres' : 'Por meses'} •
             Total: {euro(evolucionTemporal.reduce((sum, [, data]) => sum + data.facturacion, 0))}
           </div>
-          <div className="flex-1 space-y-2">
+          <div className="space-y-3">
             {evolucionTemporal.map(([periodo, data]) => {
-              const maxFacturacion = Math.max(...evolucionTemporal.map(([, d]) => d.facturacion));
               const percentage = maxFacturacion > 0 ? (data.facturacion / maxFacturacion) * 100 : 0;
               
               let displayName = periodo;

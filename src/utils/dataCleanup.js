@@ -2,11 +2,11 @@
 const LS_KEYS = {
 	zonas: 'appcv_zonas',
 	operadores: 'appcv_operadores',
-	productos: 'appcv_productos',
-	colaboradores: 'appcv_colaboradores',
+	productos: 'cv_productos_v3',
+	colaboradores: 'cv_colaboradores_v3',
 	ventas: 'appcv_ventas',
-	reglas: 'appcv_reglas',
-	niveles: 'appcv_niveles',
+	reglas: 'cv_reglas_v3',
+	niveles: 'cv_niveles_v3',
 };
 
 function loadLS(key) {

@@ -14,9 +14,11 @@ export function VentasStats({ ventasCalc, productos = [] }) {
     ventasCalc.forEach((v) => {
       const prod = productos.find((p) => p?.id === v.producto_id);
       const pvpValue = prod?.pvp || v.pvp || 0;
+      const cantidad = Number(v.cantidad) || 1;
+      const importe = (Number(pvpValue) || 0) * cantidad;
       
       if (pvpValue > 0) {
-        totalPvp += pvpValue;
+        totalPvp += importe;
         countConPvp++;
       }
       

@@ -17,9 +17,13 @@ export function calcularAntiguedad(fechaAlta) {
   return diffYears;
 }
 
-export function calcularIRPF(colaborador, importeBruto) {
-  if (!colaborador || colaborador.tipo !== 'autonomo') return 0;
-  const antiguedad = calcularAntiguedad(colaborador.fecha_alta);
+export function calcularIRPF(colaborador, importeBruto, fechaRef) {
+  if (!colaborador) return 0;
+  const tipo = (colaborador.tipo_fiscal || colaborador.tipo || '').toUpperCase();
+  const esCIF = colaborador.cif_dni?.toUpperCase()?.match(/^[ABCDEFGHJNPQRSUVW]/);
+  if (esCIF || tipo === 'EMPRESA' || tipo === 'AUTONOMO_ESPECIAL' || tipo === 'EXENTO') return 0;
+  if (tipo !== 'AUTONOMO') return 0;
+  const antiguedad = calcularAntiguedad(colaborador.fecha_alta || fechaRef);
   const porcentajeIRPF = antiguedad < 2 ? 7 : 15;
   return (importeBruto * porcentajeIRPF) / 100;
 }

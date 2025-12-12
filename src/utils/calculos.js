@@ -37,9 +37,19 @@ export function getIrpfPercentage({ tipo_fiscal, fecha_alta, cif_dni }) {
 }
 
 // Obtener comisión del colaborador (fija o porcentaje)
-export function getColaboradorComision(colab, niveles, comisionBruta) {
+const normalizeFactor = (valor) => {
+  if (valor === null || valor === undefined) return null;
+  const numeric = Number(valor);
+  if (!isFinite(numeric) || numeric < 0) return null;
+  return numeric > 1 ? numeric / 100 : numeric;
+};
+
+export function getColaboradorComision(colab, niveles, comisionBruta, producto) {
   if (!colab) return comisionBruta * 0.5;
-  // Si tiene comisión personalizada, usarla
+
+  const sector = producto?.sector?.toUpperCase();
+
+  // Si tiene comisión personalizada, usarla (siempre sobre la base)
   if (
     colab.comision_personalizada !== null &&
     colab.comision_personalizada !== undefined
@@ -47,29 +57,76 @@ export function getColaboradorComision(colab, niveles, comisionBruta) {
     if (colab.comision_tipo_personalizada === "fijo") {
       return Number(colab.comision_personalizada) || 0;
     } else if (colab.comision_tipo_personalizada === "porcentaje") {
-      return comisionBruta * (Number(colab.comision_personalizada) || 0);
+      const factorPersonalizado = normalizeFactor(colab.comision_personalizada);
+      return factorPersonalizado !== null ? comisionBruta * factorPersonalizado : 0;
     }
   }
-  // Si no, usar la del nivel
-  const nivel = niveles.find((n) => n.id === colab.nivel);
+
+  const nivelId = colab.nivel || colab.nivelId;
+  const nivel = niveles.find((n) => n.id === nivelId);
   if (!nivel) return comisionBruta * 0.5; // Fallback 50%
+
+  if (sector === "TELEFONIA") {
+    const factorTelefonia = normalizeFactor(
+      colab.pct_telefonia ?? nivel.pct_telefonia ?? nivel.pct_colaborador_default
+    );
+    if (factorTelefonia !== null) return comisionBruta * factorTelefonia;
+  } else if (sector === "ENERGIA") {
+    const factorEnergia = normalizeFactor(
+      colab.pct_energia ?? nivel.pct_energia ?? nivel.pct_colaborador_default
+    );
+    if (factorEnergia !== null) return comisionBruta * factorEnergia;
+  } else if (sector === "SEGURIDAD") {
+    const fijoSeguridad = colab.fijo_seguridad ?? nivel.fijo_seguridad;
+    if (fijoSeguridad !== undefined && fijoSeguridad !== null) {
+      return Number(fijoSeguridad) || 0;
+    }
+  }
+
   if (nivel.comision_tipo === "fijo") {
     return Number(nivel.comision_valor) || 0;
-  } else if (nivel.comision_tipo === "porcentaje") {
-    return comisionBruta * (Number(nivel.comision_valor) || 0);
   }
-  return 0;
+
+  if (nivel.comision_tipo === "porcentaje") {
+    const factorNivel = normalizeFactor(nivel.comision_valor);
+    if (factorNivel !== null) {
+      return comisionBruta * factorNivel;
+    }
+  }
+
+  return comisionBruta * 0.5;
 }
 
 // Obtener comisión base del producto (fija o porcentaje)
-export function getProductoComisionBase(producto, pvp) {
+export function getProductoComisionBase(producto, pvp, venta) {
   if (!producto) return 0;
-  if (producto.comision_tipo === "fijo") {
-    return Number(producto.comision_valor) || 0;
-  } else if (producto.comision_tipo === "porcentaje") {
-    return (Number(producto.comision_valor) || 0) * (Number(pvp) || 0);
+
+  const tipo = venta?.comision_tipo || producto.comision_tipo;
+  // comision_base en venta ya viene “congelada” desde el alta/edición de la venta.
+  const congelada = venta?.comision_base;
+  const fija = venta?.comision_fija ?? producto.comision_fija ?? 0;
+  const porcentaje = venta?.comision_porcentaje ?? producto.comision_porcentaje ?? 0;
+
+  // Si hay valor congelado y el tipo es fijo, úsalo tal cual.
+  if (tipo === "fijo" && congelada !== undefined && congelada !== null) {
+    return Number(congelada) || 0;
   }
-  return 0;
+
+  // Si hay valor congelado y el tipo es porcentaje, considéralo porcentaje y aplica sobre pvp/base.
+  if (tipo === "porcentaje" && congelada !== undefined && congelada !== null) {
+    return (Number(congelada) / 100) * (Number(pvp) || 0);
+  }
+
+  // Fallback a los campos originales del producto o la venta (porcentaje/fijo/mixto)
+  let total = 0;
+  if (tipo === "fijo") {
+    total = Number(fija) || 0;
+  } else if (tipo === "porcentaje") {
+    total = (Number(porcentaje) / 100) * (Number(pvp) || 0);
+  } else if (tipo === "mixto") {
+    total = Number(fija) + ((Number(porcentaje) / 100) * (Number(pvp) || 0));
+  }
+  return total;
 }
 
 // DEPRECATED: Mantener por compatibilidad pero marcar como obsoleta
@@ -141,8 +198,8 @@ export function computeVenta({
   const impuesto_pct = zona.impuesto_pct;
   const base = baseFromPVP(pvp, impuesto_pct);
 
-  // Comisión base del producto (fija o porcentaje)
-  let comOper = getProductoComisionBase(producto, base);
+  // Comisión base del producto (fija o porcentaje) usando valores congelados de la venta si existen
+  let comBase = getProductoComisionBase(producto, base, venta);
 
   // Evaluar reglas adicionales
   const extra = evaluateRules({
@@ -151,13 +208,13 @@ export function computeVenta({
     producto_id: producto.id,
     nivel: colab.nivel,
     refBase: base,
-    refComOper: comOper,
+    refComOper: comBase,
   });
 
-  const comBruta = Math.max(0, comOper + extra);
+  const comBruta = Math.max(0, comBase + extra);
 
-  // Parte del colaborador (fija o porcentaje)
-  const parteColab = getColaboradorComision(colab, niveles, comBruta);
+  // Parte del colaborador (fija o porcentaje, SIEMPRE sobre la comisión base)
+  const parteColab = getColaboradorComision(colab, niveles, comBase, producto);
 
   // Calcular IRPF y neto
   const irpf_pct = getIrpfPctByAntiguedad(colab, venta.fecha);
@@ -168,7 +225,7 @@ export function computeVenta({
   const margenEmpresa = Math.max(0, comBruta - costeEmpresa);
 
   // Para backward compatibility, calcular pctColab aproximado
-  const pctColab = comBruta > 0 ? parteColab / comBruta : 0;
+  const pctColab = comBase > 0 ? parteColab / comBase : 0;
 
   return {
     ok: true,
@@ -179,7 +236,7 @@ export function computeVenta({
       colaborador: colab,
       impuesto_pct,
       base,
-      comOper,
+      comBase,
       extra,
       comBruta,
       pctColab,
@@ -189,6 +246,9 @@ export function computeVenta({
       netoColab,
       costeEmpresa,
       margenEmpresa,
+      comision_fuera_vigencia: Boolean(venta.comision_fuera_vigencia),
+      comision_vigencia_aplicada_desde: venta.comision_vigencia_aplicada_desde || producto.comision_vigencia_desde || null,
+      comision_vigencia_aplicada_hasta: venta.comision_vigencia_aplicada_hasta || producto.comision_vigencia_hasta || null,
       _debug: {
         comision_producto_tipo: producto.comision_tipo,
         comision_producto_valor: producto.comision_valor,
@@ -202,31 +262,4 @@ export function computeVenta({
   };
 }
 
-/*
-EJEMPLOS DE CÁLCULO CON LA NUEVA LÓGICA:
-
-1. Venta: Fibra 1Gb (60€) - Ana Pérez (PREMIUM)
-   - Base: 60€ / 1.21 = 49.59€
-   - Comisión producto: 49.59€ × 10% = 4.96€
-   - Regla PREMIUM: 49.59€ × 5% = 2.48€
-   - Comisión bruta: 4.96€ + 2.48€ = 7.44€
-   - Parte Ana (60% nivel PREMIUM): 7.44€ × 60% = 4.46€
-   - IRPF (15%): 4.46€ × 15% = 0.67€
-   - Neto Ana: 4.46€ - 0.67€ = 3.79€
-
-2. Venta: Luz Pyme (121€) - María Ruiz (BASE)
-   - Comisión producto: 15€ fijos (independiente del PVP)
-   - Regla BASE: +5€ fijos adicionales
-   - Comisión bruta: 15€ + 5€ = 20€
-   - Parte María (25€ fijos nivel BASE): 25€
-   - IRPF (7%): 25€ × 7% = 1.75€
-   - Neto María: 25€ - 1.75€ = 23.25€
-
-3. Venta: Kit Alarma (36.4€) - Luis Gómez (MASTER con override)
-   - Base: 36.4€ / 1.21 = 30.08€
-   - Comisión producto: 30.08€ × 8% = 2.41€
-   - Comisión bruta: 2.41€ (sin reglas aplicables)
-   - Parte Luis (30€ fijos override): 30€
-   - IRPF (15%): 30€ × 15% = 4.5€
-   - Neto Luis: 30€ - 4.5€ = 25.5€
-*/
+// Ejemplos de cálculo disponibles en la documentación técnica. Los comentarios aquí deben ser solo sintaxis válida de JavaScript.

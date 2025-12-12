@@ -15,10 +15,10 @@ function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-lg max-w-lg w-full p-6 relative">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg max-w-lg w-full p-6 relative text-slate-800 dark:text-slate-100">
         <button
           onClick={onClose}
-          className="absolute top-2 right-2 p-2 text-slate-500 hover:bg-slate-100 rounded-full"
+          className="absolute top-2 right-2 p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-gray-800 rounded-full"
         >
           ×
         </button>
@@ -356,10 +356,10 @@ export default function ImportExcelMapperV2({
       {/* Header */}
       <Card>
         <div className="flex items-center mb-4">
-          <FileSpreadsheet className="w-6 h-6 mr-3 text-sky-600" />
+          <FileSpreadsheet className="w-6 h-6 mr-3 text-sky-600 dark:text-sky-300" />
           <div>
             <SectionTitle>Importación/Exportación Masiva Excel/CSV</SectionTitle>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Importa y exporta datos fácilmente. Optimizado para datos legacy y
               nuevos.
             </p>
@@ -368,12 +368,12 @@ export default function ImportExcelMapperV2({
 
         <div className="grid md:grid-cols-2 gap-6">
           {/* Importar */}
-          <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-sky-300 transition-colors bg-gradient-to-br from-sky-50 to-sky-100">
-            <Upload className="w-12 h-12 mx-auto mb-4 text-sky-600" />
-            <h4 className="font-semibold mb-2 text-slate-800">
+          <div className="border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl p-6 text-center hover:border-sky-300 dark:hover:border-sky-400 transition-colors bg-gradient-to-br from-sky-50 to-sky-100 dark:from-sky-900/40 dark:to-sky-800/40">
+            <Upload className="w-12 h-12 mx-auto mb-4 text-sky-600 dark:text-sky-300" />
+            <h4 className="font-semibold mb-2 text-slate-800 dark:text-slate-100">
               Importar Excel/CSV
             </h4>
-            <p className="text-sm text-slate-600 mb-4">
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
               Soporta archivos .xlsx, .xls y .csv con mapeo automático
               inteligente
             </p>
@@ -397,39 +397,39 @@ export default function ImportExcelMapperV2({
             </label>
 
             <div className="mt-4 space-y-2">
-              <label className="flex items-center justify-center gap-2 text-sm">
+              <label className="flex items-center justify-center gap-2 text-sm text-slate-700 dark:text-slate-200">
                 <input
                   type="checkbox"
                   checked={resolverNombres}
                   onChange={(e) => setResolverNombres(e.target.checked)}
-                  className="rounded"
+                  className="rounded border-slate-300 dark:border-slate-500 dark:bg-gray-800"
                 />
                 Resolver por nombre si no es ID
               </label>
-              <label className="flex items-center justify-center gap-2 text-sm">
+              <label className="flex items-center justify-center gap-2 text-sm text-slate-700 dark:text-slate-200">
                 <input
                   type="checkbox"
                   checked={guardarExtras}
                   onChange={(e) => setGuardarExtras(e.target.checked)}
-                  className="rounded"
+                  className="rounded border-slate-300 dark:border-slate-500 dark:bg-gray-800"
                 />
                 Guardar campos adicionales
               </label>
               {autoCreacionDisponible && (
-                <label className="flex items-center justify-center gap-2 text-sm font-medium text-emerald-700">
+                <label className="flex items-center justify-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-200">
                   <input
                     type="checkbox"
                     checked={crearAutomaticamente}
                     onChange={(e) =>
                       setCrearAutomaticamente(e.target.checked)
                     }
-                    className="rounded"
+                    className="rounded border-emerald-300 dark:border-emerald-500 dark:bg-gray-800"
                   />
                   🚀 Crear automáticamente entidades faltantes
                 </label>
               )}
               {!autoCreacionDisponible && (
-                <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                <div className="text-xs text-amber-600 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 p-2 rounded">
                   ⚠️ Auto-creación no disponible: faltan setters de entidades
                 </div>
               )}
@@ -437,12 +437,12 @@ export default function ImportExcelMapperV2({
           </div>
 
           {/* Plantilla */}
-          <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-emerald-300 transition-colors bg-gradient-to-br from-emerald-50 to-emerald-100 flex flex-col items-center justify-center">
-            <Download className="w-12 h-12 mx-auto mb-4 text-emerald-600" />
-            <h4 className="font-semibold mb-2 text-slate-800">
+          <div className="border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl p-6 text-center hover:border-emerald-300 dark:hover:border-emerald-400 transition-colors bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/40 dark:to-emerald-800/40 flex flex-col items-center justify-center">
+            <Download className="w-12 h-12 mx-auto mb-4 text-emerald-600 dark:text-emerald-300" />
+            <h4 className="font-semibold mb-2 text-slate-800 dark:text-slate-100">
               Plantilla Completa
             </h4>
-            <p className="text-sm text-slate-600 mb-4">
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
               Descarga una plantilla Excel lista para importar, con ejemplo,
               mapeo y guía de uso.
             </p>
@@ -452,7 +452,7 @@ export default function ImportExcelMapperV2({
             >
               Descargar Plantilla
             </button>
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
               Incluye ejemplo, mapeo y guía para datos antiguos y nuevos.
             </p>
           </div>
@@ -460,20 +460,20 @@ export default function ImportExcelMapperV2({
 
         {/* Avisos */}
         <div className="mt-4 space-y-2">
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
             <div className="flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-              <div className="text-sm text-amber-800">
+              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-300 flex-shrink-0" />
+              <div className="text-sm text-amber-800 dark:text-amber-100">
                 <strong>Importante:</strong> El sistema solo usa la columna PVP
                 para el precio del producto. Las columnas IMPORTE, TOTAL y
                 COMISION se guardan como datos financieros separados.
               </div>
             </div>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
             <div className="flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
-              <div className="text-sm text-blue-800">
+              <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-300 flex-shrink-0" />
+              <div className="text-sm text-blue-800 dark:text-blue-100">
                 <strong>Datos Legacy:</strong> Para +300 registros antiguos,
                 activa "Crear automáticamente" y el sistema creará
                 colaboradores, productos y zonas que falten con valores por
@@ -488,8 +488,8 @@ export default function ImportExcelMapperV2({
       {headers.length > 0 && (
         <Card>
           <SectionTitle>Mapeo de Columnas</SectionTitle>
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+            <p className="text-sm text-blue-800 dark:text-blue-100">
               Ajusta el mapeo de columnas según necesites. Los campos marcados
               con * son requeridos.
             </p>
@@ -498,14 +498,14 @@ export default function ImportExcelMapperV2({
           <div className="grid md:grid-cols-3 gap-4">
             {Object.keys(MAPEO_CAMPOS).map((campo) => (
               <div key={campo} className="flex items-center gap-2">
-                <label className="w-24 text-sm font-medium text-slate-700 truncate">
+                <label className="w-24 text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
                   {campo.replace(/_/g, " ")}
                   {["fecha", "cliente", "colaborador_id"].includes(campo) && (
                     <span className="text-red-500">*</span>
                   )}
                 </label>
                 <select
-                  className="border rounded px-2 py-1 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  className="border rounded px-2 py-1 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:bg-gray-800 dark:border-gray-700 dark:text-slate-100"
                   value={mapping[campo] || ""}
                   onChange={(e) =>
                     setMapping((prev) => ({
@@ -533,7 +533,7 @@ export default function ImportExcelMapperV2({
           <SectionTitle>Previsualización de Datos</SectionTitle>
 
           <div className="mb-4 flex justify-between items-center">
-            <div className="text-sm text-slate-600">
+            <div className="text-sm text-slate-600 dark:text-slate-300">
               {rows.length > PREVIEW_PAGE_SIZE
                 ? `Mostrando filas ${
                     (previewPage - 1) * PREVIEW_PAGE_SIZE + 1
@@ -546,17 +546,17 @@ export default function ImportExcelMapperV2({
             {rows.length > PREVIEW_PAGE_SIZE && (
               <div className="flex gap-2 items-center">
                 <button
-                  className="px-2 py-1 rounded bg-slate-200 text-slate-700 text-sm hover:bg-slate-300"
+                  className="px-2 py-1 rounded bg-slate-200 text-slate-700 text-sm hover:bg-slate-300 dark:bg-gray-700 dark:text-slate-100 dark:hover:bg-gray-600"
                   onClick={() => setPreviewPage((p) => Math.max(1, p - 1))}
                   disabled={previewPage === 1}
                 >
                   Anterior
                 </button>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
                   Página {previewPage} de {totalPreviewPages}
                 </span>
                 <button
-                  className="px-2 py-1 rounded bg-slate-200 text-slate-700 text-sm hover:bg-slate-300"
+                  className="px-2 py-1 rounded bg-slate-200 text-slate-700 text-sm hover:bg-slate-300 dark:bg-gray-700 dark:text-slate-100 dark:hover:bg-gray-600"
                   onClick={() =>
                     setPreviewPage((p) =>
                       Math.min(totalPreviewPages, p + 1)
@@ -577,15 +577,15 @@ export default function ImportExcelMapperV2({
             <span className="text-red-600 font-medium">
               ❌ Inválidas: {validationStats.invalid}
             </span>
-            <span className="text-slate-600">
+            <span className="text-slate-600 dark:text-slate-300">
               Total: {validationStats.total}
             </span>
           </div>
 
-          <div className="overflow-auto border border-slate-200 rounded-lg max-h-96">
+          <div className="overflow-auto border border-slate-200 dark:border-gray-700 rounded-lg max-h-96">
             <table className="text-sm w-full">
-              <thead className="bg-slate-50 sticky top-0">
-                <tr>
+              <thead className="bg-slate-50 dark:bg-gray-900 sticky top-0">
+                <tr className="text-slate-700 dark:text-slate-200">
                   <th className="text-left py-2 px-3 font-medium">Estado</th>
                   {headers.map((header) => (
                     <th
@@ -611,7 +611,9 @@ export default function ImportExcelMapperV2({
                       <tr
                         key={realIndex}
                         className={`border-b ${
-                          isValid ? "bg-green-50" : "bg-red-50"
+                          isValid
+                            ? "bg-green-50 dark:bg-green-900/20"
+                            : "bg-red-50 dark:bg-red-900/20"
                         }`}
                       >
                         <td className="py-2 px-3">
@@ -733,19 +735,19 @@ export default function ImportExcelMapperV2({
 
       {/* Resumen de importación inteligente */}
       {resumenImportacion && (
-        <Card className="border-green-200 bg-green-50">
+        <Card className="border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/30">
           <SectionTitle>Resumen de Importación Inteligente</SectionTitle>
           <div className="space-y-3">
             {resumenImportacion.operadoresNuevos?.length > 0 && (
               <div>
-                <strong className="text-green-700">
+                <strong className="text-green-700 dark:text-green-200">
                   ✅ Operadores creados:
                 </strong>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {resumenImportacion.operadoresNuevos.map((nombre, i) => (
                     <span
                       key={i}
-                      className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs"
+                      className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-100 px-2 py-1 rounded text-xs"
                     >
                       {nombre}
                     </span>
@@ -756,10 +758,10 @@ export default function ImportExcelMapperV2({
 
             {resumenImportacion.productosNuevos?.length > 0 && (
               <div>
-                <strong className="text-green-700">
+                <strong className="text-green-700 dark:text-green-200">
                   ✅ Productos creados:
                 </strong>
-                <div className="mt-1 text-sm text-green-800 max-h-32 overflow-y-auto">
+                <div className="mt-1 text-sm text-green-800 dark:text-green-100 max-h-32 overflow-y-auto">
                   {resumenImportacion.productosNuevos.join(", ")}
                 </div>
               </div>
@@ -767,7 +769,7 @@ export default function ImportExcelMapperV2({
 
             {resumenImportacion.colaboradoresNuevos?.length > 0 && (
               <div>
-                <strong className="text-green-700">
+                <strong className="text-green-700 dark:text-green-200">
                   ✅ Colaboradores creados:
                 </strong>
                 <div className="mt-1 flex flex-wrap gap-2">
@@ -775,7 +777,7 @@ export default function ImportExcelMapperV2({
                     (nombre, i) => (
                       <span
                         key={i}
-                        className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs"
+                        className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-100 px-2 py-1 rounded text-xs"
                       >
                         {nombre}
                       </span>
@@ -787,12 +789,12 @@ export default function ImportExcelMapperV2({
 
             {resumenImportacion.zonasNuevas?.length > 0 && (
               <div>
-                <strong className="text-green-700">✅ Zonas creadas:</strong>
+                <strong className="text-green-700 dark:text-green-200">✅ Zonas creadas:</strong>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {resumenImportacion.zonasNuevas.map((nombre, i) => (
                     <span
                       key={i}
-                      className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs"
+                      className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-100 px-2 py-1 rounded text-xs"
                     >
                       {nombre}
                     </span>
@@ -801,19 +803,19 @@ export default function ImportExcelMapperV2({
               </div>
             )}
 
-            <div className="text-lg font-bold text-green-800 bg-white p-3 rounded-lg">
+            <div className="text-lg font-bold text-green-800 dark:text-green-100 bg-white dark:bg-gray-900 p-3 rounded-lg">
               ✅ {resumenImportacion.ventasCreadas} ventas creadas exitosamente
             </div>
 
             {resumenImportacion.ventasRechazadas > 0 && (
-              <div className="text-amber-600">
+              <div className="text-amber-600 dark:text-amber-200">
                 ⚠️ {resumenImportacion.ventasRechazadas} ventas rechazadas por
                 datos incompletos
               </div>
             )}
 
             {resumenImportacion.errores?.length > 0 && (
-              <div className="text-red-600">
+              <div className="text-red-600 dark:text-red-300">
                 <strong>❌ Errores:</strong>
                 <ul className="list-disc pl-5 text-sm mt-2">
                   {resumenImportacion.errores.map((error, i) => (

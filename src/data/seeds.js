@@ -111,8 +111,11 @@ export const seedProductos = [
     familia: "Only Fibra",
     base: 35,
     pvp: 65,
-    comision_tipo: "porcentaje",
-    comision_valor: 0.12
+    comision_tipo: "mixto",
+    comision_fija: 20,
+    comision_porcentaje: 0.12,
+    comision_valor: 0.12,
+    comisiones_historial: []
   },
   { 
     id: "p-2", 
@@ -122,8 +125,11 @@ export const seedProductos = [
     familia: "Convergente",
     base: 40,
     pvp: 70,
-    comision_tipo: "porcentaje",
-    comision_valor: 0.10
+    comision_tipo: "fijo",
+    comision_fija: 15,
+    comision_porcentaje: 0,
+    comision_valor: 15,
+    comisiones_historial: []
   },
 ];
 

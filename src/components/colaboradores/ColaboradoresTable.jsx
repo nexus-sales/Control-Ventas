@@ -53,10 +53,12 @@ export default function ColaboradoresTable({ colaboradores, niveles, zonas, onEd
                             : "Autónomo"}
                       </div>
                       <div className="text-xs text-slate-500 mt-1">
-                        {c.irpf_calculado === 0 ? (
+                        {c.exento_impuestos ? (
                           <span className="text-green-600 font-medium">IRPF: Exento</span>
-                        ) : (
+                        ) : c.irpf_calculado !== null && c.irpf_calculado !== undefined ? (
                           `IRPF: ${c.irpf_calculado}%`
+                        ) : (
+                          "IRPF: -"
                         )}
                       </div>
                     </div>

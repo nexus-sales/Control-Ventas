@@ -75,7 +75,7 @@ input, select, textarea, button {
 }
 
 .card-pastel {
-  @apply bg-pink-50 dark:bg-pink-900 text-pink-900 dark:text-pink-100 border border-pink-200 dark:border-pink-800;
+  @apply bg-pink-50 dark:bg-slate-900/70 text-pink-900 dark:text-slate-100 border border-pink-200 dark:border-slate-700;
 }
 .card-green {
   @apply bg-emerald-50 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-100 border border-emerald-200 dark:border-emerald-800;

@@ -38,7 +38,10 @@ const seedProductos = [
     base: 30,
     pvp: 60,
     comision_tipo: "porcentaje",
-    comision_valor: 0.1
+    comision_valor: 0.1,
+    comision_porcentaje: 0.1,
+    comision_fija: 0,
+    comisiones_historial: []
   },
   { 
     id: "p-2", 
@@ -48,7 +51,10 @@ const seedProductos = [
     base: 25,
     pvp: 50,
     comision_tipo: "fijo",
-    comision_valor: 25
+    comision_valor: 25,
+    comision_fija: 25,
+    comision_porcentaje: 0,
+    comisiones_historial: []
   },
   { 
     id: "p-3", 
@@ -58,7 +64,10 @@ const seedProductos = [
     base: 36.4,
     pvp: 72.8,
     comision_tipo: "porcentaje",
-    comision_valor: 0.08
+    comision_valor: 0.08,
+    comision_porcentaje: 0.08,
+    comision_fija: 0,
+    comisiones_historial: []
   },
 ];
 

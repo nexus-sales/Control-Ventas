@@ -468,6 +468,9 @@ export default function ConfigSections({ zonas = [] }) {
       const newData = { ...prev, ...data };
       try {
         localStorage.setItem("empresaData", JSON.stringify(newData));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('empresaDataUpdated', { detail: newData }));
+        }
       } catch {
         // LOG ELIMINADO
       }

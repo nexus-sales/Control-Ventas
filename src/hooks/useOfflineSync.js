@@ -70,7 +70,7 @@ export function useOfflineSync() {
     const backupData = {
       ventas: JSON.parse(localStorage.getItem('appcv_ventas') || '[]'),
       colaboradores: JSON.parse(localStorage.getItem('appcv_colaboradores') || '[]'),
-      productos: JSON.parse(localStorage.getItem('appcv_productos') || '[]'),
+      productos: JSON.parse(localStorage.getItem('cv_productos_v3') || '[]'),
       operadores: JSON.parse(localStorage.getItem('appcv_operadores') || '[]'),
       liquidaciones: JSON.parse(localStorage.getItem('appcv_liquidaciones') || '[]'),
       timestamp: new Date().toISOString(),
@@ -97,7 +97,7 @@ export function useOfflineSync() {
   const getOfflineInfo = useCallback(() => {
     const sizeInfo = {
       ventas: (localStorage.getItem('appcv_ventas') || '').length,
-      productos: (localStorage.getItem('appcv_productos') || '').length,
+      productos: (localStorage.getItem('cv_productos_v3') || '').length,
       colaboradores: (localStorage.getItem('appcv_colaboradores') || '').length,
       total: 0
     };

@@ -146,14 +146,14 @@ export default function Reglas() {
       )}
 
       {/* Pestañas */}
-      <div className="border-b border-slate-200">
+      <div className="border-b border-slate-200 dark:border-gray-700">
         <nav className="flex gap-8">
           <button
             onClick={() => setActiveTab("niveles")}
             className={`pb-3 px-1 border-b-2 font-medium transition-colors flex items-center gap-2 ${
               activeTab === "niveles"
-                ? "border-sky-500 text-sky-600"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                ? "border-sky-500 text-sky-600 dark:border-sky-400 dark:text-sky-300"
+                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 hover:dark:text-white"
             }`}
             aria-label="Ver niveles de comisión"
           >
@@ -164,8 +164,8 @@ export default function Reglas() {
             onClick={() => setActiveTab("reglas")}
             className={`pb-3 px-1 border-b-2 font-medium transition-colors flex items-center gap-2 ${
               activeTab === "reglas"
-                ? "border-sky-500 text-sky-600"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                ? "border-sky-500 text-sky-600 dark:border-sky-400 dark:text-sky-300"
+                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 hover:dark:text-white"
             }`}
             aria-label="Ver reglas específicas"
           >
@@ -179,10 +179,10 @@ export default function Reglas() {
       {activeTab === "niveles" && (
         <div className="space-y-6">
           {/* Formulario para nuevo nivel */}
-          <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100">
+          <Card className="border-emerald-200 dark:border-emerald-500/40 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/40 dark:to-emerald-800/40 dark:text-emerald-50">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
-                <Layers className="w-6 h-6 mr-2 text-emerald-600" />
+                <Layers className="w-6 h-6 mr-2 text-emerald-600 dark:text-emerald-300" />
                 <SectionTitle>Nuevo Nivel de Comisión</SectionTitle>
               </div>
               <button
@@ -194,7 +194,7 @@ export default function Reglas() {
               </button>
             </div>
             
-            <div className="text-sm text-emerald-700 mb-4 p-3 bg-emerald-100 rounded-lg">
+            <div className="text-sm text-emerald-700 dark:text-emerald-100 mb-4 p-3 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
               <p className="font-medium mb-1">Comisiones diferenciadas por sector:</p>
               <ul className="space-y-1">
                 <li className="flex items-center gap-2">
@@ -229,7 +229,7 @@ export default function Reglas() {
             <div className="overflow-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-slate-500 bg-slate-50">
+                  <tr className="text-left text-slate-500 bg-slate-50 dark:text-slate-300 dark:bg-gray-900">
                     <th className="py-3 px-3 font-medium">ID</th>
                     <th className="py-3 px-3 font-medium">Nombre</th>
                     <th className="py-3 px-3 font-medium">Tipo</th>
@@ -242,52 +242,52 @@ export default function Reglas() {
                 </thead>
                 <tbody>
                   {niveles.map((n) => (
-                    <tr key={n.id} className="border-t hover:bg-slate-50">
+                    <tr key={n.id} className="border-t hover:bg-slate-50 dark:border-gray-700 dark:hover:bg-gray-800">
                       <td className="py-3 px-3">
-                        <span className="font-mono font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded">
+                        <span className="font-mono font-semibold text-slate-700 bg-slate-100 dark:text-slate-200 dark:bg-gray-800 px-2 py-1 rounded">
                           {n.id}
                         </span>
                       </td>
                       <td className="py-3 px-3">
-                        <span className="font-medium text-slate-800">{n.nombre}</span>
+                        <span className="font-medium text-slate-800 dark:text-slate-100">{n.nombre}</span>
                       </td>
                       <td className="py-3 px-3">
                         <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                           n.tipo === "MANAGER"
-                            ? "bg-purple-100 text-purple-700"
+                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-200"
                             : n.tipo === "SUPERVISOR"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-green-100 text-green-700"
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200"
+                              : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200"
                         }`}>
                           {n.tipo}
                         </span>
                       </td>
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-blue-600" />
-                          <span className="font-medium text-blue-700">
+                          <Phone className="w-4 h-4 text-blue-600 dark:text-blue-300" />
+                          <span className="font-medium text-blue-700 dark:text-blue-200">
                             {((n.pct_telefonia || 0) * 100).toFixed(0)}%
                           </span>
                         </div>
                       </td>
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-2">
-                          <Zap className="w-4 h-4 text-yellow-600" />
-                          <span className="font-medium text-yellow-700">
+                          <Zap className="w-4 h-4 text-yellow-600 dark:text-yellow-300" />
+                          <span className="font-medium text-yellow-700 dark:text-yellow-200">
                             {((n.pct_energia || 0) * 100).toFixed(0)}%
                           </span>
                         </div>
                       </td>
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-2">
-                          <Shield className="w-4 h-4 text-red-600" />
-                          <span className="font-medium text-red-700">
+                          <Shield className="w-4 h-4 text-red-600 dark:text-red-300" />
+                          <span className="font-medium text-red-700 dark:text-red-200">
                             {(n.fijo_seguridad || 0).toFixed(2)}€
                           </span>
                         </div>
                       </td>
                       <td className="py-3 px-3">
-                        <span className="text-slate-600 text-sm">
+                        <span className="text-slate-600 dark:text-slate-300 text-sm">
                           {n.descripcion || "-"}
                         </span>
                       </td>
@@ -295,14 +295,14 @@ export default function Reglas() {
                         <div className="flex gap-1">
                           <button
                             onClick={() => setModalNivel(n)}
-                            className="p-1.5 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                            className="p-1.5 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900 transition-colors"
                             title="Editar"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => removeNivel(n.id)}
-                            className="p-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors"
+                            className="p-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/40 dark:text-rose-200 dark:hover:bg-rose-900 transition-colors"
                             title="Eliminar"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -314,7 +314,7 @@ export default function Reglas() {
                 </tbody>
               </table>
               {niveles.length === 0 && (
-                <div className="text-center py-8 text-slate-500">
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                   <Layers className="w-16 h-16 mx-auto mb-3 opacity-30" />
                   <p>No hay niveles configurados</p>
                   <p className="text-sm mt-1">
@@ -337,15 +337,15 @@ export default function Reglas() {
       {/* Contenido de Reglas */}
       {activeTab === "reglas" && (
         <>
-          <Card className="bg-blue-50 border-blue-200 mb-2">
+          <Card className="bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 mb-2">
             <div className="flex items-center gap-3">
-              <Settings className="w-5 h-5 text-blue-600" />
+              <Settings className="w-5 h-5 text-blue-600 dark:text-blue-300" />
               <div>
-                <p className="font-medium text-blue-800">
+                <p className="font-medium text-blue-800 dark:text-blue-100">
                   Aquí defines las reglas de comisión que la empresa cobra a los
                   operadores por producto.
                 </p>
-                <p className="text-sm text-blue-700">
+                <p className="text-sm text-blue-700 dark:text-blue-200">
                   Estas reglas pueden ser porcentajes, cuotas, importes fijos,
                   rappel, etc. Los colaboradores solo toman referencia de aquí
                   para calcular su comisión, pero no se gestionan desde esta
@@ -356,10 +356,10 @@ export default function Reglas() {
           </Card>
 
           {/* Botón para nueva regla */}
-          <Card className="border-sky-200 bg-gradient-to-br from-sky-50 to-sky-100">
+          <Card className="border-sky-200 dark:border-sky-500/40 bg-gradient-to-br from-sky-50 to-sky-100 dark:from-sky-900/40 dark:to-sky-800/40">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Settings className="w-6 h-6 mr-2 text-sky-600" />
+                <Settings className="w-6 h-6 mr-2 text-sky-600 dark:text-sky-300" />
                 <SectionTitle>Reglas de Comisión</SectionTitle>
               </div>
               <button
@@ -390,7 +390,7 @@ export default function Reglas() {
             <div className="overflow-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-slate-500 bg-slate-50">
+                  <tr className="text-left text-slate-500 bg-slate-50 dark:text-slate-300 dark:bg-gray-900">
                     <th className="py-3 px-3 font-medium">Operador</th>
                     <th className="py-3 px-3 font-medium">Producto</th>
                     <th className="py-3 px-3 font-medium">Tipo</th>
@@ -406,16 +406,16 @@ export default function Reglas() {
                     const producto = productos.find((p) => p.id === r.producto_id);
                     
                     return (
-                      <tr key={r.id} className="border-t hover:bg-slate-50">
+                      <tr key={r.id} className="border-t hover:bg-slate-50 dark:border-gray-700 dark:hover:bg-gray-800">
                         <td className="py-3 px-3">
                           <div className="space-y-1">
-                            <span className="font-medium text-slate-800">
+                            <span className="font-medium text-slate-800 dark:text-slate-100">
                               {operador?.nombre || r.operador_id}
                             </span>
                             {operador?.sector && (
                               <div className="flex items-center gap-1">
                                 {getSectorIcon(operador.sector)}
-                                <span className="text-xs text-slate-500 capitalize">
+                                <span className="text-xs text-slate-500 dark:text-slate-400 capitalize">
                                   {operador.sector}
                                 </span>
                               </div>
@@ -423,15 +423,15 @@ export default function Reglas() {
                           </div>
                         </td>
                         <td className="py-3 px-3">
-                          <span className={r.producto_id ? "" : "text-slate-400"}>
+                          <span className={r.producto_id ? "dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}>
                             {producto?.nombre || "Todos"}
                           </span>
                         </td>
                         <td className="py-3 px-3">
                           <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                             r.tipo === "%"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-green-100 text-green-700"
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200"
+                              : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200"
                           }`}>
                             {r.tipo === "%" ? "Porcentaje" : "Fijo"}
                           </span>
@@ -440,27 +440,27 @@ export default function Reglas() {
                           {r.pct_sobre === "ComisiónOperador" ? "Comisión Op." : "Base"}
                         </td>
                         <td className="py-3 px-3">
-                          <span className="font-semibold">
+                          <span className="font-semibold dark:text-slate-100">
                             {r.tipo === "%"
                               ? `${(r.valor * 100).toFixed(2)}%`
                               : `${r.valor.toFixed(2)} €`}
                           </span>
                         </td>
                         <td className="py-3 px-3">
-                          <span className="text-slate-600">{r.prioridad}</span>
+                          <span className="text-slate-600 dark:text-slate-300">{r.prioridad}</span>
                         </td>
                         <td className="py-3 px-3">
                           <div className="flex gap-1">
                             <button
                               onClick={() => setModalRegla(r)}
-                              className="p-1.5 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                              className="p-1.5 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900 transition-colors"
                               title="Editar"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => removeRegla(r.id)}
-                              className="p-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors"
+                              className="p-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/40 dark:text-rose-200 dark:hover:bg-rose-900 transition-colors"
                               title="Eliminar"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -473,7 +473,7 @@ export default function Reglas() {
                 </tbody>
               </table>
               {reglas.length === 0 && (
-                <div className="text-center py-8 text-slate-500">
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                   <Settings className="w-16 h-16 mx-auto mb-3 opacity-30" />
                   <p>No hay reglas configuradas</p>
                   <p className="text-sm mt-1">

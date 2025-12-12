@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { X, User, Building2, Percent, Phone, MapPin, Shield, Save, Zap } from 'lucide-react';
 
 export default function ColaboradorEditModal({ colaborador, onSave, onClose, niveles, zonas = [] }) {
@@ -48,17 +48,29 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
 
   const [error, setError] = useState("");
 
+  const normalizarTipoFiscal = (tipo = "") =>
+    tipo
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/\s+/g, '_');
+
   const calcularIRPF = (tipo_fiscal, fecha_alta, cif_dni = "") => {
     const esCIF = cif_dni.toUpperCase().match(/^[ABCDEFGHJNPQRSUVW]/);
-    if (esCIF || tipo_fiscal === "EMPRESA") return 0;
-    if (tipo_fiscal === "AUTONOMO_ESPECIAL") return 0;
-    if (tipo_fiscal === "AUTONOMO") {
+    const tipo = normalizarTipoFiscal(tipo_fiscal);
+    const esEmpresa = tipo === "EMPRESA" || esCIF;
+    const esAutonomoEspecial = tipo === "AUTONOMO_ESPECIAL";
+    const esAutonomo = tipo === "AUTONOMO";
+
+    if (esEmpresa || esAutonomoEspecial) return null;
+    if (esAutonomo) {
       const fechaAlta = new Date(fecha_alta);
       const ahora = new Date();
-      const añosTranscurridos = (ahora - fechaAlta) / (1000 * 60 * 60 * 24 * 365);
+      const añosTranscurridos = (ahora - fechaAlta) / (1000 * 60 * 60 * 24 * 365.25);
       return añosTranscurridos < 2 ? 7 : 15;
     }
-    return 0;
+    return null;
   };
 
   const handleSave = () => {
@@ -89,7 +101,11 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       observaciones: draft.observaciones?.trim() || "",
       pct_colaborador: draft.pct_colaborador === "" ? null : Number(draft.pct_colaborador),
       irpf_calculado: calcularIRPF(draft.tipo_fiscal, draft.fecha_alta, draft.cif_dni),
-      exento_impuestos: draft.tipo_fiscal === "AUTONOMO_ESPECIAL",
+      exento_impuestos: (() => {
+        const tipo = normalizarTipoFiscal(draft.tipo_fiscal);
+        const esCIF = draft.cif_dni?.toUpperCase().match(/^[ABCDEFGHJNPQRSUVW]/);
+        return tipo === "AUTONOMO_ESPECIAL" || tipo === "EMPRESA" || Boolean(esCIF);
+      })(),
       fecha_baja: draft.fecha_baja || null,
     };
     
@@ -98,23 +114,53 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
 
   const nivelSeleccionado = niveles.find(n => n.id === draft.nivel);
 
+  const zonasDisponibles = useMemo(() => {
+    if (!Array.isArray(zonas) || zonas.length === 0) return [];
+    const normalizeKey = (value) =>
+      value
+        ? value
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9]+/g, ' ')
+            .trim()
+            .toLowerCase()
+        : '';
+
+    const uniqueMap = new Map();
+    zonas.forEach((zona) => {
+      if (!zona?.id) return;
+      const name = zona.nombre || zona.codigo || zona.id;
+      const keyBase = normalizeKey(name);
+      const key = keyBase || zona.id.toLowerCase();
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, zona);
+      }
+    });
+
+    return Array.from(uniqueMap.values()).sort((a, b) => {
+      const nameA = (a.nombre || a.codigo || a.id || '').toLowerCase();
+      const nameB = (b.nombre || b.codigo || b.id || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+  }, [zonas]);
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto relative">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border border-slate-200 dark:border-gray-700 rounded-xl shadow-2xl p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto relative">
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 p-2 hover:bg-slate-100 rounded-full"
+          className="absolute top-3 right-3 p-2 hover:bg-slate-100 dark:hover:bg-gray-800 rounded-full text-slate-500 dark:text-gray-400"
         >
-          <X className="w-5 h-5 text-slate-500" />
+          <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+        <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-gray-100 flex items-center gap-2">
           <User className="w-6 h-6 text-sky-600" />
           {colaborador ? `Editar: ${colaborador.nombre}` : 'Nuevo Colaborador'}
         </h2>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl text-red-700 dark:text-red-300 text-sm">
             {error}
           </div>
         )}
@@ -122,9 +168,9 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
         {/* Datos básicos */}
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Nombre completo *</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Nombre completo *</label>
             <input
-              className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
               value={draft.nombre}
               onChange={(e) => {
                 setDraft((d) => ({ ...d, nombre: e.target.value }));
@@ -133,9 +179,9 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">CIF/DNI</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">CIF/DNI</label>
             <input
-              className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
               placeholder="12345678Z o B12345678"
               value={draft.cif_dni}
               onChange={(e) => setDraft((d) => ({ ...d, cif_dni: e.target.value }))}
@@ -146,9 +192,9 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
         {/* Nivel y tipo fiscal */}
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Nivel de Comisión *</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Nivel de Comisión *</label>
             <select
-              className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
               value={draft.nivel}
               onChange={(e) => {
                 setDraft((d) => ({ ...d, nivel: e.target.value }));
@@ -163,7 +209,7 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
               ))}
             </select>
             {nivelSeleccionado && (
-              <div className="text-xs text-slate-600 bg-slate-50 p-2 rounded">
+              <div className="text-xs text-slate-600 dark:text-gray-300 bg-slate-50 dark:bg-gray-800/70 p-2 rounded">
                 <div className="flex gap-4">
                   <span>📞 {(nivelSeleccionado.pct_telefonia * 100).toFixed(0)}%</span>
                   <span>⚡ {(nivelSeleccionado.pct_energia * 100).toFixed(0)}%</span>
@@ -173,9 +219,9 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
             )}
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Tipo Fiscal</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Tipo Fiscal</label>
             <select
-              className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
               value={draft.tipo_fiscal}
               onChange={(e) => setDraft((d) => ({ ...d, tipo_fiscal: e.target.value }))}
             >
@@ -189,27 +235,27 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
         {/* Fechas y estado */}
         <div className="grid md:grid-cols-3 gap-4 mb-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Fecha de alta *</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Fecha de alta *</label>
             <input
-              className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
               type="date"
               value={draft.fecha_alta}
               onChange={(e) => setDraft((d) => ({ ...d, fecha_alta: e.target.value }))}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Fecha de baja</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Fecha de baja</label>
             <input
-              className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
               type="date"
               value={draft.fecha_baja}
               onChange={(e) => setDraft((d) => ({ ...d, fecha_baja: e.target.value }))}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Estado</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Estado</label>
             <select
-              className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
               value={draft.estado}
               onChange={(e) => setDraft((d) => ({ ...d, estado: e.target.value }))}
             >
@@ -221,25 +267,25 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
         </div>
 
         {/* Información de contacto */}
-        <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+        <div className="mb-6 p-4 bg-slate-50 dark:bg-gray-800/50 border border-slate-200 dark:border-gray-700 rounded-xl">
+          <h3 className="font-semibold text-slate-800 dark:text-gray-100 mb-4 flex items-center gap-2">
             <Phone className="w-4 h-4" />
             Información de Contacto
           </h3>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Teléfono</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Teléfono</label>
               <input
-                className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+                className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
                 placeholder="600123456"
                 value={draft.telefono}
                 onChange={(e) => setDraft((d) => ({ ...d, telefono: e.target.value }))}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Email</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Email</label>
               <input
-                className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+                className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
                 placeholder="colaborador@email.com"
                 type="email"
                 value={draft.email}
@@ -248,9 +294,9 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
             </div>
           </div>
           <div className="space-y-2 mt-4">
-            <label className="text-sm font-medium text-slate-700">Dirección</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Dirección</label>
             <input
-              className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
               placeholder="Calle, número, ciudad, código postal"
               value={draft.direccion}
               onChange={(e) => setDraft((d) => ({ ...d, direccion: e.target.value }))}
@@ -259,22 +305,22 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
         </div>
 
         {/* Zona */}
-        {zonas.length > 0 && (
+        {zonasDisponibles.length > 0 && (
           <div className="mb-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-gray-300 flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
                 Zona de trabajo
               </label>
               <select
-                className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+                className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
                 value={draft.zona_id}
                 onChange={(e) => setDraft((d) => ({ ...d, zona_id: e.target.value }))}
               >
                 <option value="">Sin asignar</option>
-                {zonas.map((zona) => (
+                {zonasDisponibles.map((zona) => (
                   <option key={zona.id} value={zona.id}>
-                    {zona.nombre}
+                    {zona.nombre || zona.codigo || zona.id}
                   </option>
                 ))}
               </select>
@@ -283,9 +329,9 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
         )}
 
         {/* Comisiones personalizadas */}
-        <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+        <div className="mb-6 p-4 bg-slate-50 dark:bg-gray-800/50 border border-slate-200 dark:border-gray-700 rounded-xl">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+            <h3 className="font-semibold text-slate-800 dark:text-gray-100 flex items-center gap-2">
               <Percent className="w-4 h-4" />
               Comisiones Personalizadas
             </h3>
@@ -294,9 +340,9 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
                 type="checkbox"
                 checked={draft.comision_personalizada_activa}
                 onChange={(e) => setDraft((d) => ({ ...d, comision_personalizada_activa: e.target.checked }))}
-                className="rounded"
+                className="rounded accent-sky-600"
               />
-              <span className="text-sm text-slate-700">Activar comisiones personalizadas</span>
+              <span className="text-sm text-slate-700 dark:text-gray-300">Activar comisiones personalizadas</span>
             </label>
           </div>
 
@@ -304,12 +350,12 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
             <div className="grid md:grid-cols-3 gap-4">
               {/* Telefonía */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-gray-300 flex items-center gap-2">
                   <Phone className="w-4 h-4 text-blue-600" />
                   Telefonía
                 </label>
                 <select
-                  className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
                   value={draft.telefonia_tipo}
                   onChange={(e) => setDraft((d) => ({ ...d, telefonia_tipo: e.target.value }))}
                 >
@@ -317,7 +363,7 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
                   <option value="fijo">Importe fijo</option>
                 </select>
                 <input
-                  className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
                   type="number"
                   step="0.01"
                   placeholder={draft.telefonia_tipo === 'porcentaje' ? '0.05' : '50'}
@@ -328,12 +374,12 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
 
               {/* Energía */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-gray-300 flex items-center gap-2">
                   <Zap className="w-4 h-4 text-yellow-600" />
                   Energía
                 </label>
                 <select
-                  className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
                   value={draft.energia_tipo}
                   onChange={(e) => setDraft((d) => ({ ...d, energia_tipo: e.target.value }))}
                 >
@@ -341,7 +387,7 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
                   <option value="fijo">Importe fijo</option>
                 </select>
                 <input
-                  className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
                   type="number"
                   step="0.01"
                   placeholder={draft.energia_tipo === 'porcentaje' ? '0.05' : '50'}
@@ -352,12 +398,12 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
 
               {/* Seguridad */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-gray-300 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-green-600" />
                   Seguridad
                 </label>
                 <select
-                  className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
                   value={draft.seguridad_tipo}
                   onChange={(e) => setDraft((d) => ({ ...d, seguridad_tipo: e.target.value }))}
                 >
@@ -365,7 +411,7 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
                   <option value="porcentaje">Porcentaje</option>
                 </select>
                 <input
-                  className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
                   type="number"
                   step="0.01"
                   placeholder={draft.seguridad_tipo === 'fijo' ? '250' : '0.15'}
@@ -379,9 +425,9 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
 
         {/* Observaciones */}
         <div className="space-y-2 mb-6">
-          <label className="text-sm font-medium text-slate-700">Observaciones</label>
+          <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Observaciones</label>
           <textarea
-            className="border border-slate-200 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+            className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
             rows="3"
             placeholder="Notas adicionales sobre el colaborador..."
             value={draft.observaciones}
@@ -390,16 +436,16 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
         </div>
 
         {/* Botones */}
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-gray-700">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 hover:bg-slate-50"
+            className="px-4 py-2 border border-slate-300 dark:border-gray-600 rounded-xl text-slate-600 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-gray-800"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl hover:from-sky-600 hover:to-sky-700 flex items-center gap-2"
+            className="px-4 py-2 bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl hover:from-sky-600 hover:to-sky-700 dark:from-sky-600 dark:to-sky-700 dark:hover:from-sky-700 dark:hover:to-sky-800 flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
             Guardar Colaborador

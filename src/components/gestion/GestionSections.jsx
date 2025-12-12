@@ -1,6 +1,6 @@
 // src/components/gestion/GestionSections.jsx
-// MÓDULO GESTIÓN CONSOLIDADO - Integra ProductosSection, OperadoresSection, AdministracionSection
-// CON LIMPIEZA AUTOMÁTICA DE DUPLICADOS Y VALIDACIONES ROBUSTAS
+// MÓDULO GESTIÓN CONSOLIDADO - VERSIÓN CORREGIDA
+// PROBLEMAS SOLUCIONADOS: Guardado de operadores, función handleSelect, limpieza de duplicados
 
 import React, { useState, useMemo, useCallback } from "react";
 import { useData } from "../../context/AppContexts";
@@ -10,44 +10,64 @@ import {
   Package, AlertTriangle, CheckCircle, Filter
 } from "lucide-react";
 import { saveAs } from "file-saver";
+import { SECTORES, FAMILIAS_POR_SECTOR } from "../../utils/constants";
 
 // ==========================================
-// UTILIDADES DE LIMPIEZA Y VALIDACIÓN
+// UTILIDADES DE LIMPIEZA Y VALIDACIÓN - CORREGIDAS
 // ==========================================
 
-// Limpieza robusta de operadores
+// Limpieza de operadores - MÁS PERMISIVA
 const cleanOperadores = (operadores = []) => {
-  // Solo filtrar si hay duplicados exactos de id
+  if (!Array.isArray(operadores)) return [];
+  
   const seen = new Set();
   return operadores.filter(op => {
-    if (!op?.id || !op?.nombre) return false;
-    if (seen.has(op.id)) return false;
-    seen.add(op.id);
-    return true;
+    // Validación más permisiva - solo requerimos que exista el objeto y tenga algún identificador
+    if (!op || typeof op !== 'object') return false;
+    
+    // Si tiene ID, usamos ID para duplicados
+    if (op.id) {
+      if (seen.has(op.id)) return false;
+      seen.add(op.id);
+      return true;
+    }
+    
+    // Si no tiene ID pero tiene nombre, lo permitimos (para operadores en proceso de creación)
+    if (op.nombre && op.nombre.trim()) {
+      return true;
+    }
+    
+    return false;
   });
 };
 
-// Limpieza robusta de productos con validaciones
+// Limpieza de productos - MEJORADA
 const cleanProductosRobust = (productos = [], operadores = []) => {
-  const operadorIds = new Set(operadores.map(o => o.id));
+  if (!Array.isArray(productos)) return [];
+  if (!Array.isArray(operadores)) return [];
+  
+  const operadorIds = new Set(operadores.map(o => o.id).filter(Boolean));
   const seen = new Set();
   
   return productos.filter(prod => {
-    if (!prod?.id || !prod?.nombre) return false;
+    if (!prod || typeof prod !== 'object') return false;
+    if (!prod.nombre || !prod.nombre.trim()) return false;
     
-    // Verificar que el operador existe
+    // Permitir productos sin operador asignado (operador_id vacío o null)
     if (prod.operador_id && !operadorIds.has(prod.operador_id)) {
-      // LOG ELIMINADO
+      console.log(`Producto "${prod.nombre}" tiene operador inexistente:`, prod.operador_id);
       return false;
     }
     
-    // Prevenir duplicados
-    const key = `${prod.nombre.toLowerCase().trim()}_${prod.operador_id || 'sin-operador'}`;
-    if (seen.has(key)) {
-      // LOG ELIMINADO
-      return false;
+    // Prevenir duplicados exactos de ID
+    if (prod.id) {
+      if (seen.has(prod.id)) {
+        console.log(`Producto duplicado por ID eliminado:`, prod.id);
+        return false;
+      }
+      seen.add(prod.id);
     }
-    seen.add(key);
+    
     return true;
   });
 };
@@ -56,20 +76,48 @@ const cleanProductosRobust = (productos = [], operadores = []) => {
 const normalizeText = (text) => text?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() || "";
 
 // ==========================================
-// COMPONENTE: ProductoModal (INTEGRADO)
+// COMPONENTE: ProductoModal (CORREGIDO)
 // ==========================================
+const sumarDia = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+};
+
 const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }) => {
   const [form, setForm] = useState(
     producto ? {
       ...producto,
+      sector: producto.sector || operadores.find(op => op.id === producto.operador_id)?.sector || "",
+      comision_vigencia_desde: producto.comision_vigencia_desde || "",
+      comision_vigencia_hasta: producto.comision_vigencia_hasta || "",
+      comision_cliente_nuevo: producto.comision_cliente_nuevo ?? "",
+      comision_cliente_existente: producto.comision_cliente_existente ?? "",
+      comision_portabilidad: producto.comision_portabilidad ?? "",
+      comision_alta_nueva: producto.comision_alta_nueva ?? "",
+      comision_fija: producto.comision_fija ?? "",
+      comision_porcentaje: producto.comision_porcentaje ?? "",
+      comisiones_historial: Array.isArray(producto.comisiones_historial) ? producto.comisiones_historial : [],
       customFields: { ...producto.customFields }
     } : {
       operador_id: operadores[0]?.id || "",
+      sector: operadores[0]?.sector || "",
       nombre: "",
       familia: "",
       pvp: "",
       comision_tipo: "porcentaje",
       comision_valor: "",
+      comision_vigencia_desde: "",
+      comision_vigencia_hasta: "",
+      comision_cliente_nuevo: "",
+      comision_cliente_existente: "",
+      comision_portabilidad: "",
+      comision_alta_nueva: "",
+      comision_fija: "",
+      comision_porcentaje: "",
+      comisiones_historial: [],
       fecha_alta: new Date().toISOString().slice(0, 10),
       contacto: "",
       email: "",
@@ -80,44 +128,136 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
   );
   
   const [errors, setErrors] = useState({});
+
+  const familiasDisponibles = useMemo(() => {
+    return form.sector ? FAMILIAS_POR_SECTOR[form.sector] || [] : [];
+  }, [form.sector]);
   
   const validate = useCallback(() => {
     const newErrors = {};
     if (!form.nombre?.trim()) newErrors.nombre = "Nombre es obligatorio";
+    if (!form.sector) newErrors.sector = "Sector es obligatorio";
     if (!form.operador_id) newErrors.operador_id = "Operador es obligatorio";
     if (!form.pvp || Number(form.pvp) <= 0) newErrors.pvp = "PVP debe ser mayor que 0";
     if (form.comision_valor && Number(form.comision_valor) < 0) newErrors.comision_valor = "Comisión no puede ser negativa";
+    ["comision_cliente_nuevo", "comision_cliente_existente", "comision_portabilidad", "comision_alta_nueva"].forEach((campo) => {
+      if (form[campo] !== "" && form[campo] !== null && form[campo] !== undefined && isNaN(Number(form[campo]))) {
+        newErrors[campo] = "Debe ser numérico";
+      }
+    });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [form]);
   
+  const appendSnapshot = useCallback((baseForm) => {
+    const snapshotFecha = baseForm.comision_vigencia_desde || baseForm.fecha_alta || new Date().toISOString().slice(0, 10);
+    const nowIso = new Date().toISOString();
+    const snapshot = {
+      id: `hist_${Date.now()}`,
+      desde: snapshotFecha,
+      hasta: baseForm.comision_vigencia_hasta || "",
+      comision_tipo: baseForm.comision_tipo,
+      comision_fija: baseForm.comision_fija,
+      comision_porcentaje: baseForm.comision_porcentaje,
+      comision_valor: baseForm.comision_valor,
+      comision_cliente_nuevo: baseForm.comision_cliente_nuevo,
+      comision_cliente_existente: baseForm.comision_cliente_existente,
+      comision_portabilidad: baseForm.comision_portabilidad,
+      comision_alta_nueva: baseForm.comision_alta_nueva,
+      comision_vigencia_desde: baseForm.comision_vigencia_desde || "",
+      comision_vigencia_hasta: baseForm.comision_vigencia_hasta || "",
+      created_at: nowIso,
+    };
+
+    const historial = Array.isArray(baseForm.comisiones_historial) ? [...baseForm.comisiones_historial] : [];
+    const last = historial[historial.length - 1];
+    if (last && !last.hasta && snapshot.desde && last.desde && snapshot.desde > last.desde) {
+      historial[historial.length - 1] = { ...last, hasta: last.hasta || snapshot.desde };
+    }
+    historial.push(snapshot);
+    return historial;
+  }, []);
+
   const handleSave = useCallback(() => {
     if (!validate()) return;
-    
+
     const cleanForm = {
       ...form,
       id: form.id || `p_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       nombre: form.nombre.trim(),
+      sector: form.sector || "",
       familia: form.familia?.trim() || "Sin clasificar",
       pvp: Number(form.pvp),
       comision_valor: form.comision_valor ? Number(form.comision_valor) : 0,
+      comision_fija: form.comision_fija === "" ? 0 : Number(form.comision_fija),
+      comision_porcentaje: form.comision_porcentaje === "" ? 0 : Number(form.comision_porcentaje),
+      comision_vigencia_desde: form.comision_vigencia_desde || "",
+      comision_vigencia_hasta: form.comision_vigencia_hasta || "",
+      comision_cliente_nuevo: form.comision_cliente_nuevo === "" ? "" : Number(form.comision_cliente_nuevo),
+      comision_cliente_existente: form.comision_cliente_existente === "" ? "" : Number(form.comision_cliente_existente),
+      comision_portabilidad: form.comision_portabilidad === "" ? "" : Number(form.comision_portabilidad),
+      comision_alta_nueva: form.comision_alta_nueva === "" ? "" : Number(form.comision_alta_nueva),
       activo: true,
       fecha_actualizacion: new Date().toISOString()
     };
-    
+
+    if (cleanForm.comision_tipo === 'fijo' && !cleanForm.comision_valor) {
+      cleanForm.comision_valor = cleanForm.comision_fija;
+    }
+    if (cleanForm.comision_tipo === 'porcentaje' && !cleanForm.comision_valor) {
+      cleanForm.comision_valor = cleanForm.comision_porcentaje;
+    }
+
+    cleanForm.comisiones_historial = appendSnapshot(cleanForm);
+
+    console.log('🔄 Guardando producto:', cleanForm);
     onSave(cleanForm);
     onClose();
-  }, [form, validate, onSave, onClose]);
+  }, [form, validate, onSave, onClose, appendSnapshot]);
+
+  const handleNuevaVigencia = useCallback(() => {
+    if (!form.comision_vigencia_hasta) {
+      setErrors(prev => ({ ...prev, comision_vigencia_hasta: "Indica la fecha fin para cerrar la vigencia actual" }));
+      return;
+    }
+    const cleanBase = {
+      ...form,
+      comision_fija: form.comision_fija === "" ? 0 : Number(form.comision_fija),
+      comision_porcentaje: form.comision_porcentaje === "" ? 0 : Number(form.comision_porcentaje),
+      comision_valor: form.comision_valor ? Number(form.comision_valor) : 0,
+      comision_cliente_nuevo: form.comision_cliente_nuevo === "" ? "" : Number(form.comision_cliente_nuevo),
+      comision_cliente_existente: form.comision_cliente_existente === "" ? "" : Number(form.comision_cliente_existente),
+      comision_portabilidad: form.comision_portabilidad === "" ? "" : Number(form.comision_portabilidad),
+      comision_alta_nueva: form.comision_alta_nueva === "" ? "" : Number(form.comision_alta_nueva),
+      comisiones_historial: form.comisiones_historial,
+    };
+    const nuevoHist = appendSnapshot(cleanBase);
+    const siguienteDesde = sumarDia(form.comision_vigencia_hasta) || "";
+    setForm(prev => ({
+      ...prev,
+      comisiones_historial: nuevoHist,
+      comision_vigencia_desde: siguienteDesde,
+      comision_vigencia_hasta: "",
+      comision_valor: "",
+      comision_fija: "",
+      comision_porcentaje: "",
+      comision_cliente_nuevo: "",
+      comision_cliente_existente: "",
+      comision_portabilidad: "",
+      comision_alta_nueva: "",
+    }));
+    setErrors(prev => ({ ...prev, comision_vigencia_hasta: undefined }));
+  }, [form, appendSnapshot]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border border-slate-200 dark:border-gray-700 rounded-xl shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
             <Package className="w-6 h-6 text-green-500" />
             {producto ? 'Editar Producto' : 'Nuevo Producto'}
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full">
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -125,11 +265,14 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
         <div className="space-y-6">
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Operador *</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Operador *</label>
               <select 
-                className={`w-full border rounded-xl px-3 py-2 ${errors.operador_id ? 'border-red-300' : 'border-slate-200'}`}
+                className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.operador_id ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
                 value={form.operador_id}
-                onChange={e => setForm(prev => ({...prev, operador_id: e.target.value}))}
+                onChange={e => {
+                  const selected = operadores.find(op => op.id === e.target.value);
+                  setForm(prev => ({...prev, operador_id: e.target.value, sector: selected?.sector || prev.sector, familia: ''}));
+                }}
               >
                 <option value="">Seleccionar operador</option>
                 {operadores.map(op => (
@@ -138,12 +281,27 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
               </select>
               {errors.operador_id && <p className="text-xs text-red-600">{errors.operador_id}</p>}
             </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Sector *</label>
+              <select
+                className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.sector ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
+                value={form.sector}
+                onChange={e => setForm(prev => ({...prev, sector: e.target.value, familia: ''}))}
+              >
+                <option value="">Seleccionar sector</option>
+                {Object.keys(SECTORES).map(key => (
+                  <option key={key} value={key}>{SECTORES[key]}</option>
+                ))}
+              </select>
+              {errors.sector && <p className="text-xs text-red-600">{errors.sector}</p>}
+            </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Nombre *</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Nombre *</label>
               <input 
                 type="text"
-                className={`w-full border rounded-xl px-3 py-2 ${errors.nombre ? 'border-red-300' : 'border-slate-200'}`}
+                className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.nombre ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
                 value={form.nombre}
                 onChange={e => setForm(prev => ({...prev, nombre: e.target.value}))}
               />
@@ -151,23 +309,30 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Familia</label>
-              <input 
-                type="text"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Familia</label>
+              <select
+                className="w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 rounded-xl px-3 py-2"
                 value={form.familia}
                 onChange={e => setForm(prev => ({...prev, familia: e.target.value}))}
-                placeholder="Ej: Fibra, Móvil, Alarmas..."
-              />
+                disabled={!form.sector}
+              >
+                <option value="">{form.sector ? 'Seleccionar familia' : 'Selecciona un sector primero'}</option>
+                {familiasDisponibles.map((fam) => (
+                  <option key={fam} value={fam}>{fam}</option>
+                ))}
+                {form.familia && !familiasDisponibles.includes(form.familia) && (
+                  <option value={form.familia}>{form.familia}</option>
+                )}
+              </select>
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">PVP (€) *</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">PVP (€) *</label>
               <input 
                 type="number"
                 min="0"
                 step="0.01"
-                className={`w-full border rounded-xl px-3 py-2 ${errors.pvp ? 'border-red-300' : 'border-slate-200'}`}
+                className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.pvp ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
                 value={form.pvp}
                 onChange={e => setForm(prev => ({...prev, pvp: e.target.value}))}
               />
@@ -175,57 +340,190 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Tipo Comisión</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Tipo Comisión</label>
               <select 
-                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                className="w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 rounded-xl px-3 py-2"
                 value={form.comision_tipo}
                 onChange={e => setForm(prev => ({...prev, comision_tipo: e.target.value}))}
               >
                 <option value="porcentaje">Porcentaje (%)</option>
                 <option value="fijo">Importe Fijo (€)</option>
+                <option value="mixto">Mixto (Fijo + %)</option>
               </select>
             </div>
-            
+
+            {/* Campo para comisión fija */}
+            {(form.comision_tipo === 'fijo' || form.comision_tipo === 'mixto') && (
+              <div>
+                <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Importe Fijo (€)</label>
+                <input 
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.comision_fija ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
+                  value={form.comision_fija || ''}
+                  onChange={e => setForm(prev => ({...prev, comision_fija: e.target.value}))}
+                />
+                {errors.comision_fija && <p className="text-xs text-red-600">{errors.comision_fija}</p>}
+              </div>
+            )}
+
+            {/* Campo para comisión porcentaje */}
+            {(form.comision_tipo === 'porcentaje' || form.comision_tipo === 'mixto') && (
+              <div>
+                <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Porcentaje Comisión (%)</label>
+                <input 
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.comision_porcentaje ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
+                  value={form.comision_porcentaje || ''}
+                  onChange={e => setForm(prev => ({...prev, comision_porcentaje: e.target.value}))}
+                />
+                {errors.comision_porcentaje && <p className="text-xs text-red-600">{errors.comision_porcentaje}</p>}
+              </div>
+            )}
+
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Valor Comisión ({form.comision_tipo === 'porcentaje' ? '%' : '€'})
-              </label>
-              <input 
-                type="number"
-                min="0"
-                step="0.01"
-                className={`w-full border rounded-xl px-3 py-2 ${errors.comision_valor ? 'border-red-300' : 'border-slate-200'}`}
-                value={form.comision_valor}
-                onChange={e => setForm(prev => ({...prev, comision_valor: e.target.value}))}
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Comisión vigente desde</label>
+              <input
+                type="date"
+                className="w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 rounded-xl px-3 py-2"
+                value={form.comision_vigencia_desde}
+                onChange={e => setForm(prev => ({ ...prev, comision_vigencia_desde: e.target.value }))}
               />
-              {errors.comision_valor && <p className="text-xs text-red-600">{errors.comision_valor}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Comisión vigente hasta</label>
+              <input
+                type="date"
+                className="w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 rounded-xl px-3 py-2"
+                value={form.comision_vigencia_hasta}
+                onChange={e => setForm(prev => ({ ...prev, comision_vigencia_hasta: e.target.value }))}
+              />
+              {errors.comision_vigencia_hasta && <p className="text-xs text-red-600">{errors.comision_vigencia_hasta}</p>}
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleNuevaVigencia}
+                  className="px-3 py-2 rounded-lg text-sm bg-slate-200 dark:bg-gray-700 text-slate-800 dark:text-gray-100 hover:bg-slate-300 dark:hover:bg-gray-600"
+                >
+                  Cerrar vigencia y añadir nueva
+                </button>
+                <p className="text-xs text-slate-500 dark:text-gray-400 self-center">Usa la fecha fin para cerrar; se abrirá una nueva vigencia desde el día siguiente.</p>
+              </div>
+            </div>
+
+            {String(form.sector || "").toUpperCase() === 'TELEFONIA' && (
+              <div className="border border-slate-200 dark:border-gray-700 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-slate-700 dark:text-gray-200">Condiciones específicas Telefonía</p>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Cliente nuevo (% o €)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.comision_cliente_nuevo ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
+                      value={form.comision_cliente_nuevo}
+                      onChange={e => setForm(prev => ({ ...prev, comision_cliente_nuevo: e.target.value }))}
+                    />
+                    {errors.comision_cliente_nuevo && <p className="text-xs text-red-600">{errors.comision_cliente_nuevo}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Cliente existente (% o €)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.comision_cliente_existente ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
+                      value={form.comision_cliente_existente}
+                      onChange={e => setForm(prev => ({ ...prev, comision_cliente_existente: e.target.value }))}
+                    />
+                    {errors.comision_cliente_existente && <p className="text-xs text-red-600">{errors.comision_cliente_existente}</p>}
+                  </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Alta nueva (% o €)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.comision_alta_nueva ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
+                      value={form.comision_alta_nueva}
+                      onChange={e => setForm(prev => ({ ...prev, comision_alta_nueva: e.target.value }))}
+                    />
+                    {errors.comision_alta_nueva && <p className="text-xs text-red-600">{errors.comision_alta_nueva}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Portabilidad (% o €)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.comision_portabilidad ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
+                      value={form.comision_portabilidad}
+                      onChange={e => setForm(prev => ({ ...prev, comision_portabilidad: e.target.value }))}
+                    />
+                    {errors.comision_portabilidad && <p className="text-xs text-red-600">{errors.comision_portabilidad}</p>}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="md:col-span-2 border border-slate-200 dark:border-gray-700 rounded-xl p-4 bg-slate-50 dark:bg-gray-900/40">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-slate-700 dark:text-gray-200">Historial de comisiones (auto-generado al guardar)</p>
+                <span className="text-xs text-slate-500 dark:text-gray-400">Se cierra la vigencia anterior y se añade la nueva</span>
+              </div>
+              {(!form.comisiones_historial || form.comisiones_historial.length === 0) && (
+                <p className="text-xs text-slate-500">Sin entradas aún. Se creará una al guardar.</p>
+              )}
+              {form.comisiones_historial && form.comisiones_historial.length > 0 && (
+                <div className="space-y-2 max-h-44 overflow-y-auto text-xs text-slate-700 dark:text-gray-200">
+                  {[...form.comisiones_historial].slice().reverse().map((h) => (
+                    <div key={h.id || `${h.desde}-${h.hasta}`} className="p-2 rounded-lg bg-white/70 dark:bg-gray-800 border border-slate-200 dark:border-gray-700">
+                      <div className="flex justify-between gap-2">
+                        <span className="font-semibold">{h.desde || '—'} → {h.hasta || '—'}</span>
+                        <span className="uppercase text-[11px]">{h.comision_tipo || form.comision_tipo}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {h.comision_fija !== undefined && h.comision_fija !== "" && <span className="px-2 py-1 bg-slate-100 dark:bg-gray-700 rounded">Fijo: {h.comision_fija}</span>}
+                        {h.comision_porcentaje !== undefined && h.comision_porcentaje !== "" && <span className="px-2 py-1 bg-slate-100 dark:bg-gray-700 rounded">%: {h.comision_porcentaje}</span>}
+                        {h.comision_cliente_nuevo !== undefined && h.comision_cliente_nuevo !== "" && <span className="px-2 py-1 bg-slate-100 dark:bg-gray-700 rounded">Nuevo: {h.comision_cliente_nuevo}</span>}
+                        {h.comision_cliente_existente !== undefined && h.comision_cliente_existente !== "" && <span className="px-2 py-1 bg-slate-100 dark:bg-gray-700 rounded">Existente: {h.comision_cliente_existente}</span>}
+                        {h.comision_alta_nueva !== undefined && h.comision_alta_nueva !== "" && <span className="px-2 py-1 bg-slate-100 dark:bg-gray-700 rounded">Alta: {h.comision_alta_nueva}</span>}
+                        {h.comision_portabilidad !== undefined && h.comision_portabilidad !== "" && <span className="px-2 py-1 bg-slate-100 dark:bg-gray-700 rounded">Portab: {h.comision_portabilidad}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Contacto</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Contacto</label>
               <input 
                 type="text"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                className="w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 rounded-xl px-3 py-2"
                 value={form.contacto}
                 onChange={e => setForm(prev => ({...prev, contacto: e.target.value}))}
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Email</label>
               <input 
                 type="email"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                className="w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 rounded-xl px-3 py-2"
                 value={form.email}
                 onChange={e => setForm(prev => ({...prev, email: e.target.value}))}
               />
             </div>
             
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">Observaciones</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Observaciones</label>
               <textarea 
                 rows="3"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                className="w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 rounded-xl px-3 py-2"
                 value={form.observaciones}
                 onChange={e => setForm(prev => ({...prev, observaciones: e.target.value}))}
               />
@@ -236,13 +534,13 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
         <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
           <button 
             onClick={onClose}
-            className="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 hover:bg-slate-50"
+            className="px-4 py-2 border border-slate-300 dark:border-gray-700 rounded-xl text-slate-600 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-gray-800"
           >
             Cancelar
           </button>
           <button 
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700"
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-500"
           >
             <Save className="w-4 h-4" />
             Guardar
@@ -254,7 +552,7 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
 });
 
 // ==========================================
-// COMPONENTE: OperadorModal (INTEGRADO)  
+// COMPONENTE: OperadorModal (CORREGIDO)  
 // ==========================================
 const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
   const [form, setForm] = useState(
@@ -302,44 +600,46 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
   
   const handleSave = useCallback(() => {
     if (!validate()) {
-      alert('Validación fallida. Revisa los campos.');
       return;
     }
 
     // Generar id único si no existe
-    let operadorId = form.id || `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const operadorId = form.id || `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const cleanForm = {
       ...form,
       id: operadorId,
       nombre: form.nombre.trim(),
       codigo: form.codigo?.trim().toUpperCase() || '',
+      sector: form.sector || '',
+      contacto: form.contacto?.trim() || '',
+      email: form.email?.trim() || '',
+      telefono: form.telefono?.trim() || '',
       reglas_decomision: {
         antes_6_meses: Number(form.reglas_decomision.antes_6_meses),
         despues_6_meses: Number(form.reglas_decomision.despues_6_meses),
         limite_meses: Number(form.reglas_decomision.limite_meses)
       },
-      fecha_actualizacion: new Date().toISOString()
+      fecha_actualizacion: new Date().toISOString(),
+      activo: true
     };
 
-    // LOG VISUAL Y DE CONSOLA
-    alert('Guardando operador: ' + JSON.stringify(cleanForm, null, 2));
-    console.log('Guardando operador:', cleanForm);
-
-    // Guardar y cerrar
-    onSave(cleanForm, true);
-    setTimeout(() => { onClose(); }, 100); // Pequeño delay para asegurar persistencia visual
+    console.log('🔄 Guardando operador:', cleanForm);
+    
+    // CORRECIÓN PRINCIPAL: Llamar a onSave sin parámetros extra
+    onSave(cleanForm);
+    onClose();
   }, [form, validate, onSave, onClose]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border border-slate-200 dark:border-gray-700 rounded-xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
             <Building className="w-6 h-6 text-purple-500" />
             {operador ? 'Editar Operador' : 'Nuevo Operador'}
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full">
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -347,10 +647,10 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
         <div className="space-y-6">
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Nombre *</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Nombre *</label>
               <input 
                 type="text"
-                className={`w-full border rounded-xl px-3 py-2 ${errors.nombre ? 'border-red-300' : 'border-slate-200'}`}
+                className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.nombre ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
                 value={form.nombre}
                 onChange={e => setForm(prev => ({...prev, nombre: e.target.value}))}
               />
@@ -358,19 +658,19 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Código</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Código</label>
               <input 
                 type="text"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                className="w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 rounded-xl px-3 py-2"
                 value={form.codigo}
                 onChange={e => setForm(prev => ({...prev, codigo: e.target.value}))}
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Sector</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Sector</label>
               <select 
-                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                className="w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 rounded-xl px-3 py-2"
                 value={form.sector}
                 onChange={e => setForm(prev => ({...prev, sector: e.target.value}))}
               >
@@ -385,30 +685,30 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Contacto</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Contacto</label>
               <input 
                 type="text"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                className="w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 rounded-xl px-3 py-2"
                 value={form.contacto}
                 onChange={e => setForm(prev => ({...prev, contacto: e.target.value}))}
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Email</label>
               <input 
                 type="email"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                className="w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 rounded-xl px-3 py-2"
                 value={form.email}
                 onChange={e => setForm(prev => ({...prev, email: e.target.value}))}
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Teléfono</label>
+              <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Teléfono</label>
               <input 
                 type="tel"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2"
+                className="w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 rounded-xl px-3 py-2"
                 value={form.telefono}
                 onChange={e => setForm(prev => ({...prev, telefono: e.target.value}))}
               />
@@ -416,16 +716,16 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
           </div>
           
           <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">Reglas de Decomisión</h3>
+            <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Reglas de Decomisión</h3>
             <div className="grid md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Antes 6M (%)</label>
+                <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Antes 6M (%)</label>
                 <input 
                   type="number"
                   min="0"
                   max="100"
                   step="0.01"
-                  className={`w-full border rounded-xl px-3 py-2 ${errors.antes_6_meses ? 'border-red-300' : 'border-slate-200'}`}
+                  className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.antes_6_meses ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
                   value={form.reglas_decomision.antes_6_meses}
                   onChange={e => setForm(prev => ({ 
                     ...prev, 
@@ -436,13 +736,13 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Después 6M (%)</label>
+                <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Después 6M (%)</label>
                 <input 
                   type="number"
                   min="0"
                   max="100"
                   step="0.01"
-                  className={`w-full border rounded-xl px-3 py-2 ${errors.despues_6_meses ? 'border-red-300' : 'border-slate-200'}`}
+                  className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.despues_6_meses ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
                   value={form.reglas_decomision.despues_6_meses}
                   onChange={e => setForm(prev => ({ 
                     ...prev, 
@@ -453,12 +753,12 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Límite (meses)</label>
+                <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-gray-200">Límite (meses)</label>
                 <input 
                   type="number"
                   min="1"
                   max="24"
-                  className={`w-full border rounded-xl px-3 py-2 ${errors.limite_meses ? 'border-red-300' : 'border-slate-200'}`}
+                  className={`w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 ${errors.limite_meses ? 'border-red-300 dark:border-red-400' : 'border-slate-200 dark:border-gray-700'}`}
                   value={form.reglas_decomision.limite_meses}
                   onChange={e => setForm(prev => ({ 
                     ...prev, 
@@ -474,13 +774,13 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
         <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
           <button 
             onClick={onClose}
-            className="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 hover:bg-slate-50"
+            className="px-4 py-2 border border-slate-300 dark:border-gray-700 rounded-xl text-slate-600 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-gray-800"
           >
             Cancelar
           </button>
           <button 
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500"
           >
             <Save className="w-4 h-4" />
             Guardar
@@ -492,34 +792,15 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
 });
 
 // ==========================================
-// COMPONENTE: ProductosSection (INTEGRADO + OPTIMIZADO)
+// COMPONENTE: ProductosSection (CORREGIDO)
 // ==========================================
 const ProductosSection = React.memo(() => {
   const { data, setProductos } = useData();
-  // Estado para selección múltiple de productos
   const [selectedIds, setSelectedIds] = useState([]);
+  
   // Datos limpios y seguros
   const operadores = useMemo(() => cleanOperadores(data.operadores || []), [data.operadores]);
   const productos = useMemo(() => cleanProductosRobust(data.productos || [], operadores), [data.productos, operadores]);
-  // Borrado masivo de productos seleccionados
-  const handleDeleteSelected = useCallback(() => {
-    if (selectedIds.length === 0) return;
-    if (window.confirm(`¿Seguro que quieres eliminar ${selectedIds.length} productos seleccionados?`)) {
-      setProductos(prev => {
-        const cleaned = cleanProductosRobust(prev.filter(p => !selectedIds.includes(p.id)), operadores);
-        return cleaned;
-      });
-      setSelectedIds([]);
-    }
-  }, [selectedIds, setProductos, operadores]);
-  // Selección global de productos
-  const handleSelectAll = () => {
-    if (selectedIds.length === productosFiltrados.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(productosFiltrados.map(p => p.id));
-    }
-  };
   
   // Estados locales
   const [showModal, setShowModal] = useState(false);
@@ -529,6 +810,41 @@ const ProductosSection = React.memo(() => {
   const [selectedOperador, setSelectedOperador] = useState("");
   const [selectedFamilia, setSelectedFamilia] = useState("");
   const [sortDirection, setSortDirection] = useState("asc");
+  
+  // FUNCIÓN FALTANTE: handleSelect AÑADIDA
+  const handleSelect = useCallback((id) => {
+    setSelectedIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(selectedId => selectedId !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  }, []);
+  
+  // Borrado masivo de productos seleccionados
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedIds.length === 0) return;
+    if (window.confirm(`¿Seguro que quieres eliminar ${selectedIds.length} productos seleccionados?`)) {
+      setProductos(prev => {
+        const filtered = prev.filter(p => !selectedIds.includes(p.id));
+        const cleaned = cleanProductosRobust(filtered, operadores);
+        console.log('🗑️ Productos eliminados:', selectedIds.length);
+        return cleaned;
+      });
+      setSelectedIds([]);
+    }
+  }, [selectedIds, setProductos, operadores]);
+  
+  // Selección global de productos
+  const handleSelectAll = useCallback(() => {
+    const productosFiltrados = getProductosFiltrados();
+    if (selectedIds.length === productosFiltrados.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(productosFiltrados.map(p => p.id));
+    }
+  }, [selectedIds, productos, searchTerm, selectedOperador, selectedFamilia]);
   
   // Familias únicas
   const familias = useMemo(() => {
@@ -547,8 +863,8 @@ const ProductosSection = React.memo(() => {
     return operador?.nombre || "Sin operador";
   }, [operadores]);
   
-  // Productos filtrados
-  const productosFiltrados = useMemo(() => {
+  // Función auxiliar para filtros (extraída para reutilizar)
+  const getProductosFiltrados = useCallback(() => {
     let filtered = productos;
     
     // Filtro por búsqueda
@@ -580,6 +896,9 @@ const ProductosSection = React.memo(() => {
     return filtered;
   }, [productos, searchTerm, selectedOperador, selectedFamilia, sortDirection, getOperadorNombre]);
   
+  // Productos filtrados - usando la función auxiliar
+  const productosFiltrados = useMemo(() => getProductosFiltrados(), [getProductosFiltrados]);
+  
   // Validar duplicados
   const productExists = useCallback((nombre, operadorId, excludeId = null) => {
     return productos.some(p => 
@@ -589,33 +908,43 @@ const ProductosSection = React.memo(() => {
     );
   }, [productos]);
   
-  // Manejadores
+  // Manejadores CORREGIDOS
   const handleSave = useCallback((productoData) => {
+    console.log('💾 Guardando producto:', productoData);
+    
     if (productExists(productoData.nombre, productoData.operador_id, productoData.id)) {
       setError(`Ya existe un producto con ese nombre para el operador seleccionado.`);
       return;
     }
     
-    if (productoData.id) {
-      // Actualizar
-      setProductos(prev => {
-        const cleaned = cleanProductosRobust(prev, operadores);
-        return cleaned.map(p => p.id === productoData.id ? productoData : p);
-      });
-    } else {
-      // Crear nuevo
-      setProductos(prev => {
-        const cleaned = cleanProductosRobust(prev, operadores);
-        return [...cleaned, productoData];
-      });
-    }
+    setProductos(prev => {
+      let updatedProductos;
+      
+      if (productoData.id && prev.find(p => p.id === productoData.id)) {
+        // Actualizar existente
+        updatedProductos = prev.map(p => p.id === productoData.id ? productoData : p);
+        console.log('✏️ Producto actualizado');
+      } else {
+        // Crear nuevo
+        updatedProductos = [...prev, productoData];
+        console.log('➕ Producto creado');
+      }
+      
+      // Limpiar después de la operación
+      const cleaned = cleanProductosRobust(updatedProductos, operadores);
+      console.log('🧹 Productos después de limpieza:', cleaned.length);
+      return cleaned;
+    });
+    
     setError("");
   }, [productExists, setProductos, operadores]);
   
   const handleDelete = useCallback((id) => {
     if (window.confirm("¿Seguro que quieres eliminar este producto?")) {
       setProductos(prev => {
-        const cleaned = cleanProductosRobust(prev.filter(p => p.id !== id), operadores);
+        const filtered = prev.filter(p => p.id !== id);
+        const cleaned = cleanProductosRobust(filtered, operadores);
+        console.log('🗑️ Producto eliminado:', id);
         return cleaned;
       });
     }
@@ -664,8 +993,8 @@ const ProductosSection = React.memo(() => {
       )}
       
       {/* Encabezado */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Gestión de Productos</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Gestión de Productos</h2>
         <div className="flex gap-2">
           <button 
             onClick={() => { setEditingProducto(null); setShowModal(true); }}
@@ -694,39 +1023,39 @@ const ProductosSection = React.memo(() => {
       
       {/* Estadísticas */}
       <div className="grid md:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700 dark:text-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-600 text-sm font-medium">Total Productos</p>
-              <div className="text-2xl font-bold">{productos.length}</div>
+              <p className="text-green-600 dark:text-green-200 text-sm font-medium">Total Productos</p>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">{productos.length}</div>
             </div>
-            <Package className="w-8 h-8 text-green-600" />
+            <Package className="w-8 h-8 text-green-600 dark:text-green-200" />
           </div>
         </Card>
         
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700 dark:text-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-600 text-sm font-medium">Familias</p>
-              <div className="text-2xl font-bold">{familias.length}</div>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-yellow-600 text-sm font-medium">Operadores</p>
-              <div className="text-2xl font-bold">{operadores.length}</div>
+              <p className="text-blue-600 dark:text-blue-200 text-sm font-medium">Familias</p>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">{familias.length}</div>
             </div>
           </div>
         </Card>
         
-        <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700 dark:text-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-600 text-sm font-medium">Activos</p>
-              <div className="text-2xl font-bold">{productos.filter(p => p.activo !== false).length}</div>
+              <p className="text-yellow-600 dark:text-yellow-200 text-sm font-medium">Operadores</p>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">{operadores.length}</div>
+            </div>
+          </div>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700 dark:text-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-600 dark:text-gray-300 text-sm font-medium">Activos</p>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">{productos.filter(p => p.activo !== false).length}</div>
             </div>
           </div>
         </Card>
@@ -737,7 +1066,7 @@ const ProductosSection = React.memo(() => {
         <div className="flex-1">
           <input 
             type="text"
-            className="w-full border rounded-xl px-3 py-2"
+            className="w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700 placeholder-slate-400 dark:placeholder-gray-500"
             placeholder="Buscar producto..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -746,7 +1075,7 @@ const ProductosSection = React.memo(() => {
         
         <div>
           <select 
-            className="border rounded-xl px-3 py-2"
+            className="border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700"
             value={selectedOperador}
             onChange={e => setSelectedOperador(e.target.value)}
           >
@@ -759,7 +1088,7 @@ const ProductosSection = React.memo(() => {
         
         <div>
           <select 
-            className="border rounded-xl px-3 py-2"
+            className="border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700"
             value={selectedFamilia}
             onChange={e => setSelectedFamilia(e.target.value)}
           >
@@ -773,7 +1102,7 @@ const ProductosSection = React.memo(() => {
         <div>
           <button 
             onClick={() => setSortDirection(sortDirection === "asc" ? "desc" : "asc")}
-            className="px-3 py-2 border rounded-xl flex items-center gap-1"
+            className="px-3 py-2 border rounded-xl flex items-center gap-1 bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-gray-800"
           >
             {sortDirection === "asc" ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
             Ordenar
@@ -788,13 +1117,17 @@ const ProductosSection = React.memo(() => {
         </Card>
       )}
       
-      {/* Selección múltiple y borrado masivo */}
+      {/* Tabla CORREGIDA */}
       <div className="overflow-x-auto">
-        <table className="min-w-full border-separate border-spacing-y-2 text-xs md:text-sm">
+        <table className="min-w-full border-separate border-spacing-y-2 text-xs md:text-sm text-slate-800 dark:text-gray-100">
           <thead>
-            <tr className="text-left text-slate-500 uppercase tracking-wide text-[11px] md:text-xs">
+            <tr className="text-left text-slate-500 dark:text-gray-300 uppercase tracking-wide text-[11px] md:text-xs">
               <th>
-                <input type="checkbox" checked={selectedIds?.length === productosFiltrados.length && productosFiltrados.length > 0} onChange={handleSelectAll} />
+                <input 
+                  type="checkbox" 
+                  checked={selectedIds?.length === productosFiltrados.length && productosFiltrados.length > 0} 
+                  onChange={handleSelectAll} 
+                />
               </th>
               <th>Nombre</th>
               <th>Operador</th>
@@ -809,9 +1142,13 @@ const ProductosSection = React.memo(() => {
           </thead>
           <tbody>
             {productosFiltrados.map(p => (
-              <tr key={p.id} className="bg-white hover:bg-green-50">
+              <tr key={p.id} className="bg-white dark:bg-gray-800 hover:bg-green-50 dark:hover:bg-gray-700">
                 <td>
-                  <input type="checkbox" checked={selectedIds?.includes(p.id)} onChange={() => handleSelect(p.id)} />
+                  <input 
+                    type="checkbox" 
+                    checked={selectedIds?.includes(p.id)} 
+                    onChange={() => handleSelect(p.id)} 
+                  />
                 </td>
                 <td className="font-medium">{p.nombre}</td>
                 <td>{getOperadorNombre(p.operador_id)}</td>
@@ -824,13 +1161,13 @@ const ProductosSection = React.memo(() => {
                 <td className="flex gap-2">
                   <button 
                     onClick={() => { setEditingProducto(p); setShowModal(true); }}
-                    className="p-1 rounded hover:bg-green-100"
+                    className="p-1 rounded hover:bg-green-100 dark:hover:bg-gray-700"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button 
                     onClick={() => handleDelete(p.id)}
-                    className="p-1 rounded hover:bg-red-100"
+                    className="p-1 rounded hover:bg-red-100 dark:hover:bg-gray-700"
                   >
                     <Trash2 className="w-4 h-4 text-red-600" />
                   </button>
@@ -839,7 +1176,7 @@ const ProductosSection = React.memo(() => {
             ))}
             {productosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={10} className="text-center text-slate-400 py-6">
+                <td colSpan={10} className="text-center text-slate-400 dark:text-gray-400 py-6">
                   No hay productos registrados.
                 </td>
               </tr>
@@ -862,7 +1199,7 @@ const ProductosSection = React.memo(() => {
 });
 
 // ==========================================
-// COMPONENTE: OperadoresSection (INTEGRADO + CONTEO PRODUCTOS)
+// COMPONENTE: OperadoresSection (CORREGIDO)
 // ==========================================
 const OperadoresSection = React.memo(() => {
   const { data, setOperadores } = useData();
@@ -873,7 +1210,7 @@ const OperadoresSection = React.memo(() => {
   const [editingOperador, setEditingOperador] = useState(null);
   const [error, setError] = useState("");
   const [filtroSector, setFiltroSector] = useState("");
-  const [filtroProductos, setFiltroProductos] = useState(""); // "con-productos", "sin-productos", ""
+  const [filtroProductos, setFiltroProductos] = useState("");
   
   // Conteo de productos por operador
   const productosConteo = useMemo(() => {
@@ -950,34 +1287,34 @@ const OperadoresSection = React.memo(() => {
     );
   }, [operadores]);
   
+  // MANEJADOR PRINCIPAL CORREGIDO
   const handleSave = useCallback((operadorData) => {
+    console.log('💾 Guardando operador:', operadorData);
+    
     if (operadorExists(operadorData.nombre, operadorData.id)) {
       setError(`Ya existe un operador con el nombre "${operadorData.nombre}"`);
-      alert('Ya existe un operador con ese nombre.');
       return;
     }
 
-    // LOG VISUAL Y DE CONSOLA
-    alert('onSave recibido en GestionSections: ' + JSON.stringify(operadorData, null, 2));
-    console.log('onSave recibido en GestionSections:', operadorData);
-
-    if (operadorData.id) {
-      setOperadores(prev => {
-        const cleaned = cleanOperadores(prev);
-        const result = cleaned.map(o => o.id === operadorData.id ? operadorData : o);
-        alert('setOperadores (edit): ' + JSON.stringify(result, null, 2));
-        console.log('setOperadores (edit):', result);
-        return result;
-      });
-    } else {
-      setOperadores(prev => {
-        const cleaned = cleanOperadores(prev);
-        const result = [...cleaned, operadorData];
-        alert('setOperadores (new): ' + JSON.stringify(result, null, 2));
-        console.log('setOperadores (new):', result);
-        return result;
-      });
-    }
+    setOperadores(prev => {
+      let updatedOperadores;
+      
+      if (operadorData.id && prev.find(o => o.id === operadorData.id)) {
+        // Actualizar existente
+        updatedOperadores = prev.map(o => o.id === operadorData.id ? operadorData : o);
+        console.log('✏️ Operador actualizado:', operadorData.id);
+      } else {
+        // Crear nuevo
+        updatedOperadores = [...prev, operadorData];
+        console.log('➕ Operador creado:', operadorData.id);
+      }
+      
+      // Limpiar después de la operación
+      const cleaned = cleanOperadores(updatedOperadores);
+      console.log('🧹 Operadores después de limpieza:', cleaned.length);
+      return cleaned;
+    });
+    
     setError("");
   }, [operadorExists, setOperadores]);
   
@@ -998,7 +1335,9 @@ const OperadoresSection = React.memo(() => {
     }
     
     setOperadores(prev => {
-      const cleaned = cleanOperadores(prev.filter(o => o.id !== id));
+      const filtered = prev.filter(o => o.id !== id);
+      const cleaned = cleanOperadores(filtered);
+      console.log('🗑️ Operador eliminado:', id);
       return cleaned;
     });
   }, [setOperadores, productosConteo, operadores]);
@@ -1012,7 +1351,7 @@ const OperadoresSection = React.memo(() => {
       o.nombre, 
       o.sector, 
       o.codigo, 
-      productosConteo[o.id] || 0, // <- Nueva columna productos
+      productosConteo[o.id] || 0,
       o.contacto, 
       o.telefono, 
       o.email
@@ -1047,62 +1386,62 @@ const OperadoresSection = React.memo(() => {
       
       {/* Estadísticas por sector CON productos */}
       <div className="grid md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700 dark:text-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-600 text-sm font-medium">Telefonía</p>
-              <div className="text-2xl font-bold">{sectorStats.telefonia.operadores}</div>
-              <div className="text-xs text-blue-500">{sectorStats.telefonia.productos} productos</div>
+              <p className="text-blue-600 dark:text-blue-200 text-sm font-medium">Telefonía</p>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">{sectorStats.telefonia.operadores}</div>
+              <div className="text-xs text-blue-500 dark:text-blue-200">{sectorStats.telefonia.productos} productos</div>
             </div>
-            <Building className="w-8 h-8 text-blue-600" />
+            <Building className="w-8 h-8 text-blue-600 dark:text-blue-200" />
           </div>
         </Card>
         
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700 dark:text-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-600 text-sm font-medium">Energía</p>
-              <div className="text-2xl font-bold">{sectorStats.energia.operadores}</div>
-              <div className="text-xs text-green-500">{sectorStats.energia.productos} productos</div>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-yellow-600 text-sm font-medium">Seguridad</p>
-              <div className="text-2xl font-bold">{sectorStats.seguridad.operadores}</div>
-              <div className="text-xs text-yellow-500">{sectorStats.seguridad.productos} productos</div>
+              <p className="text-green-600 dark:text-green-200 text-sm font-medium">Energía</p>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">{sectorStats.energia.operadores}</div>
+              <div className="text-xs text-green-500 dark:text-green-200">{sectorStats.energia.productos} productos</div>
             </div>
           </div>
         </Card>
         
-        <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700 dark:text-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-600 text-sm font-medium">Otros</p>
-              <div className="text-2xl font-bold">{sectorStats.otros.operadores}</div>
-              <div className="text-xs text-slate-500">{sectorStats.otros.productos} productos</div>
+              <p className="text-yellow-600 dark:text-yellow-200 text-sm font-medium">Seguridad</p>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">{sectorStats.seguridad.operadores}</div>
+              <div className="text-xs text-yellow-500 dark:text-yellow-200">{sectorStats.seguridad.productos} productos</div>
+            </div>
+          </div>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700 dark:text-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-600 dark:text-gray-300 text-sm font-medium">Otros</p>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">{sectorStats.otros.operadores}</div>
+              <div className="text-xs text-slate-500 dark:text-gray-300">{sectorStats.otros.productos} productos</div>
             </div>
           </div>
         </Card>
       </div>
       
       {/* Top operadores por productos */}
-      <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
+      <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700 dark:text-gray-100">
         <div className="p-4">
-          <h3 className="text-lg font-semibold text-purple-800 mb-3 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-purple-800 dark:text-purple-200 mb-3 flex items-center gap-2">
             🏆 Top Operadores por Productos
           </h3>
           <div className="grid md:grid-cols-5 gap-3">
             {topOperadores.map((op, index) => (
-              <div key={op.id} className="bg-white rounded-lg p-3 text-center shadow-sm">
-                <div className="text-sm font-medium text-slate-700 truncate" title={op.nombre}>
+              <div key={op.id} className="bg-white dark:bg-gray-900 rounded-lg p-3 text-center shadow-sm">
+                <div className="text-sm font-medium text-slate-700 dark:text-gray-200 truncate" title={op.nombre}>
                   {op.nombre}
                 </div>
-                <div className="text-lg font-bold text-purple-600">{op.totalProductos}</div>
-                <div className="text-xs text-slate-500">
+                <div className="text-lg font-bold text-purple-600 dark:text-purple-200">{op.totalProductos}</div>
+                <div className="text-xs text-slate-500 dark:text-gray-300">
                   {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : ''}
                   {op.sector && <span className="capitalize"> {op.sector}</span>}
                 </div>
@@ -1120,7 +1459,7 @@ const OperadoresSection = React.memo(() => {
           {/* Filtros */}
           <div className="flex gap-2">
             <select 
-              className="border rounded-lg px-3 py-2 text-sm bg-white"
+              className="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700"
               value={filtroSector}
               onChange={e => setFiltroSector(e.target.value)}
             >
@@ -1132,7 +1471,7 @@ const OperadoresSection = React.memo(() => {
             </select>
             
             <select 
-              className="border rounded-lg px-3 py-2 text-sm bg-white"
+              className="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700"
               value={filtroProductos}
               onChange={e => setFiltroProductos(e.target.value)}
             >
@@ -1169,11 +1508,20 @@ const OperadoresSection = React.memo(() => {
         </Card>
       )}
       
+      {/* Debug info */}
+      <Card className="bg-blue-50 border-blue-200 dark:bg-gray-800 dark:border-gray-700">
+        <div className="text-blue-800 dark:text-blue-200 text-sm">
+          <strong>Debug:</strong> Operadores en memoria: {operadores.length} | 
+          Operadores en data raw: {data.operadores?.length || 0} | 
+          Productos: {productos.length}
+        </div>
+      </Card>
+      
       {/* Tabla CON conteo productos */}
       <div className="overflow-x-auto">
-        <table className="min-w-full border-separate border-spacing-y-2 text-xs md:text-sm">
+        <table className="min-w-full border-separate border-spacing-y-2 text-xs md:text-sm text-slate-800 dark:text-gray-100">
           <thead>
-            <tr className="text-left text-slate-500 uppercase tracking-wide text-[11px] md:text-xs">
+            <tr className="text-left text-slate-500 dark:text-gray-300 uppercase tracking-wide text-[11px] md:text-xs">
               <th>Nombre</th>
               <th>Código</th>
               <th>Sector</th>
@@ -1188,7 +1536,7 @@ const OperadoresSection = React.memo(() => {
             {operadoresFiltrados.map(op => {
               const numProductos = productosConteo[op.id] || 0;
               return (
-                <tr key={op.id} className="bg-white hover:bg-purple-50">
+                <tr key={op.id} className="bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-gray-700">
                   <td className="font-medium">{op.nombre}</td>
                   <td>{op.codigo}</td>
                   <td className="capitalize">{op.sector || 'Sin sector'}</td>
@@ -1209,14 +1557,14 @@ const OperadoresSection = React.memo(() => {
                   <td className="flex gap-2">
                     <button 
                       onClick={() => { setEditingOperador(op); setShowModal(true); }}
-                      className="p-1 rounded hover:bg-purple-100"
+                      className="p-1 rounded hover:bg-purple-100 dark:hover:bg-gray-700"
                       title="Editar operador"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => handleDelete(op.id)}
-                      className="p-1 rounded hover:bg-red-100"
+                      className="p-1 rounded hover:bg-red-100 dark:hover:bg-gray-700"
                       title={numProductos > 0 ? `Tiene ${numProductos} productos asociados` : 'Eliminar operador'}
                     >
                       <Trash2 className="w-4 h-4 text-red-600" />
@@ -1227,7 +1575,7 @@ const OperadoresSection = React.memo(() => {
             })}
             {operadoresFiltrados.length === 0 && (
               <tr>
-                <td colSpan={8} className="text-center text-slate-400 py-6">
+                <td colSpan={8} className="text-center text-slate-400 dark:text-gray-400 py-6">
                   {filtroSector || filtroProductos ? 
                     'No se encontraron operadores con los filtros aplicados.' : 
                     'No hay operadores registrados.'
@@ -1240,16 +1588,16 @@ const OperadoresSection = React.memo(() => {
         
         {/* Resumen de filtros */}
         {(filtroSector || filtroProductos) && (
-          <div className="mt-4 p-3 bg-slate-50 rounded-lg">
-            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+          <div className="mt-4 p-3 bg-slate-50 dark:bg-gray-800 rounded-lg">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-gray-200">
               <span>Filtros activos:</span>
               {filtroSector && (
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs capitalize">
+                <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full text-xs capitalize">
                   Sector: {filtroSector}
                 </span>
               )}
               {filtroProductos && (
-                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
+                <span className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-full text-xs">
                   {filtroProductos === 'con-productos' ? 'Con productos' : 'Sin productos'}
                 </span>
               )}
@@ -1277,11 +1625,11 @@ const OperadoresSection = React.memo(() => {
 });
 
 // ==========================================
-// COMPONENTE: AdministracionSection (INTEGRADO)
+// COMPONENTE: AdministracionSection (IGUAL)
 // ==========================================
 const AdministracionSection = React.memo(() => {
   const OPERADORES = ["Telefonía", "Energía", "Seguridad"];
-  const CLAVE_GERENTE = "@LMB1828re"; // Puedes cambiarla luego
+  const CLAVE_GERENTE = "@LMB1828re";
   
   const [acuerdos, setAcuerdos] = useState([]);
   const [form, setForm] = useState({
@@ -1313,7 +1661,6 @@ const AdministracionSection = React.memo(() => {
   const handleFormSubmit = useCallback((e) => {
     e.preventDefault();
     
-    // Validación básica
     if (!form.operador.trim() || !form.nombre.trim() || !form.comision.trim()) {
       alert("Por favor, rellena los campos obligatorios.");
       return;
@@ -1338,21 +1685,21 @@ const AdministracionSection = React.memo(() => {
 
   if (!acceso) {
     return (
-      <div className="max-w-md mx-auto mt-16 p-6 bg-white rounded-xl shadow-lg">
-        <h2 className="text-xl font-bold mb-4">Acceso Gerente</h2>
+      <div className="max-w-md mx-auto mt-16 p-6 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 text-slate-800 dark:text-slate-100">
+        <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-slate-100">Acceso Gerente</h2>
         <form onSubmit={handleClaveSubmit} className="space-y-4">
           <input
             type="password"
-            className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400"
+            className="border border-slate-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 bg-white dark:bg-gray-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
             placeholder="Clave de acceso"
             value={clave}
             onChange={e => setClave(e.target.value)}
             required
           />
-          {errorClave && <div className="text-red-600 text-sm">{errorClave}</div>}
+          {errorClave && <div className="text-red-600 dark:text-red-300 text-sm">{errorClave}</div>}
           <button 
             type="submit"
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg w-full transition-colors"
+            className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-500 text-white px-4 py-2 rounded-lg w-full transition-colors"
           >
             Acceder
           </button>
@@ -1362,17 +1709,17 @@ const AdministracionSection = React.memo(() => {
   }
 
   return (
-    <section className="max-w-4xl mx-auto mt-8 p-6 bg-white rounded-xl shadow-lg">
+    <section className="max-w-4xl mx-auto mt-8 p-6 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 text-slate-800 dark:text-slate-100">
       <h2 className="text-2xl font-bold mb-6">Gestión Administrativa</h2>
       
-      <form onSubmit={handleFormSubmit} className="space-y-4 mb-8 bg-slate-50 p-6 rounded-xl">
+      <form onSubmit={handleFormSubmit} className="space-y-4 mb-8 bg-slate-50 dark:bg-gray-800 p-6 rounded-xl border border-slate-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold mb-4">Nuevo Acuerdo</h3>
         
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Sector</label>
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-200">Sector</label>
             <select
-              className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400"
+              className="border border-slate-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 bg-white dark:bg-gray-800 text-slate-900 dark:text-slate-100"
               value={form.sector}
               onChange={e => setForm(f => ({ ...f, sector: e.target.value }))}
             >
@@ -1381,10 +1728,10 @@ const AdministracionSection = React.memo(() => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-1">Operador *</label>
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-200">Operador *</label>
             <input
               type="text"
-              className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400"
+              className="border border-slate-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 bg-white dark:bg-gray-800 text-slate-900 dark:text-slate-100"
               placeholder="Nombre del operador"
               value={form.operador}
               onChange={e => setForm(f => ({ ...f, operador: e.target.value }))}
@@ -1393,10 +1740,10 @@ const AdministracionSection = React.memo(() => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-1">Nombre del acuerdo *</label>
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-200">Nombre del acuerdo *</label>
             <input
               type="text"
-              className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400"
+              className="border border-slate-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 bg-white dark:bg-gray-800 text-slate-900 dark:text-slate-100"
               placeholder="Ej: Contrato Q4 2024"
               value={form.nombre}
               onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
@@ -1405,13 +1752,13 @@ const AdministracionSection = React.memo(() => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-1">Comisión (%) *</label>
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-200">Comisión (%) *</label>
             <input
               type="number"
               min="0"
               max="100"
               step="0.1"
-              className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400"
+              className="border border-slate-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 bg-white dark:bg-gray-800 text-slate-900 dark:text-slate-100"
               placeholder="15.5"
               value={form.comision}
               onChange={e => setForm(f => ({ ...f, comision: e.target.value }))}
@@ -1420,10 +1767,10 @@ const AdministracionSection = React.memo(() => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-1">Rapel</label>
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-200">Rapel</label>
             <input
               type="text"
-              className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400"
+              className="border border-slate-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 bg-white dark:bg-gray-800 text-slate-900 dark:text-slate-100"
               placeholder="Ej: 2% adicional por objetivos"
               value={form.rapel}
               onChange={e => setForm(f => ({ ...f, rapel: e.target.value }))}
@@ -1431,9 +1778,9 @@ const AdministracionSection = React.memo(() => {
           </div>
           
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-1">Observaciones</label>
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-200">Observaciones</label>
             <textarea
-              className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400"
+              className="border border-slate-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 bg-white dark:bg-gray-800 text-slate-900 dark:text-slate-100"
               rows="3"
               placeholder="Detalles adicionales del acuerdo..."
               value={form.observaciones}
@@ -1444,7 +1791,7 @@ const AdministracionSection = React.memo(() => {
         
         <button 
           type="submit"
-          className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+          className="bg-green-500 hover:bg-green-600 dark:bg-green-700 dark:hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
         >
           Guardar acuerdo
         </button>
@@ -1454,7 +1801,7 @@ const AdministracionSection = React.memo(() => {
         <h3 className="text-lg font-semibold mb-4">Acuerdos guardados ({acuerdos.length})</h3>
         
         {acuerdos.length === 0 ? (
-          <Card className="text-center py-8 text-slate-500">
+          <Card className="text-center py-8 text-slate-500 dark:text-slate-400">
             No hay acuerdos guardados.
           </Card>
         ) : (
@@ -1463,17 +1810,17 @@ const AdministracionSection = React.memo(() => {
               <Card key={a.id} className="p-4 hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-semibold text-slate-800">{a.nombre}</h4>
-                    <p className="text-sm text-slate-600">{a.operador} ({a.sector})</p>
-                    <p className="text-sm text-slate-600">Comisión: {a.comision}%</p>
-                    {a.rapel && <p className="text-xs text-slate-500">Rapel: {a.rapel}</p>}
+                    <h4 className="font-semibold text-slate-800 dark:text-slate-100">{a.nombre}</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{a.operador} ({a.sector})</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">Comisión: {a.comision}%</p>
+                    {a.rapel && <p className="text-xs text-slate-500 dark:text-slate-400">Rapel: {a.rapel}</p>}
                     {a.observaciones && (
-                      <p className="text-xs text-slate-500 mt-2">{a.observaciones}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{a.observaciones}</p>
                     )}
                   </div>
                   <button 
                     onClick={() => handleDelete(a.id)}
-                    className="text-red-500 hover:text-red-700 text-sm font-medium"
+                    className="text-red-500 dark:text-red-300 hover:text-red-700 dark:hover:text-red-200 text-sm font-medium"
                   >
                     Eliminar
                   </button>
@@ -1488,12 +1835,11 @@ const AdministracionSection = React.memo(() => {
 });
 
 // ==========================================
-// COMPONENTE PRINCIPAL: GestionSections (CONSOLIDADO)
+// COMPONENTE PRINCIPAL: GestionSections (IGUAL)
 // ==========================================
 export default function GestionSections() {
   const [activeSection, setActiveSection] = useState('operadores');
   
-  // Secciones de gestión
   const sections = useMemo(() => [
     { id: 'operadores', label: 'Operadores', icon: '🏢', color: 'purple' },
     { id: 'productos', label: 'Productos', icon: '📦', color: 'green' },
@@ -1502,7 +1848,6 @@ export default function GestionSections() {
 
   return (
     <div className="space-y-6">
-      {/* Navegación entre secciones */}
       <div className="bg-white dark:bg-darkCard rounded-xl shadow-sm border border-slate-200 dark:border-darkAccent/30 p-4">
         <div className="flex flex-wrap gap-2">
           {sections.map(section => (
@@ -1522,7 +1867,6 @@ export default function GestionSections() {
         </div>
       </div>
 
-      {/* Contenido de la sección activa */}
       <div className="min-h-[600px]">
         {activeSection === 'operadores' && (
           <div className="bg-gradient-to-br from-white via-slate-50 to-purple-50 dark:from-darkBg dark:via-darkCard dark:to-darkCard rounded-2xl shadow-xl border border-slate-200 dark:border-darkAccent/30 p-6 transition-colors">
@@ -1546,5 +1890,4 @@ export default function GestionSections() {
   );
 }
 
-// Exportar también los subcomponentes para uso independiente si es necesario
 export { ProductosSection, OperadoresSection, AdministracionSection };

@@ -1,7 +1,8 @@
 // src/components/layout/Header.jsx
-import React, { useState, useEffect, useCallback } from "react";
-import { Search, Bell, Download, RefreshCw } from "lucide-react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Search, Bell, Download } from "lucide-react";
 import DarkModeToggle from "../ui/DarkModeToggle";
+import { useData } from "../../context/AppContexts";
 
 function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -32,10 +33,73 @@ function usePWAInstall() {
 
 export function Header() {
   const { installable, promptInstall } = usePWAInstall();
+  const { data } = useData();
+  const [empresaLocal, setEmpresaLocal] = useState(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const readEmpresa = () => {
+      try {
+        const raw = localStorage.getItem("empresaData");
+        if (raw) {
+          setEmpresaLocal(JSON.parse(raw));
+        } else {
+          setEmpresaLocal(null);
+        }
+      } catch {
+        setEmpresaLocal(null);
+      }
+    };
+
+    readEmpresa();
+    const handleStorage = (event) => {
+      if (event.key === "empresaData") {
+        readEmpresa();
+      }
+    };
+    const handleEmpresaEvent = (event) => {
+      if (event?.detail) {
+        setEmpresaLocal(event.detail);
+      } else {
+        readEmpresa();
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("empresaDataUpdated", handleEmpresaEvent);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("empresaDataUpdated", handleEmpresaEvent);
+    };
+  }, []);
+
+  const empresaActiva = useMemo(() => {
+    if (Array.isArray(data?.empresas) && data.empresas.length > 0) {
+      const activas = data.empresas.filter((empresa) => empresa.activo !== false);
+      const candidata = (activas.length > 0 ? activas : data.empresas)[0];
+      if (candidata?.logoUrl) return candidata;
+    }
+    return empresaLocal;
+  }, [data?.empresas, empresaLocal]);
 
   return (
     <header className="sticky top-0 z-10 bg-white/70 dark:bg-gray-800/80 backdrop-blur border-b border-slate-200 dark:border-gray-700 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-2">
+        {empresaActiva?.logoUrl ? (
+          <div className="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-gray-700">
+            <img
+              src={empresaActiva.logoUrl}
+              alt={empresaActiva.nombre ? `Logo ${empresaActiva.nombre}` : "Logo empresa"}
+              className="h-10 w-10 rounded-xl object-contain bg-white shadow-sm"
+            />
+            {empresaActiva.nombre && (
+              <span className="hidden sm:block text-sm font-semibold text-slate-700 dark:text-gray-200">
+                {empresaActiva.nombre}
+              </span>
+            )}
+          </div>
+        ) : null}
         {/* Buscador */}
         <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-gray-700 rounded-xl flex-1 transition-colors duration-300">
           <Search className="w-4 h-4 text-gray-500 dark:text-gray-400" />

@@ -425,16 +425,6 @@ export default function VentasPage() {
         onPageSizeChange={pagination?.handlePageSizeChange}
       />
 
-      {/* Paginador inferior */}
-      <Pagination
-        currentPage={pagination?.currentPage || 1}
-        pageSize={pagination?.pageSize || 25}
-        totalItems={pagination?.totalItems || 0}
-        totalPages={Math.ceil((pagination?.totalItems || 0) / (pagination?.pageSize || 25))}
-        onPageChange={pagination?.handlePageChange}
-        onPageSizeChange={pagination?.handlePageSizeChange}
-      />
-
       {/* Modales consolidados */}
       {(activeModal === 'new' || activeModal === 'edit') && (
         <VentaFormModal
@@ -447,6 +437,7 @@ export default function VentasPage() {
           operadores={entidadesSafe.operadores}
           colaboradores={datosSafe.colaboradores}
           zonas={datosSafe.zonas}
+          niveles={entidadesSafe.niveles}
           resolveProductoName={resolveProductoName}
           resolveColaboradorName={resolveColaboradorName}
           resolveZonaName={resolveZonaName}

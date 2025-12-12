@@ -19,9 +19,22 @@ export default function Colaboradores() {
 
   // Calcular IRPF y filtrar colaboradores
   const colaboradoresProcesados = useMemo(() => {
+    const normalizarTipoFiscal = (tipo = "") =>
+      tipo
+        .toString()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/\s+/g, "_");
+
     return colaboradores.map((c) => {
-      let irpf = 0;
-      if (c.tipo_fiscal === "AUTONOMO") {
+      const tipoFiscal = normalizarTipoFiscal(c.tipo_fiscal);
+      const esEmpresa = tipoFiscal === "EMPRESA";
+      const esAutonomoEspecial = tipoFiscal === "AUTONOMO_ESPECIAL";
+      const esAutonomo = tipoFiscal === "AUTONOMO";
+
+      let irpf = null;
+      if (esAutonomo) {
         const fechaAlta = new Date(c.fecha_alta);
         const ahora = new Date();
         const añosTranscurridos = (ahora - fechaAlta) / (1000 * 60 * 60 * 24 * 365.25);
@@ -31,7 +44,7 @@ export default function Colaboradores() {
       return {
         ...c,
         irpf_calculado: irpf,
-        exento_impuestos: c.tipo_fiscal === "AUTONOMO_ESPECIAL" || c.tipo_fiscal === "EMPRESA",
+        exento_impuestos: esEmpresa || esAutonomoEspecial,
         esta_activo: !c.fecha_baja || new Date(c.fecha_baja) > new Date(),
       };
     });
@@ -93,7 +106,7 @@ export default function Colaboradores() {
     <div className="space-y-6">
       {/* Verificación de niveles */}
       {niveles.length === 0 && (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-amber-200 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/40">
           <div className="flex items-center gap-3 text-amber-700">
             <AlertCircle className="w-5 h-5" />
             <div>
@@ -107,10 +120,10 @@ export default function Colaboradores() {
       {/* Botón para crear nuevo colaborador */}
       {niveles.length > 0 && (
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold text-slate-800">Gestión de Colaboradores</h2>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-gray-100">Gestión de Colaboradores</h2>
           <button
             onClick={() => setModalColaborador({})}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg dark:from-blue-600 dark:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800"
           >
             <Plus className="w-4 h-4" />
             Nuevo Colaborador
@@ -120,29 +133,29 @@ export default function Colaboradores() {
 
       {/* Estadísticas */}
       {colaboradoresProcesados.length > 0 && (
-        <Card className="bg-gradient-to-r from-blue-50 to-sky-50">
+        <Card className="bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-900/30 dark:to-sky-900/30">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{colaboradoresProcesados.length}</div>
-              <div className="text-sm text-slate-600">Total</div>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{colaboradoresProcesados.length}</div>
+              <div className="text-sm text-slate-600 dark:text-gray-300">Total</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-2xl font-bold text-green-600 dark:text-green-300">
                 {colaboradoresProcesados.filter(c => c.esta_activo).length}
               </div>
-              <div className="text-sm text-slate-600">Activos</div>
+              <div className="text-sm text-slate-600 dark:text-gray-300">Activos</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-2xl font-bold text-red-600 dark:text-red-300">
                 {colaboradoresProcesados.filter(c => !c.esta_activo).length}
               </div>
-              <div className="text-sm text-slate-600">Inactivos</div>
+              <div className="text-sm text-slate-600 dark:text-gray-300">Inactivos</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
+              <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
                 {colaboradoresProcesados.filter(c => c.comision_personalizada_activa).length}
               </div>
-              <div className="text-sm text-slate-600">Comisión Personal</div>
+              <div className="text-sm text-slate-600 dark:text-gray-300">Comisión Personal</div>
             </div>
           </div>
         </Card>
@@ -152,7 +165,7 @@ export default function Colaboradores() {
       {colaboradoresProcesados.length > 0 && (
         <Card>
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-slate-700">Filtrar por estado:</span>
+            <span className="text-sm font-medium text-slate-700 dark:text-gray-200">Filtrar por estado:</span>
             <div className="flex gap-2">
               {["TODOS", "ACTIVOS", "INACTIVOS"].map((estado) => (
                 <button
@@ -160,15 +173,15 @@ export default function Colaboradores() {
                   onClick={() => setFiltroEstado(estado)}
                   className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                     filtroEstado === estado
-                      ? "bg-blue-100 text-blue-700 border border-blue-200"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      ? "bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700/40"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                   }`}
                 >
                   {estado.charAt(0) + estado.slice(1).toLowerCase()}
                 </button>
               ))}
             </div>
-            <div className="ml-auto text-sm text-slate-500">
+            <div className="ml-auto text-sm text-slate-500 dark:text-gray-400">
               Mostrando {colaboradoresFiltrados.length} de {colaboradoresProcesados.length} colaboradores
             </div>
           </div>
@@ -181,7 +194,7 @@ export default function Colaboradores() {
           <div className="overflow-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-slate-500 bg-slate-50">
+                <tr className="text-left text-slate-500 dark:text-gray-300 bg-slate-50 dark:bg-gray-800/60">
                   <th className="py-3 px-3 font-medium">Colaborador</th>
                   <th className="py-3 px-3 font-medium">Tipo Fiscal</th>
                   <th className="py-3 px-3 font-medium">Nivel / Comisión</th>
@@ -200,12 +213,12 @@ export default function Colaboradores() {
                   const diasAntiguedad = Math.floor(antiguedad / (1000 * 60 * 60 * 24));
                   
                   return (
-                    <tr key={c.id} className="border-t hover:bg-slate-50">
+                    <tr key={c.id} className="border-t border-slate-200 dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-gray-800/70">
                       <td className="py-3 px-3">
                         <div>
-                          <div className="font-medium text-slate-800">{c.nombre}</div>
+                          <div className="font-medium text-slate-800 dark:text-gray-100">{c.nombre}</div>
                           {c.cif_dni && (
-                            <div className="text-xs text-slate-500">{c.cif_dni}</div>
+                            <div className="text-xs text-slate-500 dark:text-gray-400">{c.cif_dni}</div>
                           )}
                         </div>
                       </td>
@@ -213,10 +226,10 @@ export default function Colaboradores() {
                         <div>
                           <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                             c.tipo_fiscal === "EMPRESA"
-                              ? "bg-blue-100 text-blue-700"
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
                               : c.tipo_fiscal === "AUTONOMO_ESPECIAL"
-                                ? "bg-purple-100 text-purple-700"
-                                : "bg-green-100 text-green-700"
+                                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
+                                : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
                           }`}>
                             {c.tipo_fiscal === "EMPRESA"
                               ? "Empresa"
@@ -224,11 +237,13 @@ export default function Colaboradores() {
                                 ? "Aut. Especial"
                                 : "Autónomo"}
                           </div>
-                          <div className="text-xs text-slate-500 mt-1">
-                            {c.irpf_calculado === 0 ? (
-                              <span className="text-green-600 font-medium">IRPF: Exento</span>
-                            ) : (
+                          <div className="text-xs text-slate-500 dark:text-gray-400 mt-1">
+                            {c.exento_impuestos ? (
+                              <span className="text-green-600 dark:text-green-300 font-medium">IRPF: Exento</span>
+                            ) : c.irpf_calculado !== null ? (
                               `IRPF: ${c.irpf_calculado}%`
+                            ) : (
+                              "IRPF: -"
                             )}
                           </div>
                         </div>
@@ -244,9 +259,9 @@ export default function Colaboradores() {
                           }`}>
                             {nivelInfo?.nombre || c.nivel}
                           </div>
-                          <div className="text-xs text-slate-500 mt-1">
+                          <div className="text-xs text-slate-500 dark:text-gray-400 mt-1">
                             {c.comision_personalizada_activa ? (
-                              <span className="font-medium text-amber-600">Personalizado</span>
+                              <span className="font-medium text-amber-600 dark:text-amber-300">Personalizado</span>
                             ) : nivelInfo ? (
                               `Nivel estándar`
                             ) : (
@@ -291,20 +306,20 @@ export default function Colaboradores() {
                         </div>
                       </td>
                       <td className="py-3 px-3">
-                        <div>{getZonaNombre(c.zona_id)}</div>
+                        <div className="text-slate-700 dark:text-gray-200">{getZonaNombre(c.zona_id)}</div>
                       </td>
                       <td className="py-3 px-3">
                         <div>
-                          <div className="text-xs text-slate-700">{c.telefono}</div>
-                          <div className="text-xs text-slate-500">{c.email}</div>
+                          <div className="text-xs text-slate-700 dark:text-gray-200">{c.telefono}</div>
+                          <div className="text-xs text-slate-500 dark:text-gray-400">{c.email}</div>
                         </div>
                       </td>
                       <td className="py-3 px-3">
                         <div>
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                             c.esta_activo 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' 
+                              : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
                           }`}>
                             {c.esta_activo ? (
                               <>
@@ -319,7 +334,7 @@ export default function Colaboradores() {
                             )}
                           </span>
                           {c.fecha_baja && (
-                            <div className="text-xs text-red-600 mt-1">
+                            <div className="text-xs text-red-600 dark:text-red-300 mt-1">
                               Baja: {c.fecha_baja}
                             </div>
                           )}
@@ -328,9 +343,9 @@ export default function Colaboradores() {
                       <td className="py-3 px-3">
                         <div className="text-xs space-y-1">
                           <div className="flex items-center gap-1">
-                            <span className="text-slate-600">{c.fecha_alta}</span>
+                            <span className="text-slate-600 dark:text-gray-300">{c.fecha_alta}</span>
                           </div>
-                          <div className="flex items-center gap-1 text-slate-500">
+                          <div className="flex items-center gap-1 text-slate-500 dark:text-gray-400">
                             <span>{diasAntiguedad} días</span>
                           </div>
                         </div>
@@ -339,14 +354,14 @@ export default function Colaboradores() {
                         <div className="flex gap-1">
                           <button
                             onClick={() => setModalColaborador(c)}
-                            className="p-2 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                            className="p-2 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-800/40"
                             title="Editar"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => eliminarColaborador(c.id)}
-                            className="p-2 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors"
+                            className="p-2 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors dark:bg-rose-900/30 dark:text-rose-300 dark:hover:bg-rose-800/40"
                             title="Eliminar"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -366,18 +381,18 @@ export default function Colaboradores() {
       {colaboradoresProcesados.length === 0 && niveles.length > 0 && (
         <Card className="text-center py-12">
           <div className="max-w-md mx-auto">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Plus className="w-8 h-8 text-slate-400" />
+            <div className="w-16 h-16 bg-slate-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Plus className="w-8 h-8 text-slate-400 dark:text-gray-300" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-800 mb-2">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-gray-100 mb-2">
               No hay colaboradores registrados
             </h3>
-            <p className="text-slate-600 mb-6">
+            <p className="text-slate-600 dark:text-gray-300 mb-6">
               Añade tu primer colaborador para comenzar a gestionar comisiones y ventas.
             </p>
             <button
               onClick={() => setModalColaborador({})}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg dark:from-blue-600 dark:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800"
             >
               <Plus className="w-5 h-5" />
               Crear Primer Colaborador
