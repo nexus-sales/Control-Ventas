@@ -797,6 +797,7 @@ const OperadorModal = React.memo(({ operador, onSave, onClose }) => {
 const ProductosSection = React.memo(() => {
   const { data, setProductos } = useData();
   const [selectedIds, setSelectedIds] = useState([]);
+  const PAGE_SIZE = 20;
   
   // Datos limpios y seguros
   const operadores = useMemo(() => cleanOperadores(data.operadores || []), [data.operadores]);
@@ -810,6 +811,7 @@ const ProductosSection = React.memo(() => {
   const [selectedOperador, setSelectedOperador] = useState("");
   const [selectedFamilia, setSelectedFamilia] = useState("");
   const [sortDirection, setSortDirection] = useState("asc");
+  const [currentPage, setCurrentPage] = useState(1);
   
   // FUNCIÓN FALTANTE: handleSelect AÑADIDA
   const handleSelect = useCallback((id) => {
@@ -835,16 +837,6 @@ const ProductosSection = React.memo(() => {
       setSelectedIds([]);
     }
   }, [selectedIds, setProductos, operadores]);
-  
-  // Selección global de productos
-  const handleSelectAll = useCallback(() => {
-    const productosFiltrados = getProductosFiltrados();
-    if (selectedIds.length === productosFiltrados.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(productosFiltrados.map(p => p.id));
-    }
-  }, [selectedIds, productos, searchTerm, selectedOperador, selectedFamilia]);
   
   // Familias únicas
   const familias = useMemo(() => {
@@ -898,6 +890,29 @@ const ProductosSection = React.memo(() => {
   
   // Productos filtrados - usando la función auxiliar
   const productosFiltrados = useMemo(() => getProductosFiltrados(), [getProductosFiltrados]);
+  const totalPages = Math.max(1, Math.ceil(productosFiltrados.length / PAGE_SIZE));
+  const currentPageSafe = Math.min(currentPage, totalPages);
+  const startIndex = productosFiltrados.length === 0 ? 0 : (currentPageSafe - 1) * PAGE_SIZE + 1;
+  const endIndex = Math.min(productosFiltrados.length, currentPageSafe * PAGE_SIZE);
+  const productosPagina = useMemo(
+    () => productosFiltrados.slice((currentPageSafe - 1) * PAGE_SIZE, currentPageSafe * PAGE_SIZE),
+    [productosFiltrados, currentPageSafe, PAGE_SIZE]
+  );
+
+  // Selección global de productos (solo página actual)
+  const handleSelectAll = useCallback(() => {
+    const pageItems = productosPagina;
+    if (pageItems.length === 0) return;
+    const allSelected = pageItems.every(p => selectedIds.includes(p.id));
+    if (allSelected) {
+      setSelectedIds(prev => prev.filter(id => !pageItems.some(p => p.id === id)));
+    } else {
+      const nuevos = pageItems
+        .map(p => p.id)
+        .filter(id => !selectedIds.includes(id));
+      setSelectedIds(prev => [...prev, ...nuevos]);
+    }
+  }, [productosPagina, selectedIds]);
   
   // Validar duplicados
   const productExists = useCallback((nombre, operadorId, excludeId = null) => {
@@ -1069,7 +1084,7 @@ const ProductosSection = React.memo(() => {
             className="w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700 placeholder-slate-400 dark:placeholder-gray-500"
             placeholder="Buscar producto..."
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           />
         </div>
         
@@ -1077,7 +1092,7 @@ const ProductosSection = React.memo(() => {
           <select 
             className="border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700"
             value={selectedOperador}
-            onChange={e => setSelectedOperador(e.target.value)}
+            onChange={e => { setSelectedOperador(e.target.value); setCurrentPage(1); }}
           >
             <option value="">Todos los operadores</option>
             {operadores.map(op => (
@@ -1090,7 +1105,7 @@ const ProductosSection = React.memo(() => {
           <select 
             className="border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700"
             value={selectedFamilia}
-            onChange={e => setSelectedFamilia(e.target.value)}
+            onChange={e => { setSelectedFamilia(e.target.value); setCurrentPage(1); }}
           >
             <option value="">Todas las familias</option>
             {familias.map(f => (
@@ -1101,7 +1116,7 @@ const ProductosSection = React.memo(() => {
         
         <div>
           <button 
-            onClick={() => setSortDirection(sortDirection === "asc" ? "desc" : "asc")}
+            onClick={() => { setSortDirection(sortDirection === "asc" ? "desc" : "asc"); setCurrentPage(1); }}
             className="px-3 py-2 border rounded-xl flex items-center gap-1 bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-gray-800"
           >
             {sortDirection === "asc" ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
@@ -1125,7 +1140,7 @@ const ProductosSection = React.memo(() => {
               <th>
                 <input 
                   type="checkbox" 
-                  checked={selectedIds?.length === productosFiltrados.length && productosFiltrados.length > 0} 
+                  checked={productosPagina.length > 0 && productosPagina.every(p => selectedIds?.includes(p.id))} 
                   onChange={handleSelectAll} 
                 />
               </th>
@@ -1141,7 +1156,7 @@ const ProductosSection = React.memo(() => {
             </tr>
           </thead>
           <tbody>
-            {productosFiltrados.map(p => (
+            {productosPagina.map(p => (
               <tr key={p.id} className="bg-white dark:bg-gray-800 hover:bg-green-50 dark:hover:bg-gray-700">
                 <td>
                   <input 
@@ -1184,6 +1199,36 @@ const ProductosSection = React.memo(() => {
           </tbody>
         </table>
       </div>
+      {productosFiltrados.length > 0 && (
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-4 text-xs md:text-sm text-slate-600 dark:text-gray-300">
+          <div>
+            Mostrando <span className="font-semibold">{startIndex}</span>
+            {" - "}
+            <span className="font-semibold">{endIndex}</span> de {productosFiltrados.length} productos
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPageSafe === 1}
+              className={`px-3 py-1 rounded-lg border text-xs md:text-sm ${currentPageSafe === 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-gray-800'} border-slate-200 dark:border-gray-700`}
+            >
+              Anterior
+            </button>
+            <span className="text-xs md:text-sm">
+              Página <span className="font-semibold">{currentPageSafe}</span> / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPageSafe === totalPages}
+              className={`px-3 py-1 rounded-lg border text-xs md:text-sm ${currentPageSafe === totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-gray-800'} border-slate-200 dark:border-gray-700`}
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* Modal */}
       {showModal && (
