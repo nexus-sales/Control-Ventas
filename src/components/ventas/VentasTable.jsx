@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Edit3, Eye, X, Check, Package, CreditCard as CardIcon } from 'lucide-react';
-import Card from '../ui/Card';
-import SectionTitle from '../ui/SectionTitle';
+import { glassStyles, sectionTitleStyles } from '../../utils/designUtils';
 import '../../styles/table-optimizations.css';
 
 // Función para formatear fecha
@@ -32,15 +31,14 @@ const formatCurrency = (value) => {
 };
 
 /**
- * 🎯 COMPONENTE CORREGIDO: VentasTable con DARK MODE COMPLETO
- * ✅ Dark mode aplicado siguiendo el patrón de DashboardPanels
+ * 🎯 COMPONENTE PREMIUM: VentasTable con Glassmorphism
  */
 export function VentasTable({
   ventasCalc = [],
   productos = [],
   colaboradores = [],
   zonas = [],
-  operadores = [], 
+  operadores = [],
   selectedIds = [],
   onSelect,
   onSelectAll,
@@ -77,13 +75,13 @@ export function VentasTable({
     const idPart = venta.id ? `id-${venta.id}` : `no-id`;
     const clientePart = venta.cliente ? `client-${venta.cliente.slice(0, 10)}` : 'no-client';
     const fechaPart = venta.fecha ? `date-${venta.fecha}` : 'no-date';
-    
+
     const combinedStr = `${idPart}-${clientePart}-${fechaPart}`;
     const hash = combinedStr.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
-    
+
     return `${baseKey}-${Math.abs(hash)}`;
   }, []);
 
@@ -92,30 +90,30 @@ export function VentasTable({
     if (venta.productoNombre && venta.productoNombre !== venta.producto_id) {
       return venta.productoNombre;
     }
-    
+
     if (resolveProductoName) {
       const resolved = resolveProductoName(venta.producto_id);
       if (resolved && resolved !== venta.producto_id) {
         return resolved;
       }
     }
-    
+
     const producto = indexers.productos[venta.producto_id];
     if (producto?.nombre) {
       return producto.nombre;
     }
-    
+
     const productoFallback = productos.find(p => p?.id === venta.producto_id);
     if (productoFallback?.nombre) {
       return productoFallback.nombre;
     }
-    
+
     const displayId = venta.producto_id || "";
     if (displayId.startsWith('prod_')) {
       const parts = displayId.split('_');
       return parts[1] || displayId;
     }
-    
+
     return displayId || "Sin producto";
   }, [resolveProductoName, indexers.productos, productos]);
 
@@ -123,30 +121,30 @@ export function VentasTable({
     if (venta.zonaNombre && venta.zonaNombre !== venta.zona_id) {
       return venta.zonaNombre;
     }
-    
+
     if (resolveZonaName) {
       const resolved = resolveZonaName(venta.zona_id);
       if (resolved && resolved !== venta.zona_id) {
         return resolved;
       }
     }
-    
+
     const zona = indexers.zonas[venta.zona_id];
     if (zona?.nombre) {
       return zona.nombre;
     }
-    
+
     const zonaFallback = zonas.find(z => z?.id === venta.zona_id);
     if (zonaFallback?.nombre) {
       return zonaFallback.nombre;
     }
-    
+
     const displayId = venta.zona_id || "";
     if (displayId.startsWith('zona_')) {
       const parts = displayId.split('_');
       return parts[1] || displayId;
     }
-    
+
     return displayId || "Sin zona";
   }, [resolveZonaName, indexers.zonas, zonas]);
 
@@ -154,30 +152,30 @@ export function VentasTable({
     if (venta.colaboradorNombre && venta.colaboradorNombre !== venta.colaborador_id) {
       return venta.colaboradorNombre;
     }
-    
+
     if (resolveColaboradorName) {
       const resolved = resolveColaboradorName(venta.colaborador_id);
       if (resolved && resolved !== venta.colaborador_id) {
         return resolved;
       }
     }
-    
+
     const colaborador = indexers.colaboradores[venta.colaborador_id];
     if (colaborador?.nombre) {
       return colaborador.nombre;
     }
-    
+
     const colaboradorFallback = colaboradores.find(c => c?.id === venta.colaborador_id);
     if (colaboradorFallback?.nombre) {
       return colaboradorFallback.nombre;
     }
-    
+
     const displayId = venta.colaborador_id || "";
     if (displayId.startsWith('colab_') || displayId.startsWith('c_')) {
       const parts = displayId.split('_');
       return parts[1] || displayId;
     }
-    
+
     return displayId || "Sin colaborador";
   }, [resolveColaboradorName, indexers.colaboradores, colaboradores]);
 
@@ -185,40 +183,40 @@ export function VentasTable({
     if (venta.operadorNombre) {
       return venta.operadorNombre;
     }
-    
+
     if (resolveOperadorName) {
       const resolved = resolveOperadorName(venta.operador_id);
       if (resolved) {
         return resolved;
       }
     }
-    
+
     let operador = indexers.operadores[venta.operador_id];
-    
+
     if (!operador && venta.producto_id) {
       const producto = indexers.productos[venta.producto_id];
       if (producto?.operador_id) {
         operador = indexers.operadores[producto.operador_id];
       }
     }
-    
+
     if (operador?.nombre) {
       return operador.nombre;
     }
-    
+
     if (venta.operador_id) {
       const operadorFallback = operadores.find(o => o?.id === venta.operador_id);
       if (operadorFallback?.nombre) {
         return operadorFallback.nombre;
       }
     }
-    
+
     const displayId = venta.operador_id || "";
     if (displayId.startsWith('oper_') || displayId.startsWith('op_')) {
       const parts = displayId.split('_');
       return parts[1] || displayId;
     }
-    
+
     return displayId || "-";
   }, [resolveOperadorName, indexers, operadores]);
 
@@ -227,46 +225,41 @@ export function VentasTable({
     if (venta.pvpResuelto > 0) {
       return venta.pvpResuelto;
     }
-    
+
     if (venta.pvp > 0) {
       return venta.pvp;
     }
-    
+
     const producto = indexers.productos[venta.producto_id];
     if (producto?.pvp > 0) {
       return producto.pvp;
     }
-    
+
     if (venta._calc?.detalle?.producto?.pvp > 0) {
       return venta._calc.detalle.producto.pvp;
     }
-    
+
     return 0;
   }, [indexers.productos]);
 
   // Función para obtener estilo del estado
   const getEstadoStyle = useCallback((estado) => {
     const estilos = {
-      ACTIVO: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-      PENDIENTE: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-      "PENDIENTE VALIDAR": "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-      SCORING: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-      INCIDENCIA: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-      INSTALACION: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
-      ENVIADA: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
-      "PENDIENTE INSTALACION": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-      CITADA: "bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-400",
-      TRAMITACION: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400",
-      CANCELADA: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-      BAJA: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-400",
-      "OFERTA FIRMADA": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-      "PDTE FIRMA": "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400",
-      RECHAZADA: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
-      Confirmada: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-      "En Proceso": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-      Instalada: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+      ACTIVO: "bg-emerald-100/50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800",
+      PENDIENTE: "bg-amber-100/50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800",
+      "PENDIENTE VALIDAR": "bg-yellow-100/50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800",
+      SCORING: "bg-blue-100/50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800",
+      INCIDENCIA: "bg-orange-100/50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-200 dark:border-orange-800",
+      INSTALACION: "bg-indigo-100/50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800",
+      ENVIADA: "bg-cyan-100/50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800",
+      "PENDIENTE INSTALACION": "bg-purple-100/50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800",
+      CITADA: "bg-lime-100/50 text-lime-700 dark:bg-lime-900/30 dark:text-lime-400 border border-lime-200 dark:border-lime-800",
+      TRAMITACION: "bg-sky-100/50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 border border-sky-200 dark:border-sky-800",
+      CANCELADA: "bg-red-100/50 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800",
+      BAJA: "bg-gray-100/50 text-gray-700 dark:bg-gray-700/30 dark:text-gray-400 border border-gray-200 dark:border-gray-800",
+      "OFERTA FIRMADA": "bg-green-100/50 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800",
     };
-    return estilos[estado] || "bg-slate-100 text-slate-700 dark:bg-gray-700/30 dark:text-gray-400";
+    return estilos[estado] || "bg-slate-100/50 text-slate-700 dark:bg-gray-700/30 dark:text-gray-400";
   }, []);
 
   // Feedback ARIA para cambios de página
@@ -276,7 +269,7 @@ export function VentasTable({
   }, [onPageChange]);
 
   // Verificar si hay datos válidos
-  const hasValidData = useMemo(() => 
+  const hasValidData = useMemo(() =>
     ventasCalc && Array.isArray(ventasCalc) && ventasCalc.length > 0,
     [ventasCalc]
   );
@@ -287,78 +280,82 @@ export function VentasTable({
 
   if (!hasValidData) {
     return (
-      <Card>
-        <SectionTitle>Lista de Ventas</SectionTitle>
+      <div className={`${glassStyles} p-12 text-center`}>
         <div aria-live="polite" className="sr-only">
           {ariaMessage}
         </div>
-        <div className="text-center py-12">
-          <Package className="w-16 h-16 mx-auto text-slate-300 dark:text-gray-600 mb-4" />
-          <h3 className="text-lg font-medium text-slate-600 dark:text-gray-400 mb-2">No hay ventas</h3>
-          <p className="text-slate-500 dark:text-gray-500">
-            No se encontraron ventas con los filtros actuales.
+        <h2 className={sectionTitleStyles}>Lista de Ventas</h2>
+        <div className="flex flex-col items-center justify-center">
+          <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+            <Package className="w-8 h-8 text-slate-400" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-600 dark:text-slate-300 mb-2">No hay ventas</h3>
+          <p className="text-slate-500 dark:text-slate-400 max-w-sm">
+            No se encontraron ventas con los filtros actuales. Intenta ajustar los criterios de búsqueda.
           </p>
         </div>
-      </Card>
+      </div>
     );
   }
 
   return (
-    <Card className="overflow-hidden">
+    <div className={`${glassStyles} overflow-hidden p-0`}>
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
       </div>
-      <div className="flex items-center justify-between mb-4">
-        <SectionTitle>Listado de Ventas ({ventasCalc.length})</SectionTitle>
-        
-        {/* Indicadores de estado de datos */}
-        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-gray-400">
-          <span>Productos: {productos.length}</span>
-          <span>•</span>
-          <span>Colaboradores: {colaboradores.length}</span>
-          <span>•</span>
-          <span>Zonas: {zonas.length}</span>
+
+      <div className="p-6 pb-2">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className={sectionTitleStyles}>Listado de Ventas <span className="text-sm font-normal text-slate-500 ml-2">({ventasCalc.length})</span></h2>
+
+          {/* Indicadores de estado de datos */}
+          <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg">
+            <span>Prod: {productos.length}</span>
+            <span className="w-1 h-3 bg-slate-200 dark:bg-slate-700 mx-1"></span>
+            <span>Colab: {colaboradores.length}</span>
+            <span className="w-1 h-3 bg-slate-200 dark:bg-slate-700 mx-1"></span>
+            <span>Zona: {zonas.length}</span>
+          </div>
         </div>
       </div>
 
-
       <div className="overflow-x-auto">
         <table
-          className="min-w-full border-separate border-spacing-y-2 text-xs md:text-sm"
+          className="min-w-full text-xs md:text-sm"
           role="table"
           aria-label="Tabla de ventas"
         >
-          <thead>
-            <tr className="text-left text-slate-500 dark:text-gray-400 uppercase tracking-wide text-[11px] md:text-xs">
-              <th className="px-2 md:px-4 py-2">
+          <thead className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 backdrop-blur-sm sticky top-0 z-10">
+            <tr className="text-left text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold">
+              <th className="px-4 py-3 w-10">
                 <input
                   type="checkbox"
                   checked={Boolean(isAllSelected)}
                   onChange={onSelectAll}
                   aria-label="Seleccionar todas las ventas"
-                  className="accent-sky-500"
+                  className="rounded border-slate-300 text-sky-500 focus:ring-sky-500 bg-white/50"
                 />
               </th>
-              <th className="px-2 md:px-4 py-2">Fecha</th>
-              <th className="px-2 md:px-4 py-2">Cliente</th>
-              <th className="px-2 md:px-4 py-2">Producto</th>
-              <th className="px-2 md:px-4 py-2">Zona</th>
-              <th className="px-2 md:px-4 py-2">Colaborador</th>
-              <th className="px-2 md:px-4 py-2">Operador</th>
-              <th className="px-2 md:px-4 py-2 text-right">PVP</th>
-              <th className="px-2 md:px-4 py-2 text-right">Comisión Base</th>
-              <th className="px-2 md:px-4 py-2 text-right">Neto</th>
-              <th className="px-2 md:px-4 py-2 text-center">Estado</th>
-              <th className="px-2 md:px-4 py-2 text-center">Acciones</th>
+              <th className="px-4 py-3">Fecha</th>
+              <th className="px-4 py-3">Cliente</th>
+              <th className="px-4 py-3">Producto</th>
+              <th className="px-4 py-3 hidden md:table-cell">Zona</th>
+              <th className="px-4 py-3 hidden lg:table-cell">Colaborador</th>
+              <th className="px-4 py-3 hidden xl:table-cell">Operador</th>
+              <th className="px-4 py-3 text-right">PVP</th>
+              <th className="px-4 py-3 text-right hidden lg:table-cell">Comisión</th>
+              <th className="px-4 py-3 text-right font-black">Neto</th>
+              <th className="px-4 py-3 text-center">Estado</th>
+              <th className="px-4 py-3 text-center">Acciones</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
             {ventasCalc.map((venta, idx) => {
               const estadoLabel = venta.estado || "SIN ESTADO";
               const comisionBase = venta._calc?.detalle?.comBase || 0;
               const comisionBruta = venta._calc?.detalle?.comBruta || 0;
               const neto = venta._calc?.detalle?.netoColab || 0;
-              
+
               const nombreProducto = getNombreProducto(venta);
               const nombreZona = getNombreZona(venta);
               const nombreColaborador = getNombreColaborador(venta);
@@ -370,137 +367,100 @@ export function VentasTable({
               return (
                 <tr
                   key={uniqueKey}
-                  className="bg-white dark:bg-gray-800 shadow-sm hover:shadow-md dark:hover:shadow-gray-900/50 transition-shadow focus-within:ring-2 focus-within:ring-sky-200 dark:focus-within:ring-sky-800"
+                  className="bg-white/40 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group"
                 >
-                  <td className="px-2 md:px-4 py-3 align-middle">
+                  <td className="px-4 py-3 align-middle">
                     <input
                       type="checkbox"
                       checked={Boolean(selectedIds?.includes(venta.id))}
                       onChange={() => onSelect && onSelect(venta.id)}
                       aria-label={`Seleccionar venta ${venta.id}`}
-                      className="accent-sky-500"
+                      className="rounded border-slate-300 text-sky-500 focus:ring-sky-500 bg-white/50"
                     />
                   </td>
-                  <td className="px-2 md:px-4 py-3 align-middle text-slate-700 dark:text-gray-300 font-medium">
+                  <td className="px-4 py-3 align-middle text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap">
                     {formatDate(venta.fecha)}
                   </td>
-                  <td className="px-2 md:px-4 py-3 align-middle">
-                    <div className="text-slate-900 dark:text-gray-100 font-medium uppercase tracking-tight">
+                  <td className="px-4 py-3 align-middle">
+                    <div className="text-slate-900 dark:text-white font-bold uppercase tracking-tight text-xs leading-tight mb-0.5">
                       {venta.cliente || "Sin cliente"}
                     </div>
                     {venta.cif && (
-                      <div className="text-[11px] text-slate-500 dark:text-gray-400">{venta.cif}</div>
-                    )}
-                    {isDevMode && venta.id && (
-                      <div className="text-[10px] text-blue-500 dark:text-blue-400" title={`ID: ${venta.id}`}>
-                        {venta.id.length > 20 ? `${venta.id.slice(0, 20)}...` : venta.id}
-                      </div>
+                      <div className="text-[10px] bg-slate-100 dark:bg-slate-900 text-slate-500 inline-block px-1.5 rounded">{venta.cif}</div>
                     )}
                   </td>
-                  <td className="px-2 md:px-4 py-3 align-middle text-slate-700 dark:text-gray-300">
-                    <div className="max-w-[150px] truncate" title={nombreProducto}>
+                  <td className="px-4 py-3 align-middle text-slate-700 dark:text-slate-300">
+                    <div className="max-w-[150px] truncate text-xs font-medium" title={nombreProducto}>
                       {nombreProducto}
                     </div>
-                    {venta.productoCodigo && (
-                      <div className="text-[10px] text-slate-400 dark:text-gray-500">{venta.productoCodigo}</div>
-                    )}
                   </td>
-                  <td className="px-2 md:px-4 py-3 align-middle text-slate-600 dark:text-gray-400">
-                    <div className="max-w-[120px] truncate" title={nombreZona}>
+                  <td className="px-4 py-3 align-middle text-slate-500 dark:text-slate-400 hidden md:table-cell">
+                    <div className="max-w-[120px] truncate text-xs" title={nombreZona}>
                       {nombreZona}
                     </div>
                   </td>
-                  <td className="px-2 md:px-4 py-3 align-middle text-slate-700 dark:text-gray-300">
-                    <div className="max-w-[140px] truncate" title={nombreColaborador}>
+                  <td className="px-4 py-3 align-middle text-slate-600 dark:text-slate-300 hidden lg:table-cell">
+                    <div className="max-w-[140px] truncate text-xs" title={nombreColaborador}>
                       {nombreColaborador}
                     </div>
-                    {venta.colaboradorNivel && (
-                      <div className="text-[10px] text-slate-400 dark:text-gray-500">{venta.colaboradorNivel}</div>
-                    )}
                   </td>
-                  <td className="px-2 md:px-4 py-3 align-middle text-slate-600 dark:text-gray-400">
-                    <div className="max-w-[120px] truncate" title={nombreOperador}>
+                  <td className="px-4 py-3 align-middle text-slate-500 dark:text-slate-400 hidden xl:table-cell">
+                    <div className="max-w-[120px] truncate text-xs" title={nombreOperador}>
                       {nombreOperador}
                     </div>
                   </td>
-                  <td className="px-2 md:px-4 py-3 align-middle text-right font-semibold text-slate-900 dark:text-gray-100">
+                  <td className="px-4 py-3 align-middle text-right font-bold text-slate-800 dark:text-slate-200">
                     {formatCurrency(pvpValue)}
-                    {/* Eliminada referencia 'desde producto' y bloque condicional vacío */}
                   </td>
-                  <td className="px-2 md:px-4 py-3 align-middle text-right text-indigo-600 dark:text-indigo-400 font-semibold">
+                  <td className="px-4 py-3 align-middle text-right text-indigo-600 dark:text-indigo-400 font-medium text-xs hidden lg:table-cell">
                     {formatCurrency(comisionBase)}
-                    {comisionBruta !== comisionBase && (
-                      <div className="text-[10px] text-slate-500 dark:text-gray-400">
-                        Comisión total: {formatCurrency(comisionBruta)}
-                      </div>
-                    )}
-                    {venta._calc?.detalle?.parteColab !== undefined && (
-                      <div className="text-[10px] text-emerald-600 dark:text-emerald-400">
-                        {/* Eliminado Parte colaborador */}
-                      </div>
-                    )}
                   </td>
-                  <td className="px-2 md:px-4 py-3 align-middle text-right text-emerald-600 dark:text-emerald-400 font-semibold">
-                    {formatCurrency(neto)}
+                  <td className="px-4 py-3 align-middle text-right">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-black">
+                      {formatCurrency(neto)}
+                    </span>
                   </td>
-                  <td className="px-2 md:px-4 py-3 align-middle">
+                  <td className="px-4 py-3 align-middle text-center">
                     <span
-                      className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${getEstadoStyle(
+                      className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm ${getEstadoStyle(
                         estadoLabel
                       )}`}
                     >
                       {estadoLabel}
                     </span>
                   </td>
-                  <td className="px-2 md:px-4 py-3 align-middle">
-                    <div className="flex items-center justify-center gap-1.5">
+                  <td className="px-4 py-3 align-middle">
+                    <div className="flex items-center justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => onView && onView(venta)}
-                        aria-label={`Ver detalles de venta ${venta.id}`}
-                        className="p-2 rounded-lg bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-800/50 transition-colors"
+                        className="p-1.5 rounded-lg bg-white dark:bg-slate-700 text-sky-500 shadow-sm hover:scale-110 transition-transform"
                         title="Ver detalles"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-3.5 h-3.5" />
                       </button>
                       {isAdmin && (
                         <>
                           <button
                             onClick={() => onEdit && onEdit(venta)}
-                            aria-label={`Editar venta ${venta.id}`}
-                            className="p-2 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-800/50 transition-colors"
+                            className="p-1.5 rounded-lg bg-white dark:bg-slate-700 text-amber-500 shadow-sm hover:scale-110 transition-transform"
                             title="Editar venta"
                           >
-                            <Edit3 className="w-4 h-4" />
+                            <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => onDelete && onDelete(venta.id)}
-                            aria-label={`Eliminar venta ${venta.id}`}
-                            className="p-2 rounded-lg bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-800/50 transition-colors"
+                            className="p-1.5 rounded-lg bg-white dark:bg-slate-700 text-rose-500 shadow-sm hover:scale-110 transition-transform"
                             title="Eliminar venta"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => onActivate && onActivate(venta.id)}
-                            aria-label={`Activar venta ${venta.id}`}
-                            className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800/50 transition-colors"
+                            className="p-1.5 rounded-lg bg-white dark:bg-slate-700 text-emerald-500 shadow-sm hover:scale-110 transition-transform"
                             title="Activar venta"
                           >
-                            <Check className="w-4 h-4" />
+                            <Check className="w-3.5 h-3.5" />
                           </button>
-                          {venta.producto_id && (
-                            <button
-                              onClick={() =>
-                                onDefinePvp &&
-                                onDefinePvp(venta.producto_id, nombreProducto)
-                              }
-                              aria-label={`Definir PVP del producto de la venta ${venta.id}`}
-                              className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800/50 transition-colors"
-                              title="Definir PVP del producto"
-                            >
-                              <CardIcon className="w-4 h-4" />
-                            </button>
-                          )}
                         </>
                       )}
                     </div>
@@ -511,24 +471,7 @@ export function VentasTable({
           </tbody>
         </table>
       </div>
-
-      {/* Información de debug SOLO en desarrollo */}
-      {isDevMode && (
-        <div className="mt-4 p-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded text-xs text-slate-600 dark:text-gray-400">
-          <strong>Debug Info:</strong> Productos: {productos.length}, 
-          Colaboradores: {colaboradores.length}, 
-          Zonas: {zonas.length}, 
-          Operadores: {operadores.length}
-          {ventasCalc.length > 0 && (
-            <>
-              {" | "}Ejemplo ID: {ventasCalc[0]?.id || 'No ID'}
-              {" | "}Unique Keys: Generados dinámicamente
-            </>
-          )}
-        </div>
-      )}
-
-    </Card>
+    </div>
   );
 }
 

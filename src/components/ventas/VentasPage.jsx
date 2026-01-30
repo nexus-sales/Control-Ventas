@@ -12,6 +12,7 @@ import Pagination from '../ui/Pagination';
 import { VentasStats } from './VentasStats';
 import { VentasActions } from './VentasActions';
 import { VentasTable } from './VentasTable';
+import { VentasProcessWidget } from './widgets/VentasProcessWidget';
 import VentasFilters from './VentasFilters';
 import VentaFormModal from './modals/VentaFormModal';
 import { VentaDetailModal } from './modals/VentaDetailModal';
@@ -38,7 +39,7 @@ export default function VentasPage() {
   const navigate = useNavigate();
   // Contexto global
   const { data, dataInitialized } = useData();
-  
+
   // Hook consolidado de gestión de ventas
   const {
     // Datos desde allData
@@ -78,7 +79,7 @@ export default function VentasPage() {
   // ==========================================
   // DATOS SEGUROS - MEMOIZACIÓN OPTIMIZADA
   // ==========================================
-  
+
   // Arrays defensivos para datos del contexto
   const entidadesSafe = useMemo(() => ({
     operadores: Array.isArray(data?.operadores) ? data.operadores : [],
@@ -97,19 +98,19 @@ export default function VentasPage() {
   // ==========================================
   // CÁLCULO DE VENTAS OPTIMIZADO
   // ==========================================
-  
+
   const ventasCalc = useMemo(() => {
     if (datosSafe.ventasFiltradas.length === 0) {
       return [];
     }
-    
+
     return datosSafe.ventasFiltradas.map((venta) => {
       try {
         // Resolver entidades por ID
         const producto = datosSafe.productos.find(p => p?.id === venta?.producto_id);
         const colaborador = datosSafe.colaboradores.find(c => c?.id === venta?.colaborador_id);
         const zona = datosSafe.zonas.find(z => z?.id === venta?.zona_id);
-        const operador = entidadesSafe.operadores.find(o => 
+        const operador = entidadesSafe.operadores.find(o =>
           o?.id === (venta?.operador_id || producto?.operador_id)
         ) || null;
 
@@ -152,7 +153,7 @@ export default function VentasPage() {
   // ==========================================
   // ESTADÍSTICAS OPTIMIZADAS
   // ==========================================
-  
+
   const estadisticas = useMemo(() => {
     if (ventasCalc.length === 0) {
       return {
@@ -173,12 +174,12 @@ export default function VentasPage() {
         // Calcular PVP
         const producto = datosSafe.productos.find(p => p?.id === venta?.producto_id);
         const pvpValue = producto?.pvp || venta?.pvp || 0;
-        
+
         if (pvpValue > 0) {
           totalPvp += pvpValue;
           countConPvp++;
         }
-        
+
         // Calcular comisiones
         if (venta?._calc?.ok) {
           comisionesTotal += venta._calc.detalle?.comBruta || 0;
@@ -203,17 +204,17 @@ export default function VentasPage() {
 
   // Handlers de modales con useCallback
   const openNewVentaModal = useCallback(() => setActiveModal('new'), []);
-  
+
   const openEditModal = useCallback((venta) => {
     setSelectedVenta(venta);
     setActiveModal('edit');
   }, []);
-  
+
   const openDetailModal = useCallback((venta) => {
     setSelectedVenta(venta);
     setActiveModal('detail');
   }, []);
-  
+
   const openPvpModal = useCallback((productoId, productoNombre) => {
     setPvpEdit({
       producto_id: productoId,
@@ -222,7 +223,7 @@ export default function VentasPage() {
     });
     setActiveModal('pvp');
   }, []);
-  
+
   const closeModal = useCallback(() => {
     setActiveModal(null);
     setSelectedVenta(null);
@@ -277,7 +278,7 @@ export default function VentasPage() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const filtrosUrl = {};
-    
+
     // Abrir modal de nueva venta si viene en la URL
     const modal = params.get('modal');
     if (modal === 'newVenta') {
@@ -288,7 +289,7 @@ export default function VentasPage() {
       navigate(newUrl, { replace: true });
       return;
     }
-    
+
     // Procesar parámetros de filtros
     for (const [key, value] of params.entries()) {
       // Mapear claves de la URL a las esperadas por el estado de filtros
@@ -305,7 +306,7 @@ export default function VentasPage() {
         filtrosUrl[filtroKey] = value;
       }
     }
-    
+
     if (Object.keys(filtrosUrl).length > 0 && updateFilter) {
       Object.entries(filtrosUrl).forEach(([key, value]) => {
         updateFilter(key, value);
@@ -320,7 +321,7 @@ export default function VentasPage() {
   const isAdmin = true; // TODO: Obtener del contexto de usuario
 
   // Verificar si hay filtros activos
-  const hasActiveFilters = useMemo(() => 
+  const hasActiveFilters = useMemo(() =>
     filtros && Object.values(filtros).some((value) => {
       if (Array.isArray(value)) return value.length > 0;
       if (typeof value === 'string') return value !== '';
@@ -359,9 +360,15 @@ export default function VentasPage() {
   return (
     <div className="space-y-6">
       {/* Estadísticas */}
-      <VentasStats 
-        ventasCalc={ventasCalc} 
-        productos={datosSafe.productos} 
+      <VentasStats
+        ventasCalc={ventasCalc}
+        productos={datosSafe.productos}
+      />
+
+      {/* Pipeline Visual de Estados */}
+      <VentasProcessWidget
+        ventas={ventasCalc}
+        onFilterChange={updateFilter}
       />
 
       {/* Filtros */}
@@ -372,6 +379,7 @@ export default function VentasPage() {
         onExport={handleExport}
         colaboradores={datosSafe.colaboradores}
         operadores={entidadesSafe.operadores}
+        zonas={datosSafe.zonas}
         hasActiveFilters={hasActiveFilters}
       />
 

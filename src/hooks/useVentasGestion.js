@@ -42,21 +42,21 @@ const formatDate = (dateStr) => {
  * - Eliminación de todos los warnings de ESLint
  */
 export function useVentasGestion(customFields = []) {
-  const { 
-    data, 
-    setVentas, 
-    setProductos 
+  const {
+    data,
+    setVentas,
+    setProductos
   } = useData();
 
   // =================== ESTADO CONSOLIDADO ===================
   const [state, setState] = useState({
     // 🔍 FILTROS
     filtros: INITIAL_FILTERS,
-    
+
     // ✅ SELECCIÓN MÚLTIPLE
     selectedIds: [],
     selectAll: false,
-    
+
     // 📊 UI STATES
     isExporting: false,
     isProcessing: false,
@@ -64,41 +64,41 @@ export function useVentasGestion(customFields = []) {
 
   // =================== 🎯 DATOS MEMOIZADOS MEJORADOS ===================
   // 🎯 MEJORA: Usar useMemo para evitar warnings de ESLint
-  const ventas = useMemo(() => 
-    Array.isArray(data?.ventas) ? data.ventas : [], 
+  const ventas = useMemo(() =>
+    Array.isArray(data?.ventas) ? data.ventas : [],
     [data?.ventas]
   );
-  
-  const productos = useMemo(() => 
-    Array.isArray(data?.productos) ? data.productos : [], 
+
+  const productos = useMemo(() =>
+    Array.isArray(data?.productos) ? data.productos : [],
     [data?.productos]
   );
-  
-  const colaboradores = useMemo(() => 
-    Array.isArray(data?.colaboradores) ? data.colaboradores : [], 
+
+  const colaboradores = useMemo(() =>
+    Array.isArray(data?.colaboradores) ? data.colaboradores : [],
     [data?.colaboradores]
   );
-  
-  const zonas = useMemo(() => 
-    Array.isArray(data?.zonas) ? data.zonas : [], 
+
+  const zonas = useMemo(() =>
+    Array.isArray(data?.zonas) ? data.zonas : [],
     [data?.zonas]
   );
-  
-  const operadores = useMemo(() => 
-    Array.isArray(data?.operadores) ? data.operadores : [], 
+
+  const operadores = useMemo(() =>
+    Array.isArray(data?.operadores) ? data.operadores : [],
     [data?.operadores]
   );
 
   // 🎯 NUEVA: Helper para extraer nombre legible de un ID críptico
   const extractReadableName = useCallback((id, fallback = '') => {
     if (!id || typeof id !== 'string') return fallback;
-    
+
     // Si tiene formato de ID generado automáticamente, extraer la parte legible
     const patterns = [
       /^(prod|colab|zona|oper|c)_([a-zA-Z0-9]+)_\d+/,  // Nuevo formato: prod_nombreproducto_1234
       /^(prod|colab|zona|oper|c)_\d+_([a-zA-Z0-9]+)$/   // Formato críptico: c_176400078164_fzrk5j
     ];
-    
+
     for (const pattern of patterns) {
       const match = id.match(pattern);
       if (match) {
@@ -113,7 +113,7 @@ export function useVentasGestion(customFields = []) {
         }
       }
     }
-    
+
     return id;
   }, []);
 
@@ -128,13 +128,13 @@ export function useVentasGestion(customFields = []) {
   // 🎯 NUEVAS: Funciones de resolución inteligentes para componentes
   const getNombreProducto = useCallback((producto_id) => {
     if (!producto_id) return '';
-    
+
     // 1. Buscar por ID exacto
     const producto = indexers.productos[producto_id];
     if (producto?.nombre && producto.nombre !== producto.id) {
       return producto.nombre;
     }
-    
+
     // 2. Si no tiene nombre o el nombre es igual al ID, intentar extraer del ID
     if (producto && (!producto.nombre || producto.nombre === producto.id)) {
       const extractedName = extractReadableName(producto.id);
@@ -142,7 +142,7 @@ export function useVentasGestion(customFields = []) {
         return extractedName;
       }
     }
-    
+
     // 3. Extraer directamente del ID si no se encontró el producto
     const extractedName = extractReadableName(producto_id);
     return extractedName !== producto_id ? extractedName : (producto_id || 'Sin producto');
@@ -150,61 +150,61 @@ export function useVentasGestion(customFields = []) {
 
   const getNombreColaborador = useCallback((colaborador_id) => {
     if (!colaborador_id) return '';
-    
+
     const colaborador = indexers.colaboradores[colaborador_id];
     if (colaborador?.nombre && colaborador.nombre !== colaborador.id) {
       return colaborador.nombre;
     }
-    
+
     if (colaborador && (!colaborador.nombre || colaborador.nombre === colaborador.id)) {
       const extractedName = extractReadableName(colaborador.id);
       if (extractedName !== colaborador.id) {
         return extractedName;
       }
     }
-    
+
     const extractedName = extractReadableName(colaborador_id);
     return extractedName !== colaborador_id ? extractedName : (colaborador_id || 'Sin colaborador');
   }, [indexers.colaboradores, extractReadableName]);
 
   const getNombreZona = useCallback((zona_id) => {
     if (!zona_id) return '';
-    
+
     const zona = indexers.zonas[zona_id];
     if (zona?.nombre && zona.nombre !== zona.id) {
       return zona.nombre;
     }
-    
+
     if (zona && (!zona.nombre || zona.nombre === zona.id)) {
       const extractedName = extractReadableName(zona.id);
       if (extractedName !== zona.id) {
         return extractedName;
       }
     }
-    
+
     const extractedName = extractReadableName(zona_id);
     return extractedName !== zona_id ? extractedName : (zona_id || 'Sin zona');
   }, [indexers.zonas, extractReadableName]);
 
   const getNombreOperador = useCallback((operador_id) => {
     if (!operador_id) return '';
-    
+
     const operador = indexers.operadores[operador_id];
     if (operador?.nombre && operador.nombre !== operador.id) {
       return operador.nombre;
     }
-    
+
     if (operador?.codigo && operador.codigo !== operador.id) {
       return operador.codigo;
     }
-    
+
     if (operador && (!operador.nombre || operador.nombre === operador.id)) {
       const extractedName = extractReadableName(operador.id);
       if (extractedName !== operador.id) {
         return extractedName;
       }
     }
-    
+
     const extractedName = extractReadableName(operador_id);
     return extractedName !== operador_id ? extractedName : '';
   }, [indexers.operadores, extractReadableName]);
@@ -223,23 +223,23 @@ export function useVentasGestion(customFields = []) {
       colaboradorNombre: getNombreColaborador(venta.colaborador_id),
       zonaNombre: getNombreZona(venta.zona_id),
       operadorNombre: getNombreOperador(operador_id),
-      
+
       // 🎯 MEJORA: PVP resuelto correctamente
       pvpResuelto: producto?.pvp || venta.pvp || 0,
-      
+
       // 🎯 MEJORA: Datos adicionales útiles
       colaboradorNivel: indexers.colaboradores[venta.colaborador_id]?.nivelId || '',
       zonaActiva: indexers.zonas[venta.zona_id]?.activo ?? true,
       productoActivo: producto?.activo ?? true,
       operadorActivo: indexers.operadores[operador_id]?.activo ?? true,
-      
+
       // 🎯 NUEVA: Información de operador desde producto
       operador_id: operador_id,
     };
   }, [indexers, getNombreProducto, getNombreColaborador, getNombreZona, getNombreOperador]);
 
   // =================== 🔍 FUNCIONES DE FILTRADO MEJORADAS ===================
-  
+
   // Actualizar filtro específico
   const updateFilter = useCallback((key, value) => {
     setState(prev => ({
@@ -275,16 +275,16 @@ export function useVentasGestion(customFields = []) {
   const ventasFiltradas = useMemo(() => {
     const { filtros } = state;
     if (!ventas.length) return [];
-    
+
     return ventas
       .map(enrichVenta) // 🎯 MEJORA: Enriquecer primero
       .filter((venta) => {
         if (!venta?.id) return false;
-        
+
         const producto = indexers.productos[venta.producto_id];
         const pvpValue = venta.pvpResuelto || 0;
         const fecha = venta.fecha?.slice(0, 10) || '';
-        
+
         // 🎯 MEJORA: Usar early return para mejor performance
         if (filtros.operador_id && (producto?.operador_id !== filtros.operador_id && venta.operador_id !== filtros.operador_id)) return false;
         if (filtros.colaborador_id && venta.colaborador_id !== filtros.colaborador_id) return false;
@@ -297,7 +297,7 @@ export function useVentasGestion(customFields = []) {
         if (filtros.sinPvp && pvpValue > 0) return false;
         if (filtros.montoMin && pvpValue < Number(filtros.montoMin)) return false;
         if (filtros.montoMax && pvpValue > Number(filtros.montoMax)) return false;
-        
+
         // 🎯 MEJORA: Búsqueda de texto mejorada (incluye nombres resueltos)
         if (filtros.texto) {
           const searchTerm = filtros.texto.toLowerCase();
@@ -313,13 +313,13 @@ export function useVentasGestion(customFields = []) {
           ].join(' ').toLowerCase();
           if (!searchableText.includes(searchTerm)) return false;
         }
-        
+
         return true;
       });
   }, [ventas, state, enrichVenta, indexers.productos]);
 
   // =================== ✅ FUNCIONES DE SELECCIÓN ===================
-  
+
   // Manejar selección individual
   const handleSelect = useCallback((id) => {
     setState(prev => ({
@@ -336,9 +336,9 @@ export function useVentasGestion(customFields = []) {
   const handleSelectAll = useCallback(() => {
     setState(prev => {
       const allCurrentIds = ventasFiltradas.map(v => v.id);
-      const allSelected = allCurrentIds.length > 0 && 
-                         allCurrentIds.every(id => prev.selectedIds.includes(id));
-      
+      const allSelected = allCurrentIds.length > 0 &&
+        allCurrentIds.every(id => prev.selectedIds.includes(id));
+
       return {
         ...prev,
         selectedIds: allSelected ? [] : allCurrentIds,
@@ -358,26 +358,26 @@ export function useVentasGestion(customFields = []) {
 
   // Helpers de selección
   const isSelected = useCallback((id) => state.selectedIds.includes(id), [state.selectedIds]);
-  
-  const getSelectedVentas = useCallback(() => 
+
+  const getSelectedVentas = useCallback(() =>
     ventasFiltradas.filter(v => state.selectedIds.includes(v.id))
-  , [ventasFiltradas, state.selectedIds]);
+    , [ventasFiltradas, state.selectedIds]);
 
   // =================== ⚡ OPERACIONES CRUD ===================
-  
+
   // 🎯 MEJORA: Agregar venta con ID más legible
   const addVenta = useCallback((ventaData) => {
     // 🎯 MEJORA: ID más legible para ventas
-    const clienteSlug = ventaData.cliente ? 
-      ventaData.cliente.slice(0, 8).replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : 
+    const clienteSlug = ventaData.cliente ?
+      ventaData.cliente.slice(0, 8).replace(/[^a-zA-Z0-9]/g, '').toLowerCase() :
       'cliente';
     const timestamp = Date.now().toString().slice(-4); // Solo últimos 4 dígitos
     const id = `venta_${clienteSlug}_${timestamp}`;
-    
+
     // Separar campos personalizados
     const customFieldsData = {};
     const standardFields = {};
-    
+
     Object.entries(ventaData).forEach(([key, value]) => {
       if (key.startsWith('cf_')) {
         customFieldsData[key] = value;
@@ -385,7 +385,7 @@ export function useVentasGestion(customFields = []) {
         standardFields[key] = value;
       }
     });
-    
+
     const nuevaVenta = {
       id,
       ...standardFields,
@@ -395,7 +395,7 @@ export function useVentasGestion(customFields = []) {
       fecha: ventaData.fecha || new Date().toISOString().slice(0, 10),
       estado: ventaData.estado || "PENDIENTE",
     };
-    
+
     setVentas(prev => [nuevaVenta, ...prev]);
     return id;
   }, [setVentas]);
@@ -404,12 +404,12 @@ export function useVentasGestion(customFields = []) {
   const updateVenta = useCallback((ventaId, changes) => {
     setVentas(prev =>
       prev.map(venta =>
-        venta.id === ventaId 
-          ? { 
-              ...venta, 
-              ...changes,
-              pvp: Number(changes.pvp ?? venta.pvp ?? 0),
-            }
+        venta.id === ventaId
+          ? {
+            ...venta,
+            ...changes,
+            pvp: Number(changes.pvp ?? venta.pvp ?? 0),
+          }
           : venta
       )
     );
@@ -418,7 +418,7 @@ export function useVentasGestion(customFields = []) {
   // Eliminar venta individual
   const deleteVenta = useCallback((ventaId) => {
     setVentas(prev => prev.filter(v => v.id !== ventaId));
-    
+
     // 🎯 MEJORA: Limpiar de selección automáticamente
     setState(prev => ({
       ...prev,
@@ -429,17 +429,17 @@ export function useVentasGestion(customFields = []) {
   // 🎯 MEJORA: Eliminar múltiples ventas optimizada
   const deleteMultipleVentas = useCallback((ventaIds = null) => {
     const idsToDelete = ventaIds || state.selectedIds;
-    
+
     if (idsToDelete.length === 0) return false;
-    
+
     if (!window.confirm(
       `¿Seguro que quieres eliminar ${idsToDelete.length} ventas seleccionadas?`
     )) {
       return false;
     }
-    
+
     setState(prev => ({ ...prev, isProcessing: true }));
-    
+
     try {
       setVentas(prev => prev.filter(v => !idsToDelete.includes(v.id)));
       clearSelection();
@@ -456,12 +456,12 @@ export function useVentasGestion(customFields = []) {
   const updateEstado = useCallback((ventaId, estado) => {
     if (Array.isArray(ventaId)) {
       // Múltiples ventas
-      setVentas(prev => 
+      setVentas(prev =>
         prev.map(v => ventaId.includes(v.id) ? { ...v, estado } : v)
       );
     } else {
       // Venta individual
-      setVentas(prev => 
+      setVentas(prev =>
         prev.map(v => v.id === ventaId ? { ...v, estado } : v)
       );
     }
@@ -475,24 +475,24 @@ export function useVentasGestion(customFields = []) {
   }, [setProductos]);
 
   // =================== 📊 EXPORTACIÓN ===================
-  
+
   const exportarDatos = useCallback((ventasCalc = null) => {
     setState(prev => ({ ...prev, isExporting: true }));
-    
+
     const ventasToExport = ventasCalc || (state.selectedIds.length ? getSelectedVentas() : ventasFiltradas);
-    
+
     try {
       // 🎯 MEJORA: Cabeceras dinámicas según campos personalizados
       const baseHeaders = [
         'Fecha', 'Cliente', 'CIF', 'Producto', 'Colaborador', 'Zona', 'Operador',
-        'PVP', 'Cantidad', 'Comisión Base', 'Comisión Neta', 'Estado', 
+        'PVP', 'Cantidad', 'Comisión Base', 'Comisión Neta', 'Estado',
         'Documento', 'Numeración', 'Teléfono', 'Observaciones'
       ];
-      
-      const customHeaders = Array.isArray(customFields) 
-        ? customFields.map(f => f.nombre) 
+
+      const customHeaders = Array.isArray(customFields)
+        ? customFields.map(f => f.nombre)
         : [];
-      
+
       const headers = [...baseHeaders, ...customHeaders];
 
       const datosExport = ventasToExport.map(venta => {
@@ -501,7 +501,7 @@ export function useVentasGestion(customFields = []) {
         const nombreColaborador = venta.colaboradorNombre || getNombreColaborador(venta.colaborador_id);
         const nombreZona = venta.zonaNombre || getNombreZona(venta.zona_id);
         const nombreOperador = venta.operadorNombre || getNombreOperador(venta.operador_id);
-        
+
         // Datos base
         const row = {
           'Fecha': formatDate(venta.fecha),
@@ -521,21 +521,21 @@ export function useVentasGestion(customFields = []) {
           'Teléfono': venta.telefono_movil || venta.telefono_fijo || '',
           'Observaciones': venta.observaciones || '',
         };
-        
+
         // Campos personalizados
         if (Array.isArray(customFields)) {
           customFields.forEach(field => {
             row[field.nombre] = venta.customFields?.[`cf_${field.id}`] || '';
           });
         }
-        
+
         return row;
       });
 
       // 🎯 MEJORA: CSV más robusto con escape de comillas
       const csvContent = [
         headers.join(','),
-        ...datosExport.map(row => 
+        ...datosExport.map(row =>
           headers.map(header => {
             const value = String(row[header] || '');
             return `"${value.replace(/"/g, '""')}"`;
@@ -546,11 +546,11 @@ export function useVentasGestion(customFields = []) {
       // Descargar con nombre descriptivo
       const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
       const filename = `ventas_${state.selectedIds.length ? 'seleccionadas' : 'filtradas'}_${timestamp}.csv`;
-      
+
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
-      
+
       link.setAttribute('href', url);
       link.setAttribute('download', filename);
       link.style.visibility = 'hidden';
@@ -558,7 +558,7 @@ export function useVentasGestion(customFields = []) {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
       return true;
     } catch (error) {
       console.error('Error en exportación:', error);
@@ -569,7 +569,7 @@ export function useVentasGestion(customFields = []) {
   }, [state.selectedIds, ventasFiltradas, customFields, getSelectedVentas, getNombreProducto, getNombreColaborador, getNombreZona, getNombreOperador]);
 
   // =================== 🛠️ HELPERS Y VALIDACIONES ===================
-  
+
   const isVentaBlocked = useCallback((venta) => {
     return ["CANCELADA", "BAJA", "RECHAZADA"].includes(venta?.estado);
   }, []);
@@ -594,20 +594,20 @@ export function useVentasGestion(customFields = []) {
   }), [productos, zonas, colaboradores, operadores]);
 
   // =================== 📊 ESTADÍSTICAS CALCULADAS MEJORADAS ===================
-  
+
   const stats = useMemo(() => {
-    const hasActiveFilters = Object.values(state.filtros).some(v => 
+    const hasActiveFilters = Object.values(state.filtros).some(v =>
       v !== "" && v !== false && v !== null && v !== undefined
     );
-    
+
     return {
       // Filtros
       hasActiveFilters,
       // Selección
       hasSelection: state.selectedIds.length > 0,
       selectionCount: state.selectedIds.length,
-      isAllSelected: state.selectedIds.length > 0 && 
-                     state.selectedIds.length === ventasFiltradas.length,
+      isAllSelected: state.selectedIds.length > 0 &&
+        state.selectedIds.length === ventasFiltradas.length,
       // Contadores
       filteredCount: ventasFiltradas.length,
       totalCount: ventas.length,
@@ -632,18 +632,18 @@ export function useVentasGestion(customFields = []) {
   }, [state, ventasFiltradas, ventas, productos, colaboradores, zonas, operadores, getSelectedVentas]);
 
   // =================== 📤 RETURN CONSOLIDADO ===================
-  
+
   return {
     // 📊 ESTADO Y DATOS
-    state: state.filtros,
+    filtros: state.filtros,
     ventasFiltradas,
     stats,
-    
+
     // 🔍 FILTROS
     updateFilter,
-    updateFilters, 
+    updateFilters,
     clearFilters,
-    
+
     // ✅ SELECCIÓN
     selectedIds: state.selectedIds,
     handleSelect,
@@ -651,7 +651,7 @@ export function useVentasGestion(customFields = []) {
     clearSelection,
     isSelected,
     getSelectedVentas,
-    
+
     // ⚡ OPERACIONES
     addVenta,
     updateVenta,
@@ -659,11 +659,11 @@ export function useVentasGestion(customFields = []) {
     deleteMultipleVentas,
     updateEstado,
     updateProductPvp,
-    
+
     // 🛠️ HELPERS
     isVentaBlocked,
     createInitialDraft,
-    
+
     // 📊 EXPORTACIÓN
     exportarDatos,
 

@@ -1,7 +1,6 @@
-// src/components/ui/Pagination.jsx
-// Componente de paginación con opciones de tamaño de página
 import React from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { glassStyles } from '../../utils/designUtils';
 
 export default function Pagination({
   currentPage,
@@ -15,124 +14,99 @@ export default function Pagination({
   const startItem = (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalItems);
 
-  // Generar números de página para mostrar
+  // Generar páginas (mismo algoritmo)
   const getPageNumbers = () => {
     const pages = [];
-    const delta = 2; // Páginas a mostrar antes y después de la actual
-    
-    // Siempre mostrar primera página
+    const delta = 2;
     if (totalPages > 1) pages.push(1);
-    
-    // Calcular rango de páginas a mostrar
     const rangeStart = Math.max(2, currentPage - delta);
     const rangeEnd = Math.min(totalPages - 1, currentPage + delta);
-    
-    // Añadir separador si hay gap después de la primera página
     if (rangeStart > 2) pages.push('...');
-    
-    // Añadir páginas del rango
     for (let i = rangeStart; i <= rangeEnd; i++) {
-      if (i > 1 && i < totalPages) pages.push(i);
+      pages.push(i);
     }
-    
-    // Añadir separador si hay gap antes de la última página
     if (rangeEnd < totalPages - 1) pages.push('...');
-    
-    // Siempre mostrar última página
-    if (totalPages > 1) pages.push(totalPages);
-    
+    if (totalPages > 1 && totalPages !== 1) pages.push(totalPages);
     return pages;
   };
 
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-gray-900 rounded-lg border border-slate-200 dark:border-gray-700 text-slate-800 dark:text-slate-100">
+    <div className={`${glassStyles} flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl`}>
       {/* Información de elementos */}
-      <div className="flex items-center gap-4">
-        <div className="text-sm text-slate-600 dark:text-slate-300">
-          Mostrando <span className="font-medium">{startItem}</span> a{' '}
-          <span className="font-medium">{endItem}</span> de{' '}
-          <span className="font-medium">{totalItems}</span> resultados
+      <div className="flex flex-col sm:flex-row items-center gap-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
+        <div>
+          Mostrando <span className="text-slate-800 dark:text-white font-black">{startItem}</span> - <span className="text-slate-800 dark:text-white font-black">{endItem}</span> de <span className="text-slate-800 dark:text-white font-black">{totalItems}</span>
         </div>
-        
+
         {/* Selector de tamaño de página */}
         <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-600 dark:text-slate-300">Ver:</label>
+          <label>Mostrar</label>
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="border border-slate-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
+            className="bg-white/50 dark:bg-slate-800/50 border-none rounded-lg px-2 py-1 text-xs font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm"
           >
             {pageSizeOptions.map(size => (
-              <option key={size} value={size}>
-                {size}
-              </option>
+              <option key={size} value={size}>{size}</option>
             ))}
           </select>
-          <span className="text-sm text-slate-600 dark:text-slate-300">por página</span>
         </div>
       </div>
 
       {/* Controles de navegación */}
       {totalPages > 1 && (
-        <div className="flex items-center gap-1">
-          {/* Primera página */}
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => onPageChange(1)}
             disabled={currentPage === 1}
-            className="p-2 rounded-lg border border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700 text-slate-700 dark:text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Primera página"
+            className="p-2 rounded-xl bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
           >
             <ChevronsLeft className="w-4 h-4" />
           </button>
-          
-          {/* Página anterior */}
+
           <button
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="p-2 rounded-lg border border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700 text-slate-700 dark:text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Página anterior"
+            className="p-2 rounded-xl bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
 
-          {/* Números de página */}
-          <div className="flex items-center gap-1 mx-2">
-            {pageNumbers.map((page, index) => (
-              <button
-                key={index}
-                onClick={() => typeof page === 'number' ? onPageChange(page) : null}
-                disabled={typeof page !== 'number'}
-                className={`min-w-[32px] h-8 px-2 rounded-lg text-sm font-medium transition-colors ${
-                  page === currentPage
-                    ? 'bg-sky-500 text-white'
-                    : typeof page === 'number'
-                    ? 'border border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700 text-slate-700 dark:text-slate-100'
-                    : 'bg-transparent text-slate-400 dark:text-slate-500 cursor-default'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
+          <div className="flex items-center gap-1 px-2">
+            {pageNumbers.map((page, index) => {
+              if (typeof page !== 'number') return <span key={index} className="text-slate-400 font-black">...</span>;
+              const isActive = page === currentPage;
+              return (
+                <button
+                  key={index}
+                  onClick={() => onPageChange(page)}
+                  className={`
+                     w-8 h-8 rounded-xl text-xs font-black transition-all shadow-sm
+                     ${isActive
+                      ? 'bg-blue-600 text-white shadow-blue-500/30 scale-110'
+                      : 'bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'}
+                   `}
+                >
+                  {page}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Página siguiente */}
           <button
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="p-2 rounded-lg border border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700 text-slate-700 dark:text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Página siguiente"
+            className="p-2 rounded-xl bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
-          
-          {/* Última página */}
+
           <button
             onClick={() => onPageChange(totalPages)}
             disabled={currentPage === totalPages}
-            className="p-2 rounded-lg border border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700 text-slate-700 dark:text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Última página"
+            className="p-2 rounded-xl bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
           >
             <ChevronsRight className="w-4 h-4" />
           </button>
@@ -141,3 +115,4 @@ export default function Pagination({
     </div>
   );
 }
+

@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, Edit3, X, Save, Euro, Percent, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, Edit3, Save, Euro, Percent, AlertCircle, CheckCircle, Smartphone, Phone, ShoppingBag, User, Calendar, CreditCard } from 'lucide-react';
+import Modal from '../../ui/Modal';
+import { Input, Select, Label, Button } from '../../ui/FormElements';
 import { SECTORES, FAMILIAS_POR_SECTOR } from '../../../utils/constants';
 import { getColaboradorComision } from '../../../utils/calculos';
 
 // Estados válidos para ventas
 const ESTADOS_VALIDOS = [
   "Confirmada",
-  "Pendiente", 
+  "Pendiente",
   "En Proceso",
   "Instalada",
   "Cancelada",
@@ -168,11 +170,11 @@ export function VentaFormModal({
     const normalizeKey = (value) =>
       value
         ? value
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-zA-Z0-9]+/g, ' ')
-            .trim()
-            .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-zA-Z0-9]+/g, ' ')
+          .trim()
+          .toLowerCase()
         : '';
 
     const uniqueMap = new Map();
@@ -573,657 +575,512 @@ export function VentaFormModal({
   if (!isOpen) return null;
 
   const modalTitle = isEditing ? 'Editar Venta' : 'Registrar Nueva Venta';
-  const primaryColor = isEditing ? 'amber' : 'emerald';
   const Icon = isEditing ? Edit3 : Plus;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-7xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-slate-800 pb-4 mb-6 border-b border-slate-200 dark:border-slate-600">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Icon className={`w-5 h-5 ${isEditing ? 'text-amber-600' : 'text-emerald-600'}`} />
-              {modalTitle}
-            </h2>
-            <button
-              onClick={handleClose}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-              disabled={isSubmitting}
-            >
-              <X className="w-5 h-5 text-slate-700 dark:text-slate-300" />
-            </button>
-          </div>
-          {/* Indicadores de estado */}
-          <div className="mt-4 flex items-center gap-4 text-sm">
-            <div className={`flex items-center gap-1 ${formStats.isComplete ? 'text-emerald-600' : 'text-amber-500'}`}>
-              <CheckCircle className="w-4 h-4" />
-              <span>Datos completos</span>
-            </div>
-            <div className={`flex items-center gap-1 ${formStats.hasErrors ? 'text-red-600' : 'text-emerald-600'}`}>
-              <AlertCircle className="w-4 h-4" />
-              <span>{formStats.hasErrors ? `${Object.keys(validationErrors).length} errores` : 'Sin errores'}</span>
-            </div>
-            {formStats.hasMissingData && (
-              <div className="flex items-center gap-1 text-orange-600">
-                <AlertCircle className="w-4 h-4" />
-                <span>Datos faltantes en el sistema</span>
-              </div>
-            )}
-            {formStats.comisionEstimada > 0 && (
-              <div className="flex items-center gap-1 text-blue-600">
-                <Euro className="w-4 h-4" />
-                <span>Comisión estimada: {formStats.comisionEstimada.toFixed(2)}€</span>
-              </div>
-            )}
-          </div>
-          {/* Alertas de datos faltantes */}
-          {formStats.hasMissingData && (
-            <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-orange-800">
-                  <strong>Atención:</strong>
-                  {colaboradoresDisponibles.length === 0 && " No hay colaboradores válidos en el sistema."}
-                  {zonasDisponibles.length === 0 && " No hay zonas válidas en el sistema."}
-                  {" Verifica que existan entidades con nombres válidos antes de crear ventas."}
-                </div>
-              </div>
-            </div>
-          )}
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={modalTitle}
+      icon={Icon}
+      iconColor={isEditing ? 'text-amber-600' : 'text-emerald-600'}
+      maxWidth="max-w-7xl"
+    >
+      {/* Header Info Bar */}
+      <div className="flex flex-wrap items-center gap-4 mb-8 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+        <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${formStats.isComplete ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-lg' : 'text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg'}`}>
+          <CheckCircle className="w-4 h-4" />
+          <span>{formStats.isComplete ? 'Datos Completos' : 'Datos Incompletos'}</span>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6" aria-label={`Formulario para ${isEditing ? 'editar' : 'crear'} venta`}>
-          {/* Error general */}
-          {errors.submit && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-red-800">
-                  <strong>Error:</strong> {errors.submit}
-                </div>
-              </div>
-            </div>
-          )}
-          {/* Layout principal */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Columna 1: Información del Cliente */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-slate-900 dark:text-slate-100 pb-2 border-b border-slate-200 dark:border-slate-600">
-                📋 Información del Cliente
-              </h4>
-              <div>
-                <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-cliente">
-                  Cliente *
-                </label>
-                <input
-                  id="venta-cliente"
-                  className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
-                    errors.cliente 
-                      ? 'border-red-500 focus:ring-red-400' 
-                      : `focus:ring-${primaryColor}-400`
-                  } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                  value={formData.cliente || ''}
-                  onChange={(e) => updateField('cliente', e.target.value)}
-                  required
-                  aria-label="Nombre del cliente"
-                  maxLength="255"
-                />
-                {errors.cliente && (
-                  <p className="text-xs text-red-600 mt-1">{errors.cliente}</p>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-cif">
-                    CIF/DNI
-                  </label>
-                  <input
-                    id="venta-cif"
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
-                      errors.cif 
-                        ? 'border-red-500 focus:ring-red-400' 
-                        : `focus:ring-${primaryColor}-400`
-                    } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                    value={formData.cif || ''}
-                    onChange={(e) => updateField('cif', e.target.value)}
-                    aria-label="CIF o DNI"
-                    maxLength="20"
-                  />
-                  {errors.cif && (
-                    <p className="text-xs text-red-600 mt-1">{errors.cif}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-fecha">
-                    Fecha *
-                  </label>
-                  <input
-                    id="venta-fecha"
-                    type="date"
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
-                      errors.fecha 
-                        ? 'border-red-500 focus:ring-red-400' 
-                        : `focus:ring-${primaryColor}-400`
-                    } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                    value={formData.fecha || ''}
-                    onChange={(e) => updateField('fecha', e.target.value)}
-                    required
-                    aria-label="Fecha de la venta"
-                  />
-                  {errors.fecha && (
-                    <p className="text-xs text-red-600 mt-1">{errors.fecha}</p>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-idpedido">
-                    ID Pedido
-                  </label>
-                  <input
-                    id="venta-idpedido"
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                    placeholder="ID del pedido"
-                    value={formData.id_pedido || ''}
-                    onChange={(e) => updateField('id_pedido', e.target.value)}
-                    aria-label="ID del pedido"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-idcliente">
-                    ID Cliente
-                  </label>
-                  <input
-                    id="venta-idcliente"
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                    placeholder="ID del cliente"
-                    value={formData.id_cliente || ''}
-                    onChange={(e) => updateField('id_cliente', e.target.value)}
-                    aria-label="ID del cliente"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-telfijo">
-                    Teléfono Fijo
-                  </label>
-                  <input
-                    id="venta-telfijo"
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                    value={formData.telefono_fijo || ''}
-                    onChange={(e) => updateField('telefono_fijo', e.target.value)}
-                    aria-label="Teléfono fijo"
-                    maxLength="20"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor="venta-telmovil">
-                    Teléfono Móvil
-                  </label>
-                  <input
-                    id="venta-telmovil"
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                    value={formData.telefono_movil || ''}
-                    onChange={(e) => updateField('telefono_movil', e.target.value)}
-                    aria-label="Teléfono móvil"
-                    maxLength="20"
-                  />
-                </div>
-              </div>
-            </div>
-            {/* Columna 2: Detalles del Servicio */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-slate-900 dark:text-slate-100 pb-2 border-b border-slate-200 dark:border-slate-600">
-                🛍️ Detalles del Servicio
-              </h4>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm text-slate-500 dark:text-slate-400">Sector</label>
-                    <select
-                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                      value={formData.sector || ''}
-                      onChange={(e) => handleSectorChange(e.target.value)}
-                    >
-                      <option value="">Seleccionar sector</option>
-                      {Object.entries(SECTORES).map(([key, label]) => (
-                        <option key={key} value={key}>{label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {formData.sector && (
-                    <div>
-                      <label className="text-sm text-slate-500 dark:text-slate-400">Familia</label>
-                      <select
-                        className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                        value={formData.familia || ''}
-                        onChange={(e) => updateField('familia', e.target.value)}
-                      >
-                        <option value="">Seleccionar familia</option>
-                        {familiasDisponibles.map((familia) => (
-                          <option key={familia} value={familia}>{familia}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">
-                    Operador ({operadoresDisponibles.length} disponibles)
-                  </label>
-                  <select
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                    value={formData.operador_id || ''}
-                    onChange={(e) => handleOperadorChange(e.target.value)}
-                  >
-                    <option value="">Seleccionar operador</option>
-                    {operadoresDisponibles.map((op) => (
-                      <option key={op.id} value={op.id}>
-                        {op.nombreDisplay}
-                        {op.codigo && op.codigo !== op.nombreDisplay && ` (${op.codigo})`}
-                      </option>
-                    ))}
-                  </select>
-                  {operadoresDisponibles.length === 0 && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      ⚠️ No hay operadores disponibles en el sistema
-                    </p>
-                  )}
-                  {operadorSeleccionado && (
-                    <p className="text-xs text-blue-600 mt-1">
-                      Operador: {operadorSeleccionado.nombreDisplay}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">
-                    Producto ({productosFiltrados.length} disponibles)
-                  </label>
-                  <select
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                    value={formData.producto_id || ''}
-                    onChange={(e) => handleProductChange(e.target.value)}
-                    disabled={!formData.operador_id}
-                  >
-                    <option value="">
-                      {formData.operador_id ? "Seleccionar producto" : "Primero selecciona un operador"}
-                    </option>
-                    {productosFiltrados.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombreDisplay}
-                        {(!p.pvp || p.pvp === 0) && " (Sin PVP)"}
-                        {p.pvp > 0 && ` (${p.pvp}€)`}
-                      </option>
-                    ))}
-                  </select>
-                  {productoSeleccionado && (
-                    <p className="text-xs text-green-600 mt-1">
-                      PVP: {productoSeleccionado.pvp ? `${productoSeleccionado.pvp}€` : 'No definido'}
-                    </p>
-                  )}
-                  {productoSeleccionado && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      Comisión vigente: {productoSeleccionado.comision_vigencia_desde || '—'} → {productoSeleccionado.comision_vigencia_hasta || '—'}
-                    </p>
-                  )}
-                  {formData.comision_fuera_vigencia && (
-                    <p className="text-xs text-amber-600 mt-1">⚠️ La fecha de la venta queda fuera de la vigencia definida en el producto.</p>
-                  )}
-                </div>
 
-                { (formData.sector || productoSeleccionado?.sector || '').toUpperCase() === 'TELEFONIA' && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-sm text-slate-500 dark:text-slate-400">Tipo de cliente</label>
-                      <select
-                        className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                        value={formData.cliente_tipo || 'NUEVO'}
-                        onChange={(e) => updateField('cliente_tipo', e.target.value)}
-                      >
-                        <option value="NUEVO">Nuevo</option>
-                        <option value="EXISTENTE">Existente</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-500 dark:text-slate-400">Tipo activación</label>
-                      <select
-                        className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                        value={formData.tipo_activacion || 'ALTA'}
-                        onChange={(e) => updateField('tipo_activacion', e.target.value)}
-                      >
-                        <option value="ALTA">Alta nueva</option>
-                        <option value="PORTABILIDAD">Portabilidad</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm text-slate-500 dark:text-slate-400">
-                      Zona * ({zonasDisponibles.length} disponibles)
-                    </label>
-                    <select
-                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
-                        errors.zona_id 
-                          ? 'border-red-500 focus:ring-red-400' 
-                          : `focus:ring-${primaryColor}-400`
-                      } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                      value={formData.zona_id || ''}
-                      onChange={(e) => updateField('zona_id', e.target.value)}
-                      required
-                    >
-                      <option value="">Seleccionar zona</option>
-                      {zonasDisponibles.map((z) => (
-                        <option key={z.id} value={z.id}>
-                          {z.nombreDisplay}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.zona_id && (
-                      <p className="text-xs text-red-600 mt-1">{errors.zona_id}</p>
-                    )}
-                    {zonaSeleccionada && (
-                      <p className="text-xs text-blue-600 mt-1">
-                        Zona: {zonaSeleccionada.nombreDisplay}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm text-slate-500 dark:text-slate-400">Estado</label>
-                    <select
-                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                      value={formData.estado || 'Confirmada'}
-                      onChange={(e) => updateField('estado', e.target.value)}
-                    >
-                      {ESTADOS_VALIDOS.map((estado) => (
-                        <option key={estado} value={estado}>{estado}</option>
-                      ))}
-                    </select>
-                  </div>
+        <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${formStats.hasErrors ? 'text-red-600 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg' : 'text-slate-500'}`}>
+          <AlertCircle className="w-4 h-4" />
+          <span>{formStats.hasErrors ? `${Object.keys(validationErrors).length} Errores` : 'Sin Errores'}</span>
+        </div>
+
+        {formStats.hasMissingData && (
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-lg">
+            <AlertCircle className="w-4 h-4" />
+            <span>Faltan Datos Maestros</span>
+          </div>
+        )}
+
+        {formStats.comisionEstimada > 0 && (
+          <div className="ml-auto flex items-center gap-2 text-sm font-black text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl shadow-sm">
+            <Euro className="w-5 h-5" />
+            <span>Est: {formStats.comisionEstimada.toFixed(2)}€</span>
+          </div>
+        )}
+      </div>
+
+      {/* Alertas de datos faltantes */}
+      {formStats.hasMissingData && (
+        <div className="mb-6 p-4 bg-orange-50/50 border border-orange-200/50 rounded-xl flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-orange-800">
+            <strong className="block mb-1">Atención Requerida</strong>
+            <ul className="list-disc pl-4 space-y-1 opacity-90">
+              {colaboradoresDisponibles.length === 0 && <li>No hay colaboradores válidos en el sistema.</li>}
+              {zonasDisponibles.length === 0 && <li>No hay zonas válidas en el sistema.</li>}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* Formulario */}
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {errors.submit && (
+          <div className="p-4 bg-red-50/50 border border-red-200/50 rounded-xl flex items-center gap-3 text-red-700">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span className="font-medium">{errors.submit}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Columna 1: Información del Cliente */}
+          <div className="space-y-6">
+            <h4 className="font-black text-slate-800 dark:text-white pb-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
+              <User className="w-5 h-5 text-indigo-500" />
+              Información del Cliente
+            </h4>
+
+            <div>
+              <Label>Cliente *</Label>
+              <Input
+                icon={User}
+                placeholder="Nombre completo o razón social"
+                value={formData.cliente || ''}
+                onChange={(e) => updateField('cliente', e.target.value)}
+                className={errors.cliente ? 'bg-red-50 focus:ring-red-500/50' : ''}
+              />
+              {errors.cliente && <p className="text-xs text-red-600 mt-1 font-bold">{errors.cliente}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>CIF/DNI</Label>
+                <Input
+                  icon={CreditCard}
+                  placeholder="DNI/CIF"
+                  value={formData.cif || ''}
+                  onChange={(e) => updateField('cif', e.target.value)}
+                  className={errors.cif ? 'bg-red-50 focus:ring-red-500/50' : ''}
+                />
+                {errors.cif && <p className="text-xs text-red-600 mt-1 font-bold">{errors.cif}</p>}
+              </div>
+              <div>
+                <Label>Fecha *</Label>
+                <Input
+                  type="date"
+                  icon={Calendar}
+                  value={formData.fecha || ''}
+                  onChange={(e) => updateField('fecha', e.target.value)}
+                  className={errors.fecha ? 'bg-red-50 focus:ring-red-500/50' : ''}
+                />
+                {errors.fecha && <p className="text-xs text-red-600 mt-1 font-bold">{errors.fecha}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>ID Pedido</Label>
+                <Input
+                  placeholder="Opcional"
+                  value={formData.id_pedido || ''}
+                  onChange={(e) => updateField('id_pedido', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>ID Cliente</Label>
+                <Input
+                  placeholder="Opcional"
+                  value={formData.id_cliente || ''}
+                  onChange={(e) => updateField('id_cliente', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Teléfono Fijo</Label>
+                <Input
+                  icon={Phone}
+                  placeholder="Opcional"
+                  value={formData.telefono_fijo || ''}
+                  onChange={(e) => updateField('telefono_fijo', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Móvil</Label>
+                <Input
+                  icon={Smartphone}
+                  placeholder="Opcional"
+                  value={formData.telefono_movil || ''}
+                  onChange={(e) => updateField('telefono_movil', e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Columna 2: Detalles del Servicio */}
+          <div className="space-y-6">
+            <h4 className="font-black text-slate-800 dark:text-white pb-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-indigo-500" />
+              Detalles del Servicio
+            </h4>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Sector</Label>
+                  <Select
+                    value={formData.sector || ''}
+                    onChange={(e) => handleSectorChange(e.target.value)}
+                  >
+                    <option value="">Seleccionar</option>
+                    {Object.entries(SECTORES).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </Select>
                 </div>
                 <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">
-                    Colaborador * ({colaboradoresDisponibles.length} disponibles)
-                  </label>
-                  <select
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
-                      errors.colaborador_id 
-                        ? 'border-red-500 focus:ring-red-400' 
-                        : `focus:ring-${primaryColor}-400`
-                    } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                  <Label>Zona *</Label>
+                  <Select
+                    value={formData.zona_id || ''}
+                    onChange={(e) => updateField('zona_id', e.target.value)}
+                    className={errors.zona_id ? 'bg-red-50 focus:ring-red-500/50' : ''}
+                  >
+                    <option value="">Seleccionar</option>
+                    {zonasDisponibles.map((z) => (
+                      <option key={z.id} value={z.id}>{z.nombreDisplay}</option>
+                    ))}
+                  </Select>
+                  {errors.zona_id && <p className="text-xs text-red-600 mt-1 font-bold">{errors.zona_id}</p>}
+                </div>
+              </div>
+
+              <div>
+                <Label>Operador</Label>
+                <Select
+                  value={formData.operador_id || ''}
+                  onChange={(e) => handleOperadorChange(e.target.value)}
+                >
+                  <option value="">Seleccionar operador</option>
+                  {operadoresDisponibles.map((op) => (
+                    <option key={op.id} value={op.id}>
+                      {op.nombreDisplay}
+                      {op.codigo && op.codigo !== op.nombreDisplay && ` (${op.codigo})`}
+                    </option>
+                  ))}
+                </Select>
+                {operadoresDisponibles.length === 0 && <p className="text-xs text-orange-600 mt-1 font-bold">⚠️ Sin operadores disponibles</p>}
+              </div>
+
+              <div>
+                <Label>Producto ({productosFiltrados.length})</Label>
+                <Select
+                  value={formData.producto_id || ''}
+                  onChange={(e) => handleProductChange(e.target.value)}
+                  disabled={!formData.operador_id}
+                >
+                  <option value="">{formData.operador_id ? "Seleccionar producto" : "Selecciona operador primero"}</option>
+                  {productosFiltrados.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombreDisplay}
+                      {(!p.pvp || p.pvp === 0) && " (Sin PVP)"}
+                      {p.pvp > 0 && ` (${p.pvp}€)`}
+                    </option>
+                  ))}
+                </Select>
+                {productoSeleccionado && (
+                  <div className="mt-2 text-xs space-y-1">
+                    <p className="font-bold text-green-600">PVP: {productoSeleccionado.pvp ? `${productoSeleccionado.pvp}€` : 'No definido'}</p>
+                    <p className="text-slate-500">Vigencia: {productoSeleccionado.comision_vigencia_desde || '—'} → {productoSeleccionado.comision_vigencia_hasta || '—'}</p>
+                    {formData.comision_fuera_vigencia && <p className="text-amber-600 font-bold">⚠️ Fuera de vigencia</p>}
+                  </div>
+                )}
+              </div>
+
+              {(formData.sector || productoSeleccionado?.sector || '').toUpperCase() === 'TELEFONIA' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Tipo Cliente</Label>
+                    <Select
+                      value={formData.cliente_tipo || 'NUEVO'}
+                      onChange={(e) => updateField('cliente_tipo', e.target.value)}
+                    >
+                      <option value="NUEVO">Nuevo</option>
+                      <option value="EXISTENTE">Existente</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Activación</Label>
+                    <Select
+                      value={formData.tipo_activacion || 'ALTA'}
+                      onChange={(e) => updateField('tipo_activacion', e.target.value)}
+                    >
+                      <option value="ALTA">Alta nueva</option>
+                      <option value="PORTABILIDAD">Portabilidad</option>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Estado</Label>
+                  <Select
+                    value={formData.estado || 'Confirmada'}
+                    onChange={(e) => updateField('estado', e.target.value)}
+                    className="font-bold text-slate-700"
+                  >
+                    {ESTADOS_VALIDOS.map((est) => (
+                      <option key={est} value={est}>{est}</option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <Label>Colaborador *</Label>
+                  <Select
                     value={formData.colaborador_id || ''}
                     onChange={(e) => handleColaboradorChange(e.target.value)}
-                    required
+                    className={errors.colaborador_id ? 'bg-red-50 focus:ring-red-500/50' : ''}
                   >
-                    <option value="">Seleccionar colaborador</option>
+                    <option value="">Seleccionar</option>
                     {colaboradoresDisponibles.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.nombreDisplay}
-                        {c.nivel && ` - ${c.nivel}`}
-                        {c.pct_colaborador_default && ` (${(c.pct_colaborador_default * 100).toFixed(1)}%)`}
                       </option>
                     ))}
-                  </select>
-                  {errors.colaborador_id && (
-                    <p className="text-xs text-red-600 mt-1">{errors.colaborador_id}</p>
-                  )}
-                  {colaboradorSeleccionado && (
-                    <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                      <Percent className="w-3 h-3" />
-                      Comisión: {((colaboradorSeleccionado.pct_colaborador_default || 0) * 100).toFixed(1)}%
-                    </p>
-                  )}
+                  </Select>
+                  {errors.colaborador_id && <p className="text-xs text-red-600 mt-1 font-bold">{errors.colaborador_id}</p>}
                 </div>
               </div>
             </div>
-            {/* Columna 3: Precios y Comisiones */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-slate-900 dark:text-slate-100 pb-2 border-b border-slate-200 dark:border-slate-600">
-                💰 Precios y Comisiones
-              </h4>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">PVP del Producto</label>
-                  <input
+          </div>
+
+          {/* Columna 3: Precios y Comisiones */}
+          <div className="space-y-6">
+            <h4 className="font-black text-slate-800 dark:text-white pb-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
+              <Euro className="w-5 h-5 text-indigo-500" />
+              Económico y Notas
+            </h4>
+
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 space-y-4">
+              <div>
+                <Label>PVP Producto</Label>
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-600">
+                  <span className="text-slate-400 font-bold">€</span>
+                  <span className="text-lg font-black text-slate-800 dark:text-white">{formStats.pvp || 0}</span>
+                </div>
+                {formStats.pvp === 0 && <p className="text-xs text-amber-600 mt-1 font-bold">⚠️ Sin PVP definido</p>}
+              </div>
+
+              <div>
+                <Label>Comisión Base</Label>
+                <div className="flex gap-2">
+                  <Input
                     type="number"
                     step="0.01"
-                    className="border rounded-lg px-3 py-2 w-full bg-slate-100 dark:bg-slate-700 focus:outline-none dark:border-slate-600 dark:text-slate-100"
-                    value={formStats.pvp || 0}
-                    readOnly
+                    value={formData.comision_base || 0}
+                    onChange={(e) => updateField('comision_base', parseFloat(e.target.value) || 0)}
+                    className="font-bold"
                   />
-                  {formStats.pvp === 0 && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      ⚠️ Este producto no tiene PVP definido
-                    </p>
-                  )}
+                  <Select
+                    value={formData.comision_tipo || 'porcentaje'}
+                    onChange={(e) => updateField('comision_tipo', e.target.value)}
+                    className="w-24 font-bold"
+                  >
+                    <option value="porcentaje">%</option>
+                    <option value="fijo">€</option>
+                  </Select>
                 </div>
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">Comisión Base</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      className={`border rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                      value={formData.comision_base || 0}
-                      onChange={(e) => updateField('comision_base', parseFloat(e.target.value) || 0)}
-                    />
-                    <select
-                      className={`border rounded-lg px-3 py-2 w-20 focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                      value={formData.comision_tipo || 'porcentaje'}
-                      onChange={(e) => updateField('comision_tipo', e.target.value)}
-                    >
-                      <option value="porcentaje">%</option>
-                      <option value="fijo">€</option>
-                    </select>
-                  </div>
-                  {formData.comision_base > 0 && (
-                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                      <Euro className="w-3 h-3" />
-                      {formData.comision_tipo === 'porcentaje' 
-                        ? `${(formData.comision_base || 0).toFixed(1)}% del PVP`
-                        : `${(formData.comision_base || 0).toFixed(2)}€ fijos`
-                      }
-                    </p>
-                  )}
-                  {formStats.comisionEstimada > 0 && (
-                    <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
-                      <Euro className="w-3 h-3" />
-                      {/* Eliminado Parte colaborador */}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">
-                    Comisión Colaborador
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="1"
-                      className={`border rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                      value={formData.comision_colaborador || 0}
-                      onChange={(e) => updateField('comision_colaborador', parseFloat(e.target.value) || 0)}
-                    />
-                    <span className="flex items-center px-3 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">%</span>
-                  </div>
-                  {formStats.comisionEstimada > 0 && (
-                    <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/30 rounded-lg">
-                      <p className="text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
-                        <span className="font-medium">Comisión estimada del colaborador:</span>
-                        <span className="font-bold text-lg">{formStats.comisionEstimada.toFixed(2)}€</span>
-                      </p>
-                      {formData.comision_tipo === 'porcentaje' && (
-                        <p className="text-xs text-green-600 dark:text-green-500 mt-1">
-                          {(formData.comision_base || 0).toFixed(1)}% de {formStats.pvp.toFixed(2)}€ × {((formData.comision_colaborador || 0) * 100).toFixed(1)}% colaborador
-                        </p>
-                      )}
-                      {formData.comision_tipo === 'fijo' && (
-                        <p className="text-xs text-green-600 dark:text-green-500 mt-1">
-                          {(formData.comision_base || 0).toFixed(2)}€ fijos × {((formData.comision_colaborador || 0) * 100).toFixed(1)}% colaborador
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Valor entre 0 y 1 (ej: 0.08 = 8%)
+                {formData.comision_base > 0 && (
+                  <p className="text-xs text-green-600 mt-1 font-bold">
+                    {formData.comision_tipo === 'porcentaje'
+                      ? `${(formData.comision_base || 0).toFixed(1)}% del PVP`
+                      : `${(formData.comision_base || 0).toFixed(2)}€ fijos`
+                    }
                   </p>
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">Cantidad</label>
-                  <input
+                )}
+              </div>
+
+              <div>
+                <Label>Comisión Colaborador</Label>
+                <div className="flex gap-2">
+                  <Input
                     type="number"
-                    min="1"
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                    value={formData.cantidad || 1}
-                    onChange={(e) => updateField('cantidad', parseInt(e.target.value) || 1)}
+                    step="0.001"
+                    max="1"
+                    value={formData.comision_colaborador || 0}
+                    onChange={(e) => updateField('comision_colaborador', parseFloat(e.target.value) || 0)}
+                    className="font-bold bg-blue-50/50"
                   />
+                  <div className="flex items-center justify-center px-4 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold text-slate-500">%</div>
                 </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Equivale a: <span className="font-bold text-blue-600">{((formData.comision_colaborador || 0) * 100).toFixed(1)}%</span>
+                </p>
+                {formStats.comisionEstimada > 0 && (
+                  <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/30 rounded-lg border border-green-100 dark:border-green-800">
+                    <p className="text-sm text-green-700 dark:text-green-400 flex items-center justify-between">
+                      <span className="font-medium">Estimado:</span>
+                      <span className="font-black text-lg">{formStats.comisionEstimada.toFixed(2)}€</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label>Cantidad</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={formData.cantidad || 1}
+                  onChange={(e) => updateField('cantidad', parseInt(e.target.value) || 1)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">Documento</label>
-                  <input
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                  <Label>Documento</Label>
+                  <Input
+                    placeholder="Nº Contrato/Doc"
                     value={formData.documento || ''}
                     onChange={(e) => updateField('documento', e.target.value)}
-                    maxLength="100"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">Numeración</label>
-                  <input
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                  <Label>Numeración</Label>
+                  <Input
+                    placeholder="Línea/ID"
                     value={formData.numeracion || ''}
                     onChange={(e) => updateField('numeracion', e.target.value)}
-                    maxLength="50"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500 dark:text-slate-400">Observaciones</label>
-                  <textarea
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-${primaryColor}-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                    rows="4"
-                    value={formData.observaciones || ''}
-                    onChange={(e) => updateField('observaciones', e.target.value)}
-                    maxLength="500"
                   />
                 </div>
               </div>
-            </div>
-          </div>
-          {/* Campos personalizados */}
-          {customFields?.length > 0 && (
-            <div className="border-t border-slate-200 dark:border-slate-600 pt-6">
-              <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">
-                🎛️ Campos Personalizados
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {customFields.map((field) => {
-                  const fieldKey = `cf_${field.id}`;
-                  const hasError = !!errors[fieldKey];
-                  return (
-                    <div key={field.id}>
-                      <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor={`customfield-${field.id}`}>
-                        {field.nombre}{field.requerido && ' *'}
-                      </label>
-                      {field.tipo === 'texto' && (
-                        <input
-                          id={`customfield-${field.id}`}
-                          className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
-                            hasError 
-                              ? 'border-red-500 focus:ring-red-400' 
-                              : 'focus:ring-yellow-400'
-                          } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                          value={formData[fieldKey] || ''}
-                          onChange={e => updateField(fieldKey, e.target.value)}
-                          required={field.requerido}
-                        />
-                      )}
-                      {field.tipo === 'número' && (
-                        <input
-                          id={`customfield-${field.id}`}
-                          type="number"
-                          className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
-                            hasError 
-                              ? 'border-red-500 focus:ring-red-400' 
-                              : 'focus:ring-yellow-400'
-                          } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                          value={formData[fieldKey] || ''}
-                          onChange={e => updateField(fieldKey, e.target.value)}
-                          required={field.requerido}
-                        />
-                      )}
-                      {field.tipo === 'fecha' && (
-                        <input
-                          id={`customfield-${field.id}`}
-                          type="date"
-                          className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
-                            hasError 
-                              ? 'border-red-500 focus:ring-red-400' 
-                              : 'focus:ring-yellow-400'
-                          } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                          value={formData[fieldKey] || ''}
-                          onChange={e => updateField(fieldKey, e.target.value)}
-                          required={field.requerido}
-                        />
-                      )}
-                      {field.tipo === 'select' && (
-                        <select
-                          id={`customfield-${field.id}`}
-                          className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${
-                            hasError 
-                              ? 'border-red-500 focus:ring-red-400' 
-                              : 'focus:ring-yellow-400'
-                          } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                          value={formData[fieldKey] || ''}
-                          onChange={e => updateField(fieldKey, e.target.value)}
-                          required={field.requerido}
-                        >
-                          <option value="">Seleccionar</option>
-                          {field.opciones?.map(opt => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      )}
-                      {hasError && (
-                        <p className="text-xs text-red-600 mt-1">{errors[fieldKey]}</p>
-                      )}
-                    </div>
-                  );
-                })}
+              <div>
+                <Label>Observaciones</Label>
+                <textarea
+                  className="w-full rounded-2xl border-none outline-none resize-none bg-slate-50 dark:bg-slate-800/50 text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400/50 shadow-inner px-4 py-3 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/30 transition-all"
+                  rows="3"
+                  value={formData.observaciones || ''}
+                  onChange={(e) => updateField('observaciones', e.target.value)}
+                  maxLength="500"
+                />
               </div>
             </div>
-          )}
-          {/* Botones de acción */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-600">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-8 py-3 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={formStats.hasErrors || isSubmitting}
-              className={`flex items-center gap-2 px-8 py-3 rounded-xl text-white transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
-                isEditing 
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700'
-                  : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
-              }`}
-            >
-              <Save className="w-4 h-4" />
-              {isSubmitting 
-                ? (isEditing ? 'Guardando...' : 'Creando...') 
-                : (isEditing ? 'Guardar Cambios' : 'Crear Venta')
-              }
-            </button>
           </div>
-        </form>
+        </div>
+    {/* Campos personalizados */ }
+  {
+    customFields?.length > 0 && (
+      <div className="border-t border-slate-200 dark:border-slate-600 pt-6">
+        <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">
+          🎛️ Campos Personalizados
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {customFields.map((field) => {
+            const fieldKey = `cf_${field.id}`;
+            const hasError = !!errors[fieldKey];
+            return (
+              <div key={field.id}>
+                <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor={`customfield-${field.id}`}>
+                  {field.nombre}{field.requerido && ' *'}
+                </label>
+                {field.tipo === 'texto' && (
+                  <input
+                    id={`customfield-${field.id}`}
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${hasError
+                      ? 'border-red-500 focus:ring-red-400'
+                      : 'focus:ring-yellow-400'
+                      } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                    value={formData[fieldKey] || ''}
+                    onChange={e => updateField(fieldKey, e.target.value)}
+                    required={field.requerido}
+                  />
+                )}
+                {field.tipo === 'número' && (
+                  <input
+                    id={`customfield-${field.id}`}
+                    type="number"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${hasError
+                      ? 'border-red-500 focus:ring-red-400'
+                      : 'focus:ring-yellow-400'
+                      } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                    value={formData[fieldKey] || ''}
+                    onChange={e => updateField(fieldKey, e.target.value)}
+                    required={field.requerido}
+                  />
+                )}
+                {field.tipo === 'fecha' && (
+                  <input
+                    id={`customfield-${field.id}`}
+                    type="date"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${hasError
+                      ? 'border-red-500 focus:ring-red-400'
+                      : 'focus:ring-yellow-400'
+                      } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                    value={formData[fieldKey] || ''}
+                    onChange={e => updateField(fieldKey, e.target.value)}
+                    required={field.requerido}
+                  />
+                )}
+                {field.tipo === 'select' && (
+                  <select
+                    id={`customfield-${field.id}`}
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${hasError
+                      ? 'border-red-500 focus:ring-red-400'
+                      : 'focus:ring-yellow-400'
+                      } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
+                    value={formData[fieldKey] || ''}
+                    onChange={e => updateField(fieldKey, e.target.value)}
+                    required={field.requerido}
+                  >
+                    <option value="">Seleccionar</option>
+                    {field.opciones?.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                )}
+                {hasError && (
+                  <p className="text-xs text-red-600 mt-1">{errors[fieldKey]}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    )
+  }
+  {/* Botones de acción */ }
+  <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-600">
+    <button
+      type="button"
+      onClick={handleClose}
+      className="px-8 py-3 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+      disabled={isSubmitting}
+    >
+      Cancelar
+    </button>
+    <button
+      type="submit"
+      disabled={formStats.hasErrors || isSubmitting}
+      className={`flex items-center gap-2 px-8 py-3 rounded-xl text-white transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${isEditing
+        ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700'
+        : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
+        }`}
+    >
+      <Save className="w-4 h-4" />
+      {isSubmitting
+        ? (isEditing ? 'Guardando...' : 'Creando...')
+        : (isEditing ? 'Guardar Cambios' : 'Crear Venta')
+      }
+    </button>
+  </div>
+      </form >
+    </Modal >
   );
 }
 
