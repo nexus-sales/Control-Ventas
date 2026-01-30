@@ -1,13 +1,59 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { useData } from "../../../context/AppContexts";
-import Card from "../../ui/Card";
 import {
-    Building, Plus, Edit3, Trash2, Download, AlertCircle
+    Building, Plus, Edit3, Trash2, Download, AlertCircle,
+    Phone, Zap, Shield, MoreHorizontal, Trophy, Package, Search
 } from "lucide-react";
 import { saveAs } from "file-saver";
 import OperadorModal from "./OperadorModal";
 import { cleanOperadores, cleanProductosRobust } from "../utils/gestionUtils";
+import { glassStyles, cardHoverStyles } from "../../../utils/designUtils";
 
+// ==========================================
+// COMPONENTE: Tarjeta de Sector Premium
+// ==========================================
+const SectorCard = ({ title, operadores, productos, icon: Icon, gradientFrom, gradientTo, onClick, isActive }) => (
+    <button
+        onClick={onClick}
+        className={`${glassStyles()} ${cardHoverStyles()} w-full rounded-3xl p-5 relative overflow-hidden group text-left transition-all ${isActive ? 'ring-2 ring-offset-2 ring-offset-transparent' : ''}`}
+        style={{ '--tw-ring-color': isActive ? gradientFrom.replace('from-', '') : 'transparent' }}
+    >
+        <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full bg-gradient-to-br ${gradientFrom} ${gradientTo} opacity-10 group-hover:opacity-20 transition-opacity duration-500`} />
+        <div className="flex items-center justify-between relative z-10">
+            <div className="space-y-1">
+                <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest">{title}</p>
+                <p className="text-2xl font-black text-slate-800 dark:text-white">{operadores}</p>
+                <p className="text-xs font-bold text-slate-400">{productos} productos</p>
+            </div>
+            <div className={`p-3 rounded-2xl bg-gradient-to-br ${gradientFrom} ${gradientTo} shadow-lg`}>
+                <Icon className="w-5 h-5 text-white" />
+            </div>
+        </div>
+    </button>
+);
+
+// ==========================================
+// COMPONENTE: Top Operador Card
+// ==========================================
+const TopOperadorCard = ({ operador, index }) => (
+    <div className={`${glassStyles()} ${cardHoverStyles()} rounded-2xl p-4 text-center relative overflow-hidden group`}>
+        {index < 3 && (
+            <div className={`absolute top-2 right-2 p-1.5 rounded-lg ${index === 0 ? 'bg-amber-100 text-amber-600' :
+                    index === 1 ? 'bg-slate-100 text-slate-500' :
+                        'bg-orange-100 text-orange-600'
+                }`}>
+                <Trophy className="w-3 h-3" />
+            </div>
+        )}
+        <p className="font-bold text-slate-800 dark:text-white text-sm truncate">{operador.nombre}</p>
+        <p className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">{operador.totalProductos}</p>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1 capitalize">{operador.sector}</p>
+    </div>
+);
+
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
 const OperadoresSection = React.memo(() => {
     const { data, setOperadores } = useData();
     const operadores = useMemo(() => cleanOperadores(data.operadores || []), [data.operadores]);
@@ -18,6 +64,7 @@ const OperadoresSection = React.memo(() => {
     const [error, setError] = useState("");
     const [filtroSector, setFiltroSector] = useState("");
     const [filtroProductos, setFiltroProductos] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
 
     const productosConteo = useMemo(() => {
         const conteo = {};
@@ -54,6 +101,16 @@ const OperadoresSection = React.memo(() => {
     const operadoresFiltrados = useMemo(() => {
         let filtered = operadores;
 
+        // Búsqueda por texto
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            filtered = filtered.filter(o =>
+                o.nombre?.toLowerCase().includes(term) ||
+                o.codigo?.toLowerCase().includes(term) ||
+                o.sector?.toLowerCase().includes(term)
+            );
+        }
+
         if (filtroSector) {
             if (filtroSector === 'otros') {
                 filtered = filtered.filter(o => !['telefonia', 'energia', 'seguridad'].includes(o.sector));
@@ -74,7 +131,7 @@ const OperadoresSection = React.memo(() => {
             if (productosA !== productosB) return productosB - productosA;
             return a.nombre.localeCompare(b.nombre);
         });
-    }, [operadores, productosConteo, filtroSector, filtroProductos]);
+    }, [operadores, productosConteo, filtroSector, filtroProductos, searchTerm]);
 
     const operadorExists = useCallback((nombre, excludeId = null) => {
         return operadores.some(o =>
@@ -140,141 +197,251 @@ const OperadoresSection = React.memo(() => {
         saveAs(blob, `operadores_${new Date().toISOString().slice(0, 10)}.csv`);
     }, [operadoresFiltrados, productosConteo]);
 
+    const handleSectorClick = (sector) => {
+        setFiltroSector(prev => prev === sector ? "" : sector);
+    };
+
     return (
-        <section className="space-y-6">
+        <section className="space-y-8">
+            {/* Alerta de duplicados */}
             {data.operadores && data.operadores.length !== operadores.length && (
-                <Card className="bg-amber-50 border-amber-200">
-                    <div className="flex items-center gap-3">
-                        <AlertCircle className="w-5 h-5 text-amber-600" />
-                        <div>
-                            <p className="font-medium text-amber-800">Operadores duplicados eliminados</p>
-                            <p className="text-sm text-amber-700">Se eliminaron {data.operadores.length - operadores.length} operadores duplicados.</p>
-                        </div>
+                <div className={`${glassStyles()} bg-amber-50/50 dark:bg-amber-900/20 border-amber-200/50 dark:border-amber-700/30 p-4 rounded-2xl flex items-start gap-3`}>
+                    <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
+                        <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                     </div>
-                </Card>
-            )}
-
-            <div className="grid md:grid-cols-4 gap-4">
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-gray-800 dark:to-gray-700">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-blue-600 dark:text-blue-200 text-sm font-medium">Telefonía</p>
-                            <div className="text-2xl font-bold">{sectorStats.telefonia.operadores}</div>
-                            <div className="text-xs text-blue-500">{sectorStats.telefonia.productos} prod.</div>
-                        </div>
-                        <Building className="w-8 h-8 text-blue-600 dark:text-blue-200" />
-                    </div>
-                </Card>
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-gray-800 dark:to-gray-700">
                     <div>
-                        <p className="text-green-600 dark:text-green-200 text-sm font-medium">Energía</p>
-                        <div className="text-2xl font-bold">{sectorStats.energia.operadores}</div>
-                        <div className="text-xs text-green-500">{sectorStats.energia.productos} prod.</div>
-                    </div>
-                </Card>
-                <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 dark:from-gray-800 dark:to-gray-700">
-                    <div>
-                        <p className="text-yellow-600 dark:text-yellow-200 text-sm font-medium">Seguridad</p>
-                        <div className="text-2xl font-bold">{sectorStats.seguridad.operadores}</div>
-                        <div className="text-xs text-yellow-500">{sectorStats.seguridad.productos} prod.</div>
-                    </div>
-                </Card>
-                <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 dark:from-gray-800 dark:to-gray-700">
-                    <div>
-                        <p className="text-slate-600 dark:text-gray-300 text-sm font-medium">Otros</p>
-                        <div className="text-2xl font-bold">{sectorStats.otros.operadores}</div>
-                        <div className="text-xs text-slate-500">{sectorStats.otros.productos} prod.</div>
-                    </div>
-                </Card>
-            </div>
-
-            <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 dark:from-gray-800 dark:to-gray-700">
-                <div className="p-4">
-                    <h3 className="text-lg font-semibold text-purple-800 dark:text-purple-200 mb-3 flex items-center gap-2">🏆 Top Operadores</h3>
-                    <div className="grid md:grid-cols-5 gap-3">
-                        {topOperadores.map((op, idx) => (
-                            <div key={op.id} className="bg-white dark:bg-gray-900 rounded-lg p-3 text-center shadow-sm">
-                                <div className="text-sm font-medium truncate">{op.nombre}</div>
-                                <div className="text-lg font-bold text-purple-600">{op.totalProductos}</div>
-                                <div className="text-xs text-slate-500">{idx < 3 ? '⭐' : ''} {op.sector}</div>
-                            </div>
-                        ))}
+                        <p className="font-bold text-amber-900 dark:text-amber-100 text-sm uppercase tracking-wide">
+                            Operadores duplicados eliminados
+                        </p>
+                        <p className="text-amber-700 dark:text-amber-300 text-xs mt-1 font-medium">
+                            Se eliminaron {data.operadores.length - operadores.length} operadores duplicados.
+                        </p>
                     </div>
                 </div>
-            </Card>
+            )}
 
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mt-8 mb-4 gap-4">
-                <h2 className="text-xl font-bold">Gestión de Operadores ({operadoresFiltrados.length})</h2>
-                <div className="flex flex-wrap gap-2">
-                    <select
-                        className="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-slate-200 dark:border-gray-700"
-                        value={filtroSector}
-                        onChange={e => setFiltroSector(e.target.value)}
-                    >
-                        <option value="">Todos los sectores</option>
-                        <option value="telefonia">Telefonía</option>
-                        <option value="energia">Energía</option>
-                        <option value="seguridad">Seguridad</option>
-                        <option value="otros">Otros</option>
-                    </select>
-                    <select
-                        className="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-slate-200 dark:border-gray-700"
-                        value={filtroProductos}
-                        onChange={e => setFiltroProductos(e.target.value)}
-                    >
-                        <option value="">Todos</option>
-                        <option value="con-productos">Con productos</option>
-                        <option value="sin-productos">Sin productos</option>
-                    </select>
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
+                        <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg">
+                            <Building className="w-6 h-6 text-white" />
+                        </div>
+                        Gestión de Operadores
+                    </h2>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                        Administra los operadores y sus productos asociados
+                    </p>
+                </div>
+                <div className="flex gap-2 flex-wrap">
                     <button
                         onClick={() => { setEditingOperador(null); setShowModal(true); }}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-xl flex items-center gap-2 hover:bg-purple-700 transition-colors"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl hover:from-purple-600 hover:to-indigo-700 transition-all shadow-lg hover:shadow-purple-500/30 text-xs font-bold uppercase tracking-widest active:scale-95"
                     >
-                        <Plus className="w-4 h-4" /> Nuevo
+                        <Plus className="w-4 h-4" />
+                        Nuevo Operador
                     </button>
                     <button
                         onClick={exportCSV}
-                        className="px-4 py-2 border border-purple-300 rounded-xl text-purple-600 flex items-center gap-2 hover:bg-purple-50 transition-colors"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs font-bold uppercase tracking-widest active:scale-95"
                     >
-                        <Download className="w-4 h-4" /> CSV
+                        <Download className="w-4 h-4" />
+                        Exportar
                     </button>
                 </div>
             </div>
 
-            {error && <div className="text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>}
-
-            <div className="overflow-x-auto">
-                <table className="min-w-full border-separate border-spacing-y-2 text-sm">
-                    <thead>
-                        <tr className="text-left text-slate-500 uppercase text-[11px] font-bold">
-                            <th className="px-4 py-2">Nombre</th>
-                            <th className="px-4 py-2">Sector</th>
-                            <th className="px-4 py-2 text-center">Productos</th>
-                            <th className="px-4 py-2 text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {operadoresFiltrados.map(op => (
-                            <tr key={op.id} className="bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-gray-700/50 transition-colors">
-                                <td className="px-4 py-3 font-medium">{op.nombre}</td>
-                                <td className="px-4 py-3 capitalize">{op.sector}</td>
-                                <td className="px-4 py-3 text-center">
-                                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${productosConteo[op.id] > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                        {productosConteo[op.id] || 0}
-                                    </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                    <div className="flex justify-center gap-2">
-                                        <button onClick={() => { setEditingOperador(op); setShowModal(true); }} className="p-1.5 rounded-lg hover:bg-purple-100 transition-colors text-slate-400 hover:text-purple-600"><Edit3 className="w-4 h-4" /></button>
-                                        <button onClick={() => handleDelete(op.id)} className="p-1.5 rounded-lg hover:bg-red-100 transition-colors text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+            {/* Grid de Sectores */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <SectorCard
+                    title="Telefonía"
+                    operadores={sectorStats.telefonia.operadores}
+                    productos={sectorStats.telefonia.productos}
+                    icon={Phone}
+                    gradientFrom="from-blue-500"
+                    gradientTo="to-indigo-600"
+                    onClick={() => handleSectorClick('telefonia')}
+                    isActive={filtroSector === 'telefonia'}
+                />
+                <SectorCard
+                    title="Energía"
+                    operadores={sectorStats.energia.operadores}
+                    productos={sectorStats.energia.productos}
+                    icon={Zap}
+                    gradientFrom="from-emerald-500"
+                    gradientTo="to-teal-600"
+                    onClick={() => handleSectorClick('energia')}
+                    isActive={filtroSector === 'energia'}
+                />
+                <SectorCard
+                    title="Seguridad"
+                    operadores={sectorStats.seguridad.operadores}
+                    productos={sectorStats.seguridad.productos}
+                    icon={Shield}
+                    gradientFrom="from-amber-500"
+                    gradientTo="to-orange-600"
+                    onClick={() => handleSectorClick('seguridad')}
+                    isActive={filtroSector === 'seguridad'}
+                />
+                <SectorCard
+                    title="Otros"
+                    operadores={sectorStats.otros.operadores}
+                    productos={sectorStats.otros.productos}
+                    icon={MoreHorizontal}
+                    gradientFrom="from-slate-500"
+                    gradientTo="to-slate-700"
+                    onClick={() => handleSectorClick('otros')}
+                    isActive={filtroSector === 'otros'}
+                />
             </div>
 
+            {/* Top Operadores */}
+            {topOperadores.length > 0 && (
+                <div className={`${glassStyles()} p-6 rounded-3xl`}>
+                    <h3 className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-amber-500" />
+                        Top Operadores
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                        {topOperadores.map((op, idx) => (
+                            <TopOperadorCard key={op.id} operador={op} index={idx} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Barra de Filtros */}
+            <div className={`${glassStyles()} p-5 rounded-3xl`}>
+                <div className="flex flex-col md:flex-row gap-4">
+                    {/* Búsqueda */}
+                    <div className="relative flex-1 group">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-slate-400 group-focus-within:text-purple-500 transition-colors" />
+                        </div>
+                        <input
+                            type="text"
+                            className="block w-full pl-11 pr-4 py-3 rounded-2xl border-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-purple-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-inner text-sm font-medium"
+                            placeholder="Buscar operador por nombre o código..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Filtros */}
+                    <div className="flex gap-2 flex-wrap">
+                        <select
+                            className="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border-none focus:ring-2 focus:ring-purple-500/50 text-sm font-medium"
+                            value={filtroProductos}
+                            onChange={e => setFiltroProductos(e.target.value)}
+                        >
+                            <option value="">Todos</option>
+                            <option value="con-productos">Con productos</option>
+                            <option value="sin-productos">Sin productos</option>
+                        </select>
+
+                        {filtroSector && (
+                            <button
+                                onClick={() => setFiltroSector("")}
+                                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-bold uppercase tracking-widest"
+                            >
+                                {filtroSector}
+                                <span className="ml-1">✕</span>
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Error */}
+            {error && (
+                <div className="bg-red-50/50 border border-red-200/50 text-red-700 px-4 py-3 rounded-2xl flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5" />
+                    <span className="font-medium">{error}</span>
+                </div>
+            )}
+
+            {/* Tabla de Operadores */}
+            <div className={`${glassStyles()} overflow-hidden rounded-3xl`}>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm text-left">
+                        <thead className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                            <tr>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Operador</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Sector</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 text-center">Productos</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                            {operadoresFiltrados.map(op => (
+                                <tr key={op.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+                                                <Building className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-900 dark:text-white">{op.nombre}</p>
+                                                {op.codigo && <p className="text-xs text-slate-400">{op.codigo}</p>}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider ${op.sector === 'telefonia' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                op.sector === 'energia' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                                    op.sector === 'seguridad' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                                            }`}>
+                                            {op.sector || 'Sin sector'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <Package className="w-4 h-4 text-slate-400" />
+                                            <span className={`font-black ${(productosConteo[op.id] || 0) > 0
+                                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                                    : 'text-slate-400'
+                                                }`}>
+                                                {productosConteo[op.id] || 0}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={() => { setEditingOperador(op); setShowModal(true); }}
+                                                className="p-2 rounded-xl text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
+                                                title="Editar"
+                                            >
+                                                <Edit3 className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(op.id)}
+                                                className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
+                                                title="Eliminar"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {operadoresFiltrados.length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-12 text-center">
+                                        <Building className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+                                        <p className="text-slate-400 dark:text-slate-500 font-medium">
+                                            No se encontraron operadores con los filtros aplicados.
+                                        </p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Modal de Operador */}
             {showModal && (
                 <OperadorModal
                     operador={editingOperador}

@@ -1,14 +1,36 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { useData } from "../../../context/AppContexts";
-import Card from "../../ui/Card";
 import {
-    Plus, Edit3, Trash2, Download, Package, AlertCircle, ArrowUpAZ, ArrowDownZA
+    Plus, Edit3, Trash2, Download, Package, AlertCircle, ArrowUpAZ, ArrowDownZA,
+    Search, Filter, Layers, Activity, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { saveAs } from "file-saver";
 import ProductoModal from "./ProductoModal";
 import FamiliaBadge from "./FamiliaBadge";
 import { cleanOperadores, cleanProductosRobust, normalizeText } from "../utils/gestionUtils";
+import { glassStyles, cardHoverStyles } from "../../../utils/designUtils";
 
+// ==========================================
+// COMPONENTE: Tarjeta de Estadística Premium
+// ==========================================
+const StatCard = ({ title, value, icon: Icon, gradientFrom, gradientTo }) => (
+    <div className={`${glassStyles()} ${cardHoverStyles()} rounded-3xl p-6 relative overflow-hidden group`}>
+        <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full bg-gradient-to-br ${gradientFrom} ${gradientTo} opacity-10 group-hover:opacity-20 transition-opacity duration-500`} />
+        <div className="flex items-center justify-between relative z-10">
+            <div className="space-y-1">
+                <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest">{title}</p>
+                <p className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{value}</p>
+            </div>
+            <div className={`p-4 rounded-2xl bg-gradient-to-br ${gradientFrom} ${gradientTo} shadow-lg`}>
+                <Icon className="w-6 h-6 text-white" />
+            </div>
+        </div>
+    </div>
+);
+
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
 const ProductosSection = React.memo(() => {
     const { data, setProductos } = useData();
     const [selectedIds, setSelectedIds] = useState([]);
@@ -179,237 +201,273 @@ const ProductosSection = React.memo(() => {
     }, [productosFiltrados, getOperadorNombre]);
 
     return (
-        <section className="space-y-6">
+        <section className="space-y-8">
+            {/* Alerta de productos duplicados */}
             {data.productos && data.productos.length !== productos.length && (
-                <Card className="bg-amber-50 border-amber-200">
-                    <div className="flex items-center gap-3">
-                        <AlertCircle className="w-5 h-5 text-amber-600" />
-                        <div>
-                            <p className="font-medium text-amber-800">Productos duplicados eliminados</p>
-                            <p className="text-sm text-amber-700">
-                                Se eliminaron {data.productos.length - productos.length} productos duplicados o con operadores inexistentes.
-                            </p>
-                        </div>
+                <div className={`${glassStyles()} bg-amber-50/50 dark:bg-amber-900/20 border-amber-200/50 dark:border-amber-700/30 p-4 rounded-2xl flex items-start gap-3`}>
+                    <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
+                        <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                     </div>
-                </Card>
+                    <div>
+                        <p className="font-bold text-amber-900 dark:text-amber-100 text-sm uppercase tracking-wide">
+                            Productos duplicados eliminados
+                        </p>
+                        <p className="text-amber-700 dark:text-amber-300 text-xs mt-1 font-medium">
+                            Se eliminaron {data.productos.length - productos.length} productos duplicados o con operadores inexistentes.
+                        </p>
+                    </div>
+                </div>
             )}
 
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Gestión de Productos</h2>
-                <div className="flex gap-2">
+            {/* Header y Acciones */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
+                        <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg">
+                            <Package className="w-6 h-6 text-white" />
+                        </div>
+                        Gestión de Productos
+                    </h2>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                        Administra el catálogo de productos y sus comisiones
+                    </p>
+                </div>
+                <div className="flex gap-2 flex-wrap">
                     <button
                         onClick={() => { setEditingProducto(null); setShowModal(true); }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-xl flex items-center gap-2 hover:bg-green-700 transition-colors"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg hover:shadow-emerald-500/30 text-xs font-bold uppercase tracking-widest active:scale-95"
                     >
                         <Plus className="w-4 h-4" />
                         Nuevo Producto
                     </button>
                     <button
                         onClick={exportCSV}
-                        className="px-4 py-2 border border-green-300 rounded-xl text-green-600 flex items-center gap-2 hover:bg-green-50 transition-colors"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs font-bold uppercase tracking-widest active:scale-95"
                     >
                         <Download className="w-4 h-4" />
-                        Exportar CSV
+                        Exportar
                     </button>
-                    <button
-                        onClick={handleDeleteSelected}
-                        disabled={selectedIds.length === 0}
-                        className={`px-4 py-2 bg-red-600 text-white rounded-xl flex items-center gap-2 hover:bg-red-700 transition-colors ${selectedIds.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        <Trash2 className="w-4 h-4" />
-                        Borrar seleccionados
-                    </button>
+                    {selectedIds.length > 0 && (
+                        <button
+                            onClick={handleDeleteSelected}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-rose-500 to-red-600 text-white rounded-xl hover:from-rose-600 hover:to-red-700 transition-all shadow-lg hover:shadow-rose-500/30 text-xs font-bold uppercase tracking-widest active:scale-95"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Eliminar ({selectedIds.length})
+                        </button>
+                    )}
                 </div>
             </div>
 
-            <div className="grid md:grid-cols-4 gap-4 mb-6">
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-green-600 dark:text-green-200 text-sm font-medium">Total Productos</p>
-                            <div className="text-2xl font-bold text-slate-900 dark:text-white">{productos.length}</div>
-                        </div>
-                        <Package className="w-8 h-8 text-green-600 dark:text-green-200" />
-                    </div>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-blue-600 dark:text-blue-200 text-sm font-medium">Familias</p>
-                            <div className="text-2xl font-bold text-slate-900 dark:text-white">{familias.length}</div>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-yellow-600 dark:text-yellow-200 text-sm font-medium">Operadores</p>
-                            <div className="text-2xl font-bold text-slate-900 dark:text-white">{operadores.length}</div>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-slate-600 dark:text-gray-300 text-sm font-medium">Activos</p>
-                            <div className="text-2xl font-bold text-slate-900 dark:text-white">{productos.filter(p => p.activo !== false).length}</div>
-                        </div>
-                    </div>
-                </Card>
+            {/* Grid de Estadísticas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                    title="Total Productos"
+                    value={productos.length}
+                    icon={Package}
+                    gradientFrom="from-emerald-500"
+                    gradientTo="to-teal-600"
+                />
+                <StatCard
+                    title="Familias"
+                    value={familias.length}
+                    icon={Layers}
+                    gradientFrom="from-blue-500"
+                    gradientTo="to-indigo-600"
+                />
+                <StatCard
+                    title="Operadores"
+                    value={operadores.length}
+                    icon={Filter}
+                    gradientFrom="from-amber-500"
+                    gradientTo="to-orange-600"
+                />
+                <StatCard
+                    title="Activos"
+                    value={productos.filter(p => p.activo !== false).length}
+                    icon={Activity}
+                    gradientFrom="from-slate-500"
+                    gradientTo="to-slate-700"
+                />
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-                <div className="flex-1">
-                    <input
-                        type="text"
-                        className="w-full border rounded-xl px-4 py-2 bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700"
-                        placeholder="Buscar producto por nombre, operador o familia..."
-                        value={searchTerm}
-                        onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                    />
-                </div>
+            {/* Barra de Filtros */}
+            <div className={`${glassStyles()} p-5 rounded-3xl`}>
+                <div className="flex flex-col md:flex-row gap-4">
+                    {/* Búsqueda */}
+                    <div className="relative flex-1 group">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                        </div>
+                        <input
+                            type="text"
+                            className="block w-full pl-11 pr-4 py-3 rounded-2xl border-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-inner text-sm font-medium"
+                            placeholder="Buscar por nombre, operador o familia..."
+                            value={searchTerm}
+                            onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                        />
+                    </div>
 
-                <div className="flex gap-2">
-                    <select
-                        className="border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700"
-                        value={selectedOperador}
-                        onChange={e => { setSelectedOperador(e.target.value); setCurrentPage(1); }}
-                    >
-                        <option value="">Todos los operadores</option>
-                        {operadores.map(op => (
-                            <option key={op.id} value={op.id}>{op.nombre}</option>
-                        ))}
-                    </select>
+                    {/* Filtros */}
+                    <div className="flex gap-2 flex-wrap">
+                        <select
+                            className="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border-none focus:ring-2 focus:ring-emerald-500/50 text-sm font-medium"
+                            value={selectedOperador}
+                            onChange={e => { setSelectedOperador(e.target.value); setCurrentPage(1); }}
+                        >
+                            <option value="">Todos los operadores</option>
+                            {operadores.map(op => (
+                                <option key={op.id} value={op.id}>{op.nombre}</option>
+                            ))}
+                        </select>
 
-                    <select
-                        className="border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700"
-                        value={selectedFamilia}
-                        onChange={e => { setSelectedFamilia(e.target.value); setCurrentPage(1); }}
-                    >
-                        <option value="">Todas las familias</option>
-                        {familias.map(f => (
-                            <option key={f} value={f}>{f}</option>
-                        ))}
-                    </select>
+                        <select
+                            className="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border-none focus:ring-2 focus:ring-emerald-500/50 text-sm font-medium"
+                            value={selectedFamilia}
+                            onChange={e => { setSelectedFamilia(e.target.value); setCurrentPage(1); }}
+                        >
+                            <option value="">Todas las familias</option>
+                            {familias.map(f => (
+                                <option key={f} value={f}>{f}</option>
+                            ))}
+                        </select>
 
-                    <button
-                        onClick={() => { setSortDirection(sortDirection === "asc" ? "desc" : "asc"); setCurrentPage(1); }}
-                        className="px-4 py-2 border rounded-xl flex items-center gap-2 bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border-slate-200 dark:border-gray-700 hover:bg-slate-50 transition-colors"
-                    >
-                        {sortDirection === "asc" ? <ArrowUpAZ className="w-4 h-4" /> : <ArrowDownZA className="w-4 h-4" />}
-                        A-Z
-                    </button>
+                        <button
+                            onClick={() => { setSortDirection(sortDirection === "asc" ? "desc" : "asc"); setCurrentPage(1); }}
+                            className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs font-bold uppercase tracking-widest"
+                        >
+                            {sortDirection === "asc" ? <ArrowUpAZ className="w-4 h-4" /> : <ArrowDownZA className="w-4 h-4" />}
+                            A-Z
+                        </button>
+                    </div>
                 </div>
             </div>
 
+            {/* Error */}
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-6">
-                    {error}
+                <div className="bg-red-50/50 border border-red-200/50 text-red-700 px-4 py-3 rounded-2xl flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5" />
+                    <span className="font-medium">{error}</span>
                 </div>
             )}
 
-            <div className="overflow-x-auto bg-white dark:bg-gray-900 rounded-xl border border-slate-200 dark:border-gray-700">
-                <table className="min-w-full text-xs md:text-sm text-left">
-                    <thead className="bg-slate-50 dark:bg-gray-800 text-slate-500 dark:text-gray-400 uppercase text-[11px] font-bold">
-                        <tr>
-                            <th className="px-4 py-3 text-center">
-                                <input
-                                    type="checkbox"
-                                    checked={productosPagina.length > 0 && productosPagina.every(p => selectedIds?.includes(p.id))}
-                                    onChange={handleSelectAll}
-                                    className="rounded border-slate-300"
-                                />
-                            </th>
-                            <th className="px-4 py-3">Nombre</th>
-                            <th className="px-4 py-3">Operador</th>
-                            <th className="px-4 py-3">Familia</th>
-                            <th className="px-4 py-3">PVP</th>
-                            <th className="px-4 py-3">Comisión</th>
-                            <th className="px-4 py-3 text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-gray-800">
-                        {productosPagina.map(p => (
-                            <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors">
-                                <td className="px-4 py-3 text-center">
+            {/* Tabla de Productos */}
+            <div className={`${glassStyles()} overflow-hidden rounded-3xl`}>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm text-left">
+                        <thead className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                            <tr>
+                                <th className="px-4 py-4 text-center">
                                     <input
                                         type="checkbox"
-                                        checked={selectedIds?.includes(p.id)}
-                                        onChange={() => handleSelect(p.id)}
-                                        className="rounded border-slate-300"
+                                        checked={productosPagina.length > 0 && productosPagina.every(p => selectedIds?.includes(p.id))}
+                                        onChange={handleSelectAll}
+                                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                                     />
-                                </td>
-                                <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.nombre}</td>
-                                <td className="px-4 py-3">{getOperadorNombre(p.operador_id)}</td>
-                                <td className="px-4 py-3"><FamiliaBadge familia={p.familia} /></td>
-                                <td className="px-4 py-3 font-semibold text-blue-600 dark:text-blue-400">{p.pvp} €</td>
-                                <td className="px-4 py-3">
-                                    <span className="font-semibold">{p.comision_valor}</span>
-                                    <span className="ml-1 text-slate-500">{p.comision_tipo === 'porcentaje' ? '%' : '€'}</span>
-                                </td>
-                                <td className="px-4 py-3">
-                                    <div className="flex justify-center gap-2">
-                                        <button
-                                            onClick={() => { setEditingProducto(p); setShowModal(true); }}
-                                            className="p-1.5 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                                            title="Editar"
-                                        >
-                                            <Edit3 className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(p.id)}
-                                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                            title="Eliminar"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </td>
+                                </th>
+                                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Nombre</th>
+                                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Operador</th>
+                                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Familia</th>
+                                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">PVP</th>
+                                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Comisión</th>
+                                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 text-center">Acciones</th>
                             </tr>
-                        ))}
-                        {productosFiltrados.length === 0 && (
-                            <tr>
-                                <td colSpan={7} className="px-4 py-8 text-center text-slate-400 dark:text-gray-500">
-                                    No se encontraron productos con los filtros aplicados.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                            {productosPagina.map(p => (
+                                <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                                    <td className="px-4 py-4 text-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds?.includes(p.id)}
+                                            onChange={() => handleSelect(p.id)}
+                                            className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                        />
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <span className="font-bold text-slate-900 dark:text-white">{p.nombre}</span>
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <span className="text-slate-600 dark:text-slate-300 font-medium">{getOperadorNombre(p.operador_id)}</span>
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <FamiliaBadge familia={p.familia} />
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <span className="font-black text-emerald-600 dark:text-emerald-400">{p.pvp} €</span>
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <span className="font-bold text-slate-800 dark:text-white">{p.comision_valor}</span>
+                                        <span className="ml-1 text-slate-500 text-xs font-medium">{p.comision_tipo === 'porcentaje' ? '%' : '€'}</span>
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={() => { setEditingProducto(p); setShowModal(true); }}
+                                                className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
+                                                title="Editar"
+                                            >
+                                                <Edit3 className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(p.id)}
+                                                className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
+                                                title="Eliminar"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {productosFiltrados.length === 0 && (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-12 text-center">
+                                        <Package className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+                                        <p className="text-slate-400 dark:text-slate-500 font-medium">
+                                            No se encontraron productos con los filtros aplicados.
+                                        </p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Paginación */}
+                {productosFiltrados.length > 0 && (
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-5 border-t border-slate-100 dark:border-slate-700/50">
+                        <div className="text-sm text-slate-500 dark:text-slate-400">
+                            Mostrando <span className="font-bold text-slate-900 dark:text-white">{startIndex} - {endIndex}</span> de {productosFiltrados.length} productos
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPageSafe === 1}
+                                className={`flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold transition-all ${currentPageSafe === 1 ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95'}`}
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                Anterior
+                            </button>
+                            <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                                <span className="text-sm text-slate-500">Página</span>
+                                <span className="text-sm font-black text-slate-900 dark:text-white">{currentPageSafe}</span>
+                                <span className="text-sm text-slate-500">de {totalPages}</span>
+                            </div>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPageSafe === totalPages}
+                                className={`flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold transition-all ${currentPageSafe === totalPages ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95'}`}
+                            >
+                                Siguiente
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {productosFiltrados.length > 0 && (
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4">
-                    <div className="text-sm text-slate-500">
-                        Mostrando <span className="font-semibold text-slate-900 dark:text-white">{startIndex} - {endIndex}</span> de {productosFiltrados.length} productos
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                            disabled={currentPageSafe === 1}
-                            className={`px-4 py-2 rounded-xl border border-slate-200 dark:border-gray-700 text-sm font-medium ${currentPageSafe === 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-50 dark:hover:bg-gray-800'} transition-colors`}
-                        >
-                            Anterior
-                        </button>
-                        <div className="flex items-center gap-1 px-4">
-                            <span className="text-sm text-slate-500">Página</span>
-                            <span className="text-sm font-bold text-slate-900 dark:text-white">{currentPageSafe}</span>
-                            <span className="text-sm text-slate-500">de {totalPages}</span>
-                        </div>
-                        <button
-                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                            disabled={currentPageSafe === totalPages}
-                            className={`px-4 py-2 rounded-xl border border-slate-200 dark:border-gray-700 text-sm font-medium ${currentPageSafe === totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-50 dark:hover:bg-gray-800'} transition-colors`}
-                        >
-                            Siguiente
-                        </button>
-                    </div>
-                </div>
-            )}
-
+            {/* Modal de Producto */}
             {showModal && (
                 <ProductoModal
                     producto={editingProducto}
