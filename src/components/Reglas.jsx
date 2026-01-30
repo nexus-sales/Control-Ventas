@@ -1,66 +1,59 @@
 import { useState } from "react";
 import Toast from "./ui/Toast";
 import {
-  Layers,
-  Settings,
-  Phone,
-  Zap,
-  Shield,
-  Plus,
-  Edit2,
-  Trash2
+  Layers, Settings, Phone, Zap, Shield, Plus, Edit2, Trash2,
+  BookOpen, AlertTriangle
 } from "lucide-react";
-import Card from "./ui/Card";
-import SectionTitle from "./ui/SectionTitle";
 import { useData } from "../context/AppContexts";
 import { NivelEditModal, ReglaEditModal } from "./reglas/index.js";
+import { glassStyles, cardHoverStyles } from "../utils/designUtils";
 
+// ==========================================
+// COMPONENTE: Tarjeta de Estadística Compacta
+// ==========================================
+const MiniStatCard = ({ title, value, icon: Icon, gradientFrom, gradientTo }) => (
+  <div className={`${glassStyles()} ${cardHoverStyles()} rounded-2xl p-4 relative overflow-hidden group`}>
+    <div className={`absolute -right-2 -top-2 w-16 h-16 rounded-full bg-gradient-to-br ${gradientFrom} ${gradientTo} opacity-10 group-hover:opacity-20 transition-opacity duration-500`} />
+    <div className="flex items-center gap-3 relative z-10">
+      <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradientFrom} ${gradientTo} shadow-lg`}>
+        <Icon className="w-4 h-4 text-white" />
+      </div>
+      <div>
+        <p className="text-xl font-black text-slate-800 dark:text-white">{value}</p>
+        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{title}</p>
+      </div>
+    </div>
+  </div>
+);
+
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
 export default function Reglas() {
-  // Usar el hook de datos
-  const {
-    data,
-    setNiveles,
-    setReglas,
-    dataInitialized
-  } = useData();
+  const { data, setNiveles, setReglas, dataInitialized } = useData();
 
   const reglas = Array.isArray(data?.reglas) ? data.reglas : [];
   const operadores = Array.isArray(data?.operadores) ? data.operadores : [];
   const productos = Array.isArray(data?.productos) ? data.productos : [];
   const niveles = Array.isArray(data?.niveles) ? data.niveles : [];
-  
+
   const [toast, setToast] = useState({ message: "", type: "info" });
   const [activeTab, setActiveTab] = useState("niveles");
 
-  // Estados para modales
   const [modalNivel, setModalNivel] = useState(null);
   const [modalRegla, setModalRegla] = useState(null);
 
   // Funciones para niveles
   const handleModalNivelSave = (nivel, shouldClose) => {
-    // LOGS ELIMINADOS
-    
-    // CORRECCIÓN: verificar si es edición basándose en modalNivel, no en nivel.id
     const isEditing = modalNivel && modalNivel.id && niveles.some(n => n.id === modalNivel.id);
-    
+
     if (isEditing) {
-      // Editando nivel existente
-      setNiveles(prev => {
-        const updated = prev.map((n) => (n.id === nivel.id ? nivel : n));
-        return updated;
-      });
+      setNiveles(prev => prev.map((n) => (n.id === nivel.id ? nivel : n)));
     } else {
-      // Nuevo nivel
-      const nuevoNivel = {
-        ...nivel,
-        id: nivel.id || `n_${Date.now()}` // Usar el ID del formulario o generar uno
-      };
-      setNiveles(prev => {
-        const updated = [nuevoNivel, ...prev];
-        return updated;
-      });
+      const nuevoNivel = { ...nivel, id: nivel.id || `n_${Date.now()}` };
+      setNiveles(prev => [nuevoNivel, ...prev]);
     }
-    
+
     if (shouldClose) setModalNivel(null);
     setToast({ message: "Nivel guardado correctamente", type: "success" });
   };
@@ -75,17 +68,12 @@ export default function Reglas() {
   // Funciones para reglas
   const handleModalReglaSave = (regla, shouldClose) => {
     if (regla.id) {
-      // Editando regla existente
       setReglas(prev => prev.map((r) => (r.id === regla.id ? regla : r)));
     } else {
-      // Nueva regla
-      const nuevaRegla = {
-        ...regla,
-        id: `r_${Date.now()}`
-      };
+      const nuevaRegla = { ...regla, id: `r_${Date.now()}` };
       setReglas(prev => [nuevaRegla, ...prev]);
     }
-    
+
     if (shouldClose) setModalRegla(null);
     setToast({ message: "Regla guardada correctamente", type: "success" });
   };
@@ -97,9 +85,8 @@ export default function Reglas() {
     }
   };
 
-  // Función para obtener icono de sector
   const getSectorIcon = (sector) => {
-    switch(sector) {
+    switch (sector) {
       case 'telefonia': return <Phone className="w-4 h-4 text-blue-600" />;
       case 'energia': return <Zap className="w-4 h-4 text-yellow-600" />;
       case 'seguridad': return <Shield className="w-4 h-4 text-red-600" />;
@@ -112,14 +99,17 @@ export default function Reglas() {
       <div className="p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-1/4" />
-          <div className="h-64 bg-slate-200 rounded" />
+          <div className="grid grid-cols-3 gap-4">
+            {[1, 2, 3].map(i => <div key={i} className="h-20 bg-slate-200 rounded-2xl" />)}
+          </div>
+          <div className="h-64 bg-slate-200 rounded-3xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Toast
         message={toast.message}
         type={toast.type}
@@ -145,164 +135,189 @@ export default function Reglas() {
         />
       )}
 
-      {/* Pestañas */}
-      <div className="border-b border-slate-200 dark:border-gray-700">
-        <nav className="flex gap-8">
-          <button
-            onClick={() => setActiveTab("niveles")}
-            className={`pb-3 px-1 border-b-2 font-medium transition-colors flex items-center gap-2 ${
-              activeTab === "niveles"
-                ? "border-sky-500 text-sky-600 dark:border-sky-400 dark:text-sky-300"
-                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 hover:dark:text-white"
-            }`}
-            aria-label="Ver niveles de comisión"
-          >
-            <Layers className="w-4 h-4" />
-            Niveles de Comisión
-          </button>
-          <button
-            onClick={() => setActiveTab("reglas")}
-            className={`pb-3 px-1 border-b-2 font-medium transition-colors flex items-center gap-2 ${
-              activeTab === "reglas"
-                ? "border-sky-500 text-sky-600 dark:border-sky-400 dark:text-sky-300"
-                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 hover:dark:text-white"
-            }`}
-            aria-label="Ver reglas específicas"
-          >
-            <Settings className="w-4 h-4" />
-            Reglas Específicas
-          </button>
-        </nav>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-xl shadow-lg">
+              <BookOpen className="w-6 h-6 text-white" />
+            </div>
+            Configuración de Reglas
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+            Define niveles de comisión y reglas específicas por operador
+          </p>
+        </div>
       </div>
 
-      {/* Contenido de Niveles */}
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <MiniStatCard
+          title="Niveles"
+          value={niveles.length}
+          icon={Layers}
+          gradientFrom="from-emerald-500"
+          gradientTo="to-teal-600"
+        />
+        <MiniStatCard
+          title="Reglas"
+          value={reglas.length}
+          icon={Settings}
+          gradientFrom="from-sky-500"
+          gradientTo="to-indigo-600"
+        />
+        <MiniStatCard
+          title="Operadores"
+          value={operadores.length}
+          icon={Phone}
+          gradientFrom="from-blue-500"
+          gradientTo="to-blue-600"
+        />
+        <MiniStatCard
+          title="Productos"
+          value={productos.length}
+          icon={Shield}
+          gradientFrom="from-purple-500"
+          gradientTo="to-violet-600"
+        />
+      </div>
+
+      {/* Tabs Premium */}
+      <div className={`${glassStyles()} p-2 rounded-2xl inline-flex gap-2`}>
+        <button
+          onClick={() => setActiveTab("niveles")}
+          className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === "niveles"
+              ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+              : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+        >
+          <Layers className="w-4 h-4" />
+          Niveles de Comisión
+        </button>
+        <button
+          onClick={() => setActiveTab("reglas")}
+          className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === "reglas"
+              ? "bg-sky-500 text-white shadow-lg shadow-sky-500/30"
+              : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+        >
+          <Settings className="w-4 h-4" />
+          Reglas Específicas
+        </button>
+      </div>
+
+      {/* ==========================================
+          TAB: NIVELES
+          ========================================== */}
       {activeTab === "niveles" && (
         <div className="space-y-6">
-          {/* Formulario para nuevo nivel */}
-          <Card className="border-emerald-200 dark:border-emerald-500/40 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/40 dark:to-emerald-800/40 dark:text-emerald-50">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center">
-                <Layers className="w-6 h-6 mr-2 text-emerald-600 dark:text-emerald-300" />
-                <SectionTitle>Nuevo Nivel de Comisión</SectionTitle>
+          {/* Info Card */}
+          <div className={`${glassStyles()} bg-emerald-50/50 dark:bg-emerald-900/20 border-emerald-200/50 dark:border-emerald-700/30 p-5 rounded-2xl`}>
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-emerald-100 dark:bg-emerald-900/50 rounded-xl">
+                <Layers className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-black text-emerald-900 dark:text-emerald-100 text-sm uppercase tracking-wide mb-2">
+                  Comisiones diferenciadas por sector
+                </h3>
+                <div className="grid sm:grid-cols-3 gap-3 text-xs">
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                    <Phone className="w-4 h-4" />
+                    <span>Telefonía: % sobre comisión</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                    <Zap className="w-4 h-4" />
+                    <span>Energía: % sobre comisión</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                    <Shield className="w-4 h-4" />
+                    <span>Seguridad: Importe fijo</span>
+                  </div>
+                </div>
               </div>
               <button
                 onClick={() => setModalNivel({})}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg hover:shadow-emerald-500/30 text-xs font-bold uppercase tracking-widest active:scale-95"
               >
                 <Plus className="w-4 h-4" />
                 Nuevo Nivel
               </button>
             </div>
-            
-            <div className="text-sm text-emerald-700 dark:text-emerald-100 mb-4 p-3 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
-              <p className="font-medium mb-1">Comisiones diferenciadas por sector:</p>
-              <ul className="space-y-1">
-                <li className="flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  <span>Telefonía: Porcentaje sobre comisión</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Zap className="w-4 h-4" />
-                  <span>Energía: Porcentaje sobre comisión</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  <span>Seguridad: Importe fijo por venta</span>
-                </li>
-              </ul>
-            </div>
-          </Card>
+          </div>
 
           {/* Tabla de niveles */}
-          <Card>
-            <div className="flex justify-between items-center mb-4">
-              <SectionTitle>Niveles Existentes ({niveles.length})</SectionTitle>
-              <button
-                onClick={() => setModalNivel({})}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg"
-              >
-                <Plus className="w-4 h-4" />
-                Nuevo Nivel
-              </button>
-            </div>
-            
-            <div className="overflow-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-slate-500 bg-slate-50 dark:text-slate-300 dark:bg-gray-900">
-                    <th className="py-3 px-3 font-medium">ID</th>
-                    <th className="py-3 px-3 font-medium">Nombre</th>
-                    <th className="py-3 px-3 font-medium">Tipo</th>
-                    <th className="py-3 px-3 font-medium">Telefonía</th>
-                    <th className="py-3 px-3 font-medium">Energía</th>
-                    <th className="py-3 px-3 font-medium">Seguridad</th>
-                    <th className="py-3 px-3 font-medium">Descripción</th>
-                    <th className="py-3 px-3 font-medium">Acciones</th>
+          <div className={`${glassStyles()} overflow-hidden rounded-3xl`}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm text-left">
+                <thead className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                  <tr>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">ID</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Nombre</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Tipo</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Telefonía</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Energía</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Seguridad</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 text-center">Acciones</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                   {niveles.map((n) => (
-                    <tr key={n.id} className="border-t hover:bg-slate-50 dark:border-gray-700 dark:hover:bg-gray-800">
-                      <td className="py-3 px-3">
-                        <span className="font-mono font-semibold text-slate-700 bg-slate-100 dark:text-slate-200 dark:bg-gray-800 px-2 py-1 rounded">
+                    <tr key={n.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                      <td className="px-4 py-4">
+                        <span className="font-mono text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg">
                           {n.id}
                         </span>
                       </td>
-                      <td className="py-3 px-3">
-                        <span className="font-medium text-slate-800 dark:text-slate-100">{n.nombre}</span>
+                      <td className="px-4 py-4">
+                        <span className="font-bold text-slate-900 dark:text-white">{n.nombre}</span>
                       </td>
-                      <td className="py-3 px-3">
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                          n.tipo === "MANAGER"
-                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-200"
+                      <td className="px-4 py-4">
+                        <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase ${n.tipo === "MANAGER"
+                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
                             : n.tipo === "SUPERVISOR"
-                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200"
-                              : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200"
-                        }`}>
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          }`}>
                           {n.tipo}
                         </span>
                       </td>
-                      <td className="py-3 px-3">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-blue-600 dark:text-blue-300" />
-                          <span className="font-medium text-blue-700 dark:text-blue-200">
+                          <Phone className="w-4 h-4 text-blue-500" />
+                          <span className="font-bold text-blue-600 dark:text-blue-400">
                             {((n.pct_telefonia || 0) * 100).toFixed(0)}%
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 px-3">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <Zap className="w-4 h-4 text-yellow-600 dark:text-yellow-300" />
-                          <span className="font-medium text-yellow-700 dark:text-yellow-200">
+                          <Zap className="w-4 h-4 text-yellow-500" />
+                          <span className="font-bold text-yellow-600 dark:text-yellow-400">
                             {((n.pct_energia || 0) * 100).toFixed(0)}%
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 px-3">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <Shield className="w-4 h-4 text-red-600 dark:text-red-300" />
-                          <span className="font-medium text-red-700 dark:text-red-200">
+                          <Shield className="w-4 h-4 text-rose-500" />
+                          <span className="font-bold text-rose-600 dark:text-rose-400">
                             {(n.fijo_seguridad || 0).toFixed(2)}€
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 px-3">
-                        <span className="text-slate-600 dark:text-slate-300 text-sm">
-                          {n.descripcion || "-"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="flex gap-1">
+                      <td className="px-4 py-4">
+                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => setModalNivel(n)}
-                            className="p-1.5 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900 transition-colors"
+                            className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
                             title="Editar"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => removeNivel(n.id)}
-                            className="p-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/40 dark:text-rose-200 dark:hover:bg-rose-900 transition-colors"
+                            className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
                             title="Eliminar"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -313,16 +328,15 @@ export default function Reglas() {
                   ))}
                 </tbody>
               </table>
+
               {niveles.length === 0 && (
-                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                  <Layers className="w-16 h-16 mx-auto mb-3 opacity-30" />
-                  <p>No hay niveles configurados</p>
-                  <p className="text-sm mt-1">
-                    Añade niveles para poder asignarlos a los colaboradores
-                  </p>
+                <div className="text-center py-12">
+                  <Layers className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
+                  <p className="text-slate-500 dark:text-slate-400 font-medium">No hay niveles configurados</p>
+                  <p className="text-xs text-slate-400 mt-1 mb-4">Añade niveles para asignarlos a colaboradores</p>
                   <button
                     onClick={() => setModalNivel({})}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors mt-4"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest"
                   >
                     <Plus className="w-4 h-4" />
                     Crear Primer Nivel
@@ -330,137 +344,128 @@ export default function Reglas() {
                 </div>
               )}
             </div>
-          </Card>
+          </div>
         </div>
       )}
 
-      {/* Contenido de Reglas */}
+      {/* ==========================================
+          TAB: REGLAS
+          ========================================== */}
       {activeTab === "reglas" && (
-        <>
-          <Card className="bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 mb-2">
-            <div className="flex items-center gap-3">
-              <Settings className="w-5 h-5 text-blue-600 dark:text-blue-300" />
-              <div>
-                <p className="font-medium text-blue-800 dark:text-blue-100">
-                  Aquí defines las reglas de comisión que la empresa cobra a los
-                  operadores por producto.
-                </p>
-                <p className="text-sm text-blue-700 dark:text-blue-200">
-                  Estas reglas pueden ser porcentajes, cuotas, importes fijos,
-                  rappel, etc. Los colaboradores solo toman referencia de aquí
-                  para calcular su comisión, pero no se gestionan desde esta
-                  sección.
-                </p>
+        <div className="space-y-6">
+          {/* Info Card */}
+          <div className={`${glassStyles()} bg-sky-50/50 dark:bg-sky-900/20 border-sky-200/50 dark:border-sky-700/30 p-5 rounded-2xl`}>
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-sky-100 dark:bg-sky-900/50 rounded-xl">
+                <Settings className="w-6 h-6 text-sky-600 dark:text-sky-400" />
               </div>
-            </div>
-          </Card>
-
-          {/* Botón para nueva regla */}
-          <Card className="border-sky-200 dark:border-sky-500/40 bg-gradient-to-br from-sky-50 to-sky-100 dark:from-sky-900/40 dark:to-sky-800/40">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Settings className="w-6 h-6 mr-2 text-sky-600 dark:text-sky-300" />
-                <SectionTitle>Reglas de Comisión</SectionTitle>
+              <div className="flex-1">
+                <h3 className="font-black text-sky-900 dark:text-sky-100 text-sm uppercase tracking-wide mb-1">
+                  Reglas de Comisión por Operador
+                </h3>
+                <p className="text-xs text-sky-700 dark:text-sky-300">
+                  Define las comisiones que la empresa cobra a los operadores. Pueden ser porcentajes o importes fijos.
+                </p>
               </div>
               <button
                 onClick={() => setModalRegla({})}
                 disabled={operadores.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl hover:from-sky-600 hover:to-sky-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-indigo-600 text-white rounded-xl hover:from-sky-600 hover:to-indigo-700 transition-all shadow-lg hover:shadow-sky-500/30 text-xs font-bold uppercase tracking-widest active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="w-4 h-4" />
                 Nueva Regla
               </button>
             </div>
-          </Card>
+          </div>
+
+          {/* Alerta sin operadores */}
+          {operadores.length === 0 && (
+            <div className={`${glassStyles()} bg-amber-50/50 dark:bg-amber-900/20 border-amber-200/50 dark:border-amber-700/30 p-4 rounded-2xl flex items-start gap-3`}>
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
+                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="font-bold text-amber-900 dark:text-amber-100 text-sm">
+                  No hay operadores configurados
+                </p>
+                <p className="text-amber-700 dark:text-amber-300 text-xs mt-1">
+                  Debes crear al menos un operador antes de poder definir reglas.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Tabla de reglas */}
-          <Card>
-            <div className="flex justify-between items-center mb-4">
-              <SectionTitle>Reglas Existentes ({reglas.length})</SectionTitle>
-                              <button
-                onClick={() => setModalRegla({})}
-                disabled={operadores.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl hover:from-sky-600 hover:to-sky-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Plus className="w-4 h-4" />
-                Nueva Regla
-              </button>
-            </div>
-            
-            <div className="overflow-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-slate-500 bg-slate-50 dark:text-slate-300 dark:bg-gray-900">
-                    <th className="py-3 px-3 font-medium">Operador</th>
-                    <th className="py-3 px-3 font-medium">Producto</th>
-                    <th className="py-3 px-3 font-medium">Tipo</th>
-                    <th className="py-3 px-3 font-medium">Sobre</th>
-                    <th className="py-3 px-3 font-medium">Valor</th>
-                    <th className="py-3 px-3 font-medium">Prioridad</th>
-                    <th className="py-3 px-3 font-medium">Acciones</th>
+          <div className={`${glassStyles()} overflow-hidden rounded-3xl`}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm text-left">
+                <thead className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                  <tr>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Operador</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Producto</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Tipo</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Sobre</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Valor</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Prioridad</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 text-center">Acciones</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                   {reglas.map((r) => {
                     const operador = operadores.find((o) => o.id === r.operador_id);
                     const producto = productos.find((p) => p.id === r.producto_id);
-                    
+
                     return (
-                      <tr key={r.id} className="border-t hover:bg-slate-50 dark:border-gray-700 dark:hover:bg-gray-800">
-                        <td className="py-3 px-3">
-                          <div className="space-y-1">
-                            <span className="font-medium text-slate-800 dark:text-slate-100">
-                              {operador?.nombre || r.operador_id}
-                            </span>
-                            {operador?.sector && (
-                              <div className="flex items-center gap-1">
-                                {getSectorIcon(operador.sector)}
-                                <span className="text-xs text-slate-500 dark:text-slate-400 capitalize">
-                                  {operador.sector}
-                                </span>
-                              </div>
-                            )}
+                      <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-2">
+                            {getSectorIcon(operador?.sector)}
+                            <div>
+                              <p className="font-bold text-slate-900 dark:text-white">{operador?.nombre || r.operador_id}</p>
+                              {operador?.sector && (
+                                <p className="text-[10px] text-slate-400 uppercase tracking-wider">{operador.sector}</p>
+                              )}
+                            </div>
                           </div>
                         </td>
-                        <td className="py-3 px-3">
-                          <span className={r.producto_id ? "dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}>
-                            {producto?.nombre || "Todos"}
+                        <td className="px-4 py-4">
+                          <span className={producto ? "font-medium text-slate-700 dark:text-slate-300" : "text-slate-400"}>
+                            {producto?.nombre || "Todos los productos"}
                           </span>
                         </td>
-                        <td className="py-3 px-3">
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            r.tipo === "%"
-                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200"
-                              : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200"
-                          }`}>
+                        <td className="px-4 py-4">
+                          <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase ${r.tipo === "%"
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            }`}>
                             {r.tipo === "%" ? "Porcentaje" : "Fijo"}
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-sm">
-                          {r.pct_sobre === "ComisiónOperador" ? "Comisión Op." : "Base"}
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="font-semibold dark:text-slate-100">
-                            {r.tipo === "%"
-                              ? `${(r.valor * 100).toFixed(2)}%`
-                              : `${r.valor.toFixed(2)} €`}
+                        <td className="px-4 py-4">
+                          <span className="text-slate-600 dark:text-slate-300 text-xs font-medium">
+                            {r.pct_sobre === "ComisiónOperador" ? "Comisión Op." : "Base"}
                           </span>
                         </td>
-                        <td className="py-3 px-3">
-                          <span className="text-slate-600 dark:text-slate-300">{r.prioridad}</span>
+                        <td className="px-4 py-4">
+                          <span className="font-black text-slate-900 dark:text-white">
+                            {r.tipo === "%" ? `${(r.valor * 100).toFixed(2)}%` : `${r.valor.toFixed(2)} €`}
+                          </span>
                         </td>
-                        <td className="py-3 px-3">
-                          <div className="flex gap-1">
+                        <td className="px-4 py-4">
+                          <span className="font-medium text-slate-600 dark:text-slate-300">{r.prioridad}</span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => setModalRegla(r)}
-                              className="p-1.5 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900 transition-colors"
+                              className="p-2 rounded-xl text-slate-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-all"
                               title="Editar"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => removeRegla(r.id)}
-                              className="p-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/40 dark:text-rose-200 dark:hover:bg-rose-900 transition-colors"
+                              className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
                               title="Eliminar"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -472,18 +477,16 @@ export default function Reglas() {
                   })}
                 </tbody>
               </table>
+
               {reglas.length === 0 && (
-                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                  <Settings className="w-16 h-16 mx-auto mb-3 opacity-30" />
-                  <p>No hay reglas configuradas</p>
-                  <p className="text-sm mt-1">
-                    Las reglas específicas definen la comisión que la empresa
-                    cobra a los operadores.
-                  </p>
+                <div className="text-center py-12">
+                  <Settings className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
+                  <p className="text-slate-500 dark:text-slate-400 font-medium">No hay reglas configuradas</p>
+                  <p className="text-xs text-slate-400 mt-1 mb-4">Las reglas definen las comisiones de la empresa por operador</p>
                   <button
                     onClick={() => setModalRegla({})}
                     disabled={operadores.length === 0}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest disabled:opacity-50"
                   >
                     <Plus className="w-4 h-4" />
                     Crear Primera Regla
@@ -491,10 +494,9 @@ export default function Reglas() {
                 </div>
               )}
             </div>
-          </Card>
-        </>
+          </div>
+        </div>
       )}
     </div>
   );
 }
-

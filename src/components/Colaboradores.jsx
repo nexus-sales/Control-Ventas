@@ -1,12 +1,36 @@
 import { useState, useMemo } from "react";
-import { AlertCircle, Plus, Phone, Zap, Shield, User, Edit3, Trash2 } from "lucide-react";
+import {
+  AlertCircle, Plus, Phone, Zap, Shield, User, Edit3, Trash2,
+  Users, UserCheck, UserX, Sparkles, Search, Filter
+} from "lucide-react";
 import { useData } from "../context/AppContexts";
-import Card from "./ui/Card";
-import { ColaboradoresTable, ColaboradorEditModal } from "./colaboradores/index.js";
+import { ColaboradorEditModal } from "./colaboradores/index.js";
+import { glassStyles, cardHoverStyles } from "../utils/designUtils";
 
+// ==========================================
+// COMPONENTE: Tarjeta de Estadística Premium
+// ==========================================
+const StatCard = ({ title, value, icon: Icon, gradientFrom, gradientTo }) => (
+  <div className={`${glassStyles()} ${cardHoverStyles()} rounded-3xl p-5 relative overflow-hidden group`}>
+    <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full bg-gradient-to-br ${gradientFrom} ${gradientTo} opacity-10 group-hover:opacity-20 transition-opacity duration-500`} />
+    <div className="flex items-center justify-between relative z-10">
+      <div className="space-y-1">
+        <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest">{title}</p>
+        <p className="text-2xl font-black text-slate-800 dark:text-white">{value}</p>
+      </div>
+      <div className={`p-3 rounded-2xl bg-gradient-to-br ${gradientFrom} ${gradientTo} shadow-lg`}>
+        <Icon className="w-5 h-5 text-white" />
+      </div>
+    </div>
+  </div>
+);
+
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
 export default function Colaboradores() {
   const { data, setColaboradores, dataInitialized } = useData();
-  
+
   const colaboradores = useMemo(
     () => (Array.isArray(data?.colaboradores) ? data.colaboradores : []),
     [data?.colaboradores]
@@ -16,6 +40,7 @@ export default function Colaboradores() {
 
   const [modalColaborador, setModalColaborador] = useState(null);
   const [filtroEstado, setFiltroEstado] = useState("TODOS");
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Calcular IRPF y filtrar colaboradores
   const colaboradoresProcesados = useMemo(() => {
@@ -40,7 +65,7 @@ export default function Colaboradores() {
         const añosTranscurridos = (ahora - fechaAlta) / (1000 * 60 * 60 * 24 * 365.25);
         irpf = añosTranscurridos < 2 ? 7 : 15;
       }
-      
+
       return {
         ...c,
         irpf_calculado: irpf,
@@ -51,28 +76,41 @@ export default function Colaboradores() {
   }, [colaboradores]);
 
   const colaboradoresFiltrados = useMemo(() => {
-    if (filtroEstado === "TODOS") return colaboradoresProcesados;
-    if (filtroEstado === "ACTIVOS") return colaboradoresProcesados.filter(c => c.esta_activo);
-    if (filtroEstado === "INACTIVOS") return colaboradoresProcesados.filter(c => !c.esta_activo);
-    return colaboradoresProcesados.filter(c => c.estado === filtroEstado);
-  }, [colaboradoresProcesados, filtroEstado]);
+    let filtered = colaboradoresProcesados;
+
+    // Filtro por búsqueda
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(c =>
+        c.nombre?.toLowerCase().includes(term) ||
+        c.cif_dni?.toLowerCase().includes(term) ||
+        c.email?.toLowerCase().includes(term)
+      );
+    }
+
+    // Filtro por estado
+    if (filtroEstado === "ACTIVOS") {
+      filtered = filtered.filter(c => c.esta_activo);
+    } else if (filtroEstado === "INACTIVOS") {
+      filtered = filtered.filter(c => !c.esta_activo);
+    }
+
+    return filtered;
+  }, [colaboradoresProcesados, filtroEstado, searchTerm]);
 
   const handleModalColaboradorSave = (colaborador, shouldClose) => {
-    // Verificar si es edición basándose en modalColaborador, no en colaborador.id
     const isEditing = modalColaborador && modalColaborador.id && colaboradores.some(c => c.id === modalColaborador.id);
-    
+
     if (isEditing) {
-      // Editando colaborador existente
       setColaboradores(prev => prev.map((c) => (c.id === colaborador.id ? colaborador : c)));
     } else {
-      // Nuevo colaborador
       const nuevoColaborador = {
         ...colaborador,
         id: colaborador.id || `c_${Date.now()}`
       };
       setColaboradores(prev => [nuevoColaborador, ...prev]);
     }
-    
+
     if (shouldClose) setModalColaborador(null);
   };
 
@@ -90,40 +128,57 @@ export default function Colaboradores() {
     return niveles.find((n) => n.id === nivelId) || null;
   };
 
-  // Mostrar loading mientras se cargan los datos
+  // Loading state
   if (!dataInitialized) {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-1/4" />
-          <div className="h-64 bg-slate-200 rounded" />
+          <div className="grid grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-slate-200 rounded-3xl" />)}
+          </div>
+          <div className="h-64 bg-slate-200 rounded-3xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Verificación de niveles */}
+    <div className="space-y-8">
+      {/* Alerta de niveles */}
       {niveles.length === 0 && (
-        <Card className="border-amber-200 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/40">
-          <div className="flex items-center gap-3 text-amber-700">
-            <AlertCircle className="w-5 h-5" />
-            <div>
-              <p className="font-medium">No hay niveles configurados</p>
-              <p className="text-sm">Ve a la pestaña de Reglas para configurar niveles antes de añadir colaboradores</p>
-            </div>
+        <div className={`${glassStyles()} bg-amber-50/50 dark:bg-amber-900/20 border-amber-200/50 dark:border-amber-700/30 p-4 rounded-2xl flex items-start gap-3`}>
+          <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
-        </Card>
+          <div>
+            <p className="font-bold text-amber-900 dark:text-amber-100 text-sm uppercase tracking-wide">
+              No hay niveles configurados
+            </p>
+            <p className="text-amber-700 dark:text-amber-300 text-xs mt-1 font-medium">
+              Ve a la pestaña de Reglas para configurar niveles antes de añadir colaboradores
+            </p>
+          </div>
+        </div>
       )}
 
-      {/* Botón para crear nuevo colaborador */}
+      {/* Header */}
       {niveles.length > 0 && (
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold text-slate-800 dark:text-gray-100">Gestión de Colaboradores</h2>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              Gestión de Colaboradores
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+              Administra el equipo comercial y sus comisiones
+            </p>
+          </div>
           <button
             onClick={() => setModalColaborador({})}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg dark:from-blue-600 dark:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800"
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg hover:shadow-blue-500/30 text-xs font-bold uppercase tracking-widest active:scale-95"
           >
             <Plus className="w-4 h-4" />
             Nuevo Colaborador
@@ -133,235 +188,210 @@ export default function Colaboradores() {
 
       {/* Estadísticas */}
       {colaboradoresProcesados.length > 0 && (
-        <Card className="bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-900/30 dark:to-sky-900/30">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{colaboradoresProcesados.length}</div>
-              <div className="text-sm text-slate-600 dark:text-gray-300">Total</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-300">
-                {colaboradoresProcesados.filter(c => c.esta_activo).length}
-              </div>
-              <div className="text-sm text-slate-600 dark:text-gray-300">Activos</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600 dark:text-red-300">
-                {colaboradoresProcesados.filter(c => !c.esta_activo).length}
-              </div>
-              <div className="text-sm text-slate-600 dark:text-gray-300">Inactivos</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
-                {colaboradoresProcesados.filter(c => c.comision_personalizada_activa).length}
-              </div>
-              <div className="text-sm text-slate-600 dark:text-gray-300">Comisión Personal</div>
-            </div>
-          </div>
-        </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total"
+            value={colaboradoresProcesados.length}
+            icon={Users}
+            gradientFrom="from-blue-500"
+            gradientTo="to-indigo-600"
+          />
+          <StatCard
+            title="Activos"
+            value={colaboradoresProcesados.filter(c => c.esta_activo).length}
+            icon={UserCheck}
+            gradientFrom="from-emerald-500"
+            gradientTo="to-teal-600"
+          />
+          <StatCard
+            title="Inactivos"
+            value={colaboradoresProcesados.filter(c => !c.esta_activo).length}
+            icon={UserX}
+            gradientFrom="from-rose-500"
+            gradientTo="to-red-600"
+          />
+          <StatCard
+            title="Comisión Personal"
+            value={colaboradoresProcesados.filter(c => c.comision_personalizada_activa).length}
+            icon={Sparkles}
+            gradientFrom="from-purple-500"
+            gradientTo="to-violet-600"
+          />
+        </div>
       )}
 
-      {/* Filtros */}
+      {/* Barra de Filtros */}
       {colaboradoresProcesados.length > 0 && (
-        <Card>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-slate-700 dark:text-gray-200">Filtrar por estado:</span>
+        <div className={`${glassStyles()} p-5 rounded-3xl`}>
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Búsqueda */}
+            <div className="relative flex-1 group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+              </div>
+              <input
+                type="text"
+                className="block w-full pl-11 pr-4 py-3 rounded-2xl border-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-inner text-sm font-medium"
+                placeholder="Buscar por nombre, CIF/DNI o email..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            {/* Filtros de estado */}
             <div className="flex gap-2">
               {["TODOS", "ACTIVOS", "INACTIVOS"].map((estado) => (
                 <button
                   key={estado}
                   onClick={() => setFiltroEstado(estado)}
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                    filtroEstado === estado
-                      ? "bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700/40"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                  }`}
+                  className={`px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all ${filtroEstado === estado
+                      ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30"
+                      : "bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                    }`}
                 >
                   {estado.charAt(0) + estado.slice(1).toLowerCase()}
                 </button>
               ))}
             </div>
-            <div className="ml-auto text-sm text-slate-500 dark:text-gray-400">
-              Mostrando {colaboradoresFiltrados.length} de {colaboradoresProcesados.length} colaboradores
-            </div>
           </div>
-        </Card>
+
+          <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
+            Mostrando <span className="font-bold text-slate-800 dark:text-white">{colaboradoresFiltrados.length}</span> de {colaboradoresProcesados.length} colaboradores
+          </div>
+        </div>
       )}
 
       {/* Tabla de colaboradores */}
-      {colaboradoresFiltrados.length > 0 ? (
-        <Card>
-          <div className="overflow-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500 dark:text-gray-300 bg-slate-50 dark:bg-gray-800/60">
-                  <th className="py-3 px-3 font-medium">Colaborador</th>
-                  <th className="py-3 px-3 font-medium">Tipo Fiscal</th>
-                  <th className="py-3 px-3 font-medium">Nivel / Comisión</th>
-                  <th className="py-3 px-3 font-medium">Sectores</th>
-                  <th className="py-3 px-3 font-medium">Zona</th>
-                  <th className="py-3 px-3 font-medium">Contacto</th>
-                  <th className="py-3 px-3 font-medium">Estado</th>
-                  <th className="py-3 px-3 font-medium">Fechas</th>
-                  <th className="py-3 px-3 font-medium">Acciones</th>
+      {colaboradoresFiltrados.length > 0 && (
+        <div className={`${glassStyles()} overflow-hidden rounded-3xl`}>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm text-left">
+              <thead className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                <tr>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Colaborador</th>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Tipo Fiscal</th>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Nivel</th>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Sectores</th>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Zona</th>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Estado</th>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 text-center">Acciones</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                 {colaboradoresFiltrados.map((c) => {
                   const nivelInfo = getNivelInfo(c.nivel);
-                  const antiguedad = new Date() - new Date(c.fecha_alta);
-                  const diasAntiguedad = Math.floor(antiguedad / (1000 * 60 * 60 * 24));
-                  
+
                   return (
-                    <tr key={c.id} className="border-t border-slate-200 dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-gray-800/70">
-                      <td className="py-3 px-3">
-                        <div>
-                          <div className="font-medium text-slate-800 dark:text-gray-100">{c.nombre}</div>
-                          {c.cif_dni && (
-                            <div className="text-xs text-slate-500 dark:text-gray-400">{c.cif_dni}</div>
-                          )}
+                    <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                            <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900 dark:text-white">{c.nombre}</p>
+                            {c.cif_dni && <p className="text-xs text-slate-400">{c.cif_dni}</p>}
+                            {c.email && <p className="text-xs text-slate-400">{c.email}</p>}
+                          </div>
                         </div>
                       </td>
-                      <td className="py-3 px-3">
-                        <div>
-                          <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            c.tipo_fiscal === "EMPRESA"
-                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-                              : c.tipo_fiscal === "AUTONOMO_ESPECIAL"
-                                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
-                                : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                      <td className="px-4 py-4">
+                        <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase ${c.tipo_fiscal === "EMPRESA"
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            : c.tipo_fiscal === "AUTONOMO_ESPECIAL"
+                              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                           }`}>
-                            {c.tipo_fiscal === "EMPRESA"
-                              ? "Empresa"
-                              : c.tipo_fiscal === "AUTONOMO_ESPECIAL"
-                                ? "Aut. Especial"
-                                : "Autónomo"}
-                          </div>
-                          <div className="text-xs text-slate-500 dark:text-gray-400 mt-1">
-                            {c.exento_impuestos ? (
-                              <span className="text-green-600 dark:text-green-300 font-medium">IRPF: Exento</span>
-                            ) : c.irpf_calculado !== null ? (
-                              `IRPF: ${c.irpf_calculado}%`
-                            ) : (
-                              "IRPF: -"
-                            )}
-                          </div>
-                        </div>
+                          {c.tipo_fiscal === "EMPRESA" ? "Empresa" : c.tipo_fiscal === "AUTONOMO_ESPECIAL" ? "Aut. Especial" : "Autónomo"}
+                        </span>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {c.exento_impuestos ? (
+                            <span className="text-emerald-600 font-bold">IRPF: Exento</span>
+                          ) : c.irpf_calculado !== null ? (
+                            `IRPF: ${c.irpf_calculado}%`
+                          ) : "IRPF: -"}
+                        </p>
                       </td>
-                      <td className="py-3 px-3">
-                        <div>
-                          <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            nivelInfo?.tipo === "MANAGER"
-                              ? "bg-purple-100 text-purple-700"
-                              : nivelInfo?.tipo === "SUPERVISOR"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-green-100 text-green-700"
+                      <td className="px-4 py-4">
+                        <span className={`px-3 py-1 rounded-xl text-xs font-bold ${nivelInfo?.tipo === "MANAGER"
+                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                            : nivelInfo?.tipo === "SUPERVISOR"
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                           }`}>
-                            {nivelInfo?.nombre || c.nivel}
-                          </div>
-                          <div className="text-xs text-slate-500 dark:text-gray-400 mt-1">
-                            {c.comision_personalizada_activa ? (
-                              <span className="font-medium text-amber-600 dark:text-amber-300">Personalizado</span>
-                            ) : nivelInfo ? (
-                              `Nivel estándar`
-                            ) : (
-                              "Por nivel"
-                            )}
-                          </div>
-                        </div>
+                          {nivelInfo?.nombre || c.nivel}
+                        </span>
+                        {c.comision_personalizada_activa && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 font-bold mt-1 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            Personalizado
+                          </p>
+                        )}
                       </td>
-                      <td className="py-3 px-3">
+                      <td className="px-4 py-4">
                         <div className="space-y-1">
                           {c.comision_personalizada_activa ? (
                             <div className="text-xs space-y-1">
                               <div className="flex items-center gap-1">
                                 <Phone className="w-3 h-3 text-blue-500" />
-                                <span>{c.telefonia_tipo === 'fijo' ? `€${c.telefonia_valor}` : `${(c.telefonia_valor * 100).toFixed(1)}%`}</span>
+                                <span className="text-slate-600 dark:text-slate-300">{c.telefonia_tipo === 'fijo' ? `€${c.telefonia_valor}` : `${(c.telefonia_valor * 100).toFixed(1)}%`}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Zap className="w-3 h-3 text-yellow-500" />
-                                <span>{c.energia_tipo === 'fijo' ? `€${c.energia_valor}` : `${(c.energia_valor * 100).toFixed(1)}%`}</span>
+                                <span className="text-slate-600 dark:text-slate-300">{c.energia_tipo === 'fijo' ? `€${c.energia_valor}` : `${(c.energia_valor * 100).toFixed(1)}%`}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Shield className="w-3 h-3 text-green-500" />
-                                <span>{c.seguridad_tipo === 'fijo' ? `€${c.seguridad_valor}` : `${(c.seguridad_valor * 100).toFixed(1)}%`}</span>
+                                <span className="text-slate-600 dark:text-slate-300">{c.seguridad_tipo === 'fijo' ? `€${c.seguridad_valor}` : `${(c.seguridad_valor * 100).toFixed(1)}%`}</span>
                               </div>
                             </div>
                           ) : nivelInfo ? (
                             <div className="text-xs space-y-1">
                               <div className="flex items-center gap-1">
                                 <Phone className="w-3 h-3 text-blue-500" />
-                                <span>{((nivelInfo.pct_telefonia || 0) * 100).toFixed(0)}%</span>
+                                <span className="text-slate-600 dark:text-slate-300">{((nivelInfo.pct_telefonia || 0) * 100).toFixed(0)}%</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Zap className="w-3 h-3 text-yellow-500" />
-                                <span>{((nivelInfo.pct_energia || 0) * 100).toFixed(0)}%</span>
+                                <span className="text-slate-600 dark:text-slate-300">{((nivelInfo.pct_energia || 0) * 100).toFixed(0)}%</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Shield className="w-3 h-3 text-green-500" />
-                                <span>€{(nivelInfo.fijo_seguridad || 0).toFixed(2)}</span>
+                                <span className="text-slate-600 dark:text-slate-300">€{(nivelInfo.fijo_seguridad || 0).toFixed(2)}</span>
                               </div>
                             </div>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="text-slate-700 dark:text-gray-200">{getZonaNombre(c.zona_id)}</div>
-                      </td>
-                      <td className="py-3 px-3">
-                        <div>
-                          <div className="text-xs text-slate-700 dark:text-gray-200">{c.telefono}</div>
-                          <div className="text-xs text-slate-500 dark:text-gray-400">{c.email}</div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3">
-                        <div>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            c.esta_activo 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' 
-                              : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
-                          }`}>
-                            {c.esta_activo ? (
-                              <>
-                                <User className="w-3 h-3 mr-1" />
-                                Activo
-                              </>
-                            ) : (
-                              <>
-                                <User className="w-3 h-3 mr-1" />
-                                Inactivo
-                              </>
-                            )}
-                          </span>
-                          {c.fecha_baja && (
-                            <div className="text-xs text-red-600 dark:text-red-300 mt-1">
-                              Baja: {c.fecha_baja}
-                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">Por nivel</span>
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-3">
-                        <div className="text-xs space-y-1">
-                          <div className="flex items-center gap-1">
-                            <span className="text-slate-600 dark:text-gray-300">{c.fecha_alta}</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-slate-500 dark:text-gray-400">
-                            <span>{diasAntiguedad} días</span>
-                          </div>
-                        </div>
+                      <td className="px-4 py-4">
+                        <span className="text-slate-700 dark:text-slate-300 font-medium">{getZonaNombre(c.zona_id)}</span>
                       </td>
-                      <td className="py-3 px-3">
-                        <div className="flex gap-1">
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-xl text-xs font-bold ${c.esta_activo
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                            : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+                          }`}>
+                          {c.esta_activo ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
+                          {c.esta_activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                        {c.fecha_baja && (
+                          <p className="text-xs text-rose-600 mt-1">Baja: {c.fecha_baja}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => setModalColaborador(c)}
-                            className="p-2 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-800/40"
+                            className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
                             title="Editar"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => eliminarColaborador(c.id)}
-                            className="p-2 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors dark:bg-rose-900/30 dark:text-rose-300 dark:hover:bg-rose-800/40"
+                            className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
                             title="Eliminar"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -374,31 +404,31 @@ export default function Colaboradores() {
               </tbody>
             </table>
           </div>
-        </Card>
-      ) : null}
+        </div>
+      )}
 
       {/* Estado vacío */}
       {colaboradoresProcesados.length === 0 && niveles.length > 0 && (
-        <Card className="text-center py-12">
+        <div className={`${glassStyles()} rounded-3xl p-12 text-center`}>
           <div className="max-w-md mx-auto">
-            <div className="w-16 h-16 bg-slate-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Plus className="w-8 h-8 text-slate-400 dark:text-gray-300" />
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <Users className="w-10 h-10 text-blue-500" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-gray-100 mb-2">
+            <h3 className="text-xl font-black text-slate-800 dark:text-white mb-2">
               No hay colaboradores registrados
             </h3>
-            <p className="text-slate-600 dark:text-gray-300 mb-6">
+            <p className="text-slate-500 dark:text-slate-400 mb-6">
               Añade tu primer colaborador para comenzar a gestionar comisiones y ventas.
             </p>
             <button
               onClick={() => setModalColaborador({})}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg dark:from-blue-600 dark:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg hover:shadow-blue-500/30 text-sm font-bold uppercase tracking-widest active:scale-95"
             >
               <Plus className="w-5 h-5" />
               Crear Primer Colaborador
             </button>
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Modal de edición/creación */}
@@ -414,4 +444,3 @@ export default function Colaboradores() {
     </div>
   );
 }
-
