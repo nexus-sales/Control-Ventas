@@ -20,18 +20,18 @@ export const LS_AUTH = "appcv.auth";
 // Sectores y familias de productos
 export const SECTORES = {
   TELEFONIA: "Telefonía",
-  SEGURIDAD: "Seguridad", 
+  SEGURIDAD: "Seguridad",
   ENERGIA: "Energía"
 };
 
 export const FAMILIAS_POR_SECTOR = {
   TELEFONIA: [
+    "Fibra",
     "Convergente",
-    "Only Fibra", 
-    "Only Móvil",
+    "Móvil",
+    "PBX",
     "Línea Adicional",
     "Terminal",
-    "PBX IP",
     "Extensiones IP"
   ],
   SEGURIDAD: [
@@ -42,9 +42,24 @@ export const FAMILIAS_POR_SECTOR = {
   ],
   ENERGIA: [
     "Solo Luz",
-    "Solo Gas", 
+    "Solo Gas",
     "Luz + Gas",
     "Tarifa PYME",
     "Tarifa Empresa"
   ]
 };
+
+// Estilos visuales por familia (Iconos y Colores)
+export const FAMILIA_STYLES = {
+  "Fibra": { icon: "Wifi", color: "blue" },
+  "Convergente": { icon: "Zap", color: "purple" },
+  "Móvil": { icon: "Smartphone", color: "green" },
+  "PBX": { icon: "PhoneCall", color: "indigo" },
+  "Alarma": { icon: "Shield", color: "red" },
+  "Luz": { icon: "Lightbulb", color: "yellow" },
+  "Gas": { icon: "Flame", color: "orange" },
+  "default": { icon: "Package", color: "slate" }
+};
+
+// Clave de seguridad para administración
+export const CLAVE_GERENTE = "@LMB1828re"; // Cambia esta clave aquí
