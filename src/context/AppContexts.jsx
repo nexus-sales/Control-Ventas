@@ -44,13 +44,13 @@ export function AuthProvider({ children }) {
 
   const signIn = useCallback(async (email, password) => {
     if (AUTH_BYPASS) return { user: MOCK_USER, error: null };
-    
+
     // Validación básica
     if (email === 'admin@test.com' && password === 'admin123') {
       setUser(MOCK_USER);
       return { user: MOCK_USER, error: null };
     }
-    
+
     return { error: { message: 'Credenciales incorrectas' } };
   }, []);
 
@@ -113,23 +113,23 @@ export function DataProvider({ children }) {
 
   // Función para cargar datos desde localStorage
   const loadAllData = useCallback(async () => {
-    console.log('📊 DataProvider: Cargando datos...');
+    // Debug: DataProvider cargando datos
     setIsDataLoading(true);
 
     try {
       const newData = {};
-      
+
       // Cargar cada colección
       Object.keys(STORAGE_KEYS).forEach(collection => {
         const key = STORAGE_KEYS[collection];
         const stored = getFromStorage(key, []);
         newData[collection] = Array.isArray(stored) ? stored : [];
-        console.log(`📊 ${collection}: ${newData[collection].length} items`);
+        // Debug: collection loaded
       });
 
       setData(newData);
       setDataInitialized(true);
-      console.log('✅ DataProvider: Datos cargados correctamente');
+      // Debug: datos cargados correctamente
 
     } catch (error) {
       console.error('❌ DataProvider: Error cargando datos:', error);
@@ -157,10 +157,10 @@ export function DataProvider({ children }) {
         const currentData = prev[collection] || [];
         const newData = typeof update === 'function' ? update(currentData) : update;
         const finalData = Array.isArray(newData) ? newData : [];
-        
+
         // Guardar en localStorage
         saveCollectionData(collection, finalData);
-        
+
         return {
           ...prev,
           [collection]: finalData
@@ -186,8 +186,8 @@ export function DataProvider({ children }) {
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
-    
-    console.log('📊 DataProvider: Inicializando...');
+
+    // Debug: DataProvider inicializando
     loadAllData();
   }, [loadAllData]);
 
@@ -293,12 +293,12 @@ export function AppProvider({ children }) {
   const addNotification = useCallback((notification) => {
     const id = Date.now().toString();
     setNotifications(prev => [...prev, { ...notification, id }]);
-    
+
     // Auto-remove después de 5 segundos
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 5000);
-    
+
     return id;
   }, []);
 

@@ -74,8 +74,8 @@ export default function ConfigSections({ zonas = [] }) {
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
                 className={`flex items-center gap-3 px-5 py-2.5 rounded-lg font-bold transition-all ${isActive
-                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
-                    : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-gray-800'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
+                  : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-gray-800'
                   }`}
               >
                 <span className="text-xl">{section.icon}</span>
@@ -97,8 +97,20 @@ export default function ConfigSections({ zonas = [] }) {
               </div>
 
               <div className="grid lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 space-y-6">
                   <EmpresaForm empresa={empresa} onChange={handleEmpresaChange} />
+                  <div className="flex justify-end">
+                    <button
+                      className="px-6 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg flex items-center gap-2"
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('empresaDataUpdated', { detail: empresa }));
+                        alert('Datos de empresa guardados correctamente');
+                      }}
+                    >
+                      <span className="text-xl">💾</span>
+                      Guardar Cambios
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-6">
                   <LogoUploader

@@ -49,9 +49,9 @@ const generateReadableId = (prefix, name, existingIds = new Set()) => {
   globalIdCounter += 1;
   const now = Date.now();
   const uniqueSuffix = `${now.toString().slice(-8)}_${globalIdCounter.toString().padStart(4, '0')}`;
-  
+
   let candidateId = `${prefix}_${nameBase}_${uniqueSuffix}`;
-  
+
   // Verificación adicional contra existingIds
   let attempt = 1;
   while (existingIds.has(candidateId)) {
@@ -63,13 +63,12 @@ const generateReadableId = (prefix, name, existingIds = new Set()) => {
       break;
     }
   }
-  
+
   // Registrar el nuevo ID
   existingIds.add(candidateId);
-  
-  // Log para debug (opcional)
-  console.log(`✅ ID único generado: ${candidateId}`);
-  
+
+  // ID único generado: candidateId
+
   return candidateId;
 };
 
@@ -99,33 +98,33 @@ export function useImportGestion({
 } = {}) {
   // =================== CONTEXTO Y DATOS ===================
 
-  const { 
-    data, 
-    setVentas, 
-    setProductos, 
-    setOperadores, 
-    setColaboradores, 
-    setZonas, 
+  const {
+    data,
+    setVentas,
+    setProductos,
+    setOperadores,
+    setColaboradores,
+    setZonas,
   } = useData();
 
   // 🎯 MEJORA: Memoizar datos para evitar warnings de ESLint
-  const productos = useMemo(() => 
-    Array.isArray(data?.productos) ? data.productos : [], 
+  const productos = useMemo(() =>
+    Array.isArray(data?.productos) ? data.productos : [],
     [data?.productos]
   );
-  
-  const operadores = useMemo(() => 
-    Array.isArray(data?.operadores) ? data.operadores : [], 
+
+  const operadores = useMemo(() =>
+    Array.isArray(data?.operadores) ? data.operadores : [],
     [data?.operadores]
   );
-  
-  const colaboradores = useMemo(() => 
-    Array.isArray(data?.colaboradores) ? data.colaboradores : [], 
+
+  const colaboradores = useMemo(() =>
+    Array.isArray(data?.colaboradores) ? data.colaboradores : [],
     [data?.colaboradores]
   );
-  
-  const zonas = useMemo(() => 
-    Array.isArray(data?.zonas) ? data.zonas : [], 
+
+  const zonas = useMemo(() =>
+    Array.isArray(data?.zonas) ? data.zonas : [],
     [data?.zonas]
   );
 
@@ -486,13 +485,13 @@ export function useImportGestion({
             zonas: 'zona',
             operadores: 'oper'
           };
-          
+
           const newId = generateReadableId(
-            prefixMap[type], 
-            name, 
+            prefixMap[type],
+            name,
             indexers.existingIds
           );
-          
+
           const baseData = {
             id: newId,
             nombre: name.trim(),
@@ -500,7 +499,7 @@ export function useImportGestion({
           };
 
           // Agregar datos específicos por tipo
-          switch(type) {
+          switch (type) {
             case 'colaboradores':
               return {
                 ...baseData,
@@ -638,8 +637,7 @@ export function useImportGestion({
             erroresDetallados.push({
               fila: index + 1,
               errores: [
-                `No se pudo resolver: ${
-                  !colaborador_id ? "colaborador" : "zona"
+                `No se pudo resolver: ${!colaborador_id ? "colaborador" : "zona"
                 }`,
               ],
             });
@@ -702,12 +700,7 @@ export function useImportGestion({
 
         // 🎯 MEJORA: Auto-creación con orden correcto y mejor logging
         if (state.crearAutomaticamente && autoCreacionDisponible) {
-          console.log('🎯 Creando entidades con IDs legibles:', {
-            operadores: Object.keys(operadoresToCreateByName).length,
-            productos: Object.keys(productosToCreateByName).length,
-            zonas: Object.keys(zonasToCreateByName).length,
-            colaboradores: Object.keys(colaboradoresToCreateByName).length,
-          });
+          // Auto-creación de entidades con IDs legibles
 
           if (setOperadores && Object.keys(operadoresToCreateByName).length > 0) {
             setOperadores((prev) => [
@@ -776,14 +769,7 @@ export function useImportGestion({
         setState((prev) => ({ ...prev, resumenImportacion: resumen }));
 
         // 🎯 NUEVO: Log de resultado para debug
-        console.log('✅ Importación completada con IDs legibles:', {
-          ventasCreadas: resumen.ventasCreadas,
-          ejemplosIds: {
-            productos: resumen.productosIds.slice(0, 3),
-            colaboradores: resumen.colaboradoresIds.slice(0, 3),
-            zonas: resumen.zonasIds.slice(0, 3),
-          }
-        });
+        // Importación completada exitosamente
 
         return resumen;
       } finally {

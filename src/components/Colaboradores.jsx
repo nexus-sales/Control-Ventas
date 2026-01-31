@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
 import {
   AlertCircle, Plus, Phone, Zap, Shield, User, Edit3, Trash2,
-  Users, UserCheck, UserX, Sparkles, Search, Filter
+  Users, UserCheck, UserX, Sparkles, Search
 } from "lucide-react";
 import { useData } from "../context/AppContexts";
 import { ColaboradorEditModal } from "./colaboradores/index.js";
 import { glassStyles, cardHoverStyles } from "../utils/designUtils";
+import { procesarColaboradores, filtrarColaboradores, getZonaNombre, getNivelInfo } from "./colaboradores/colaboradoresUtils";
 
 // ==========================================
 // COMPONENTE: Tarjeta de Estadística Premium
@@ -44,58 +45,11 @@ export default function Colaboradores() {
 
   // Calcular IRPF y filtrar colaboradores
   const colaboradoresProcesados = useMemo(() => {
-    const normalizarTipoFiscal = (tipo = "") =>
-      tipo
-        .toString()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toUpperCase()
-        .replace(/\s+/g, "_");
-
-    return colaboradores.map((c) => {
-      const tipoFiscal = normalizarTipoFiscal(c.tipo_fiscal);
-      const esEmpresa = tipoFiscal === "EMPRESA";
-      const esAutonomoEspecial = tipoFiscal === "AUTONOMO_ESPECIAL";
-      const esAutonomo = tipoFiscal === "AUTONOMO";
-
-      let irpf = null;
-      if (esAutonomo) {
-        const fechaAlta = new Date(c.fecha_alta);
-        const ahora = new Date();
-        const añosTranscurridos = (ahora - fechaAlta) / (1000 * 60 * 60 * 24 * 365.25);
-        irpf = añosTranscurridos < 2 ? 7 : 15;
-      }
-
-      return {
-        ...c,
-        irpf_calculado: irpf,
-        exento_impuestos: esEmpresa || esAutonomoEspecial,
-        esta_activo: !c.fecha_baja || new Date(c.fecha_baja) > new Date(),
-      };
-    });
+    return procesarColaboradores(colaboradores);
   }, [colaboradores]);
 
   const colaboradoresFiltrados = useMemo(() => {
-    let filtered = colaboradoresProcesados;
-
-    // Filtro por búsqueda
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(c =>
-        c.nombre?.toLowerCase().includes(term) ||
-        c.cif_dni?.toLowerCase().includes(term) ||
-        c.email?.toLowerCase().includes(term)
-      );
-    }
-
-    // Filtro por estado
-    if (filtroEstado === "ACTIVOS") {
-      filtered = filtered.filter(c => c.esta_activo);
-    } else if (filtroEstado === "INACTIVOS") {
-      filtered = filtered.filter(c => !c.esta_activo);
-    }
-
-    return filtered;
+    return filtrarColaboradores(colaboradoresProcesados, { searchTerm, filtroEstado });
   }, [colaboradoresProcesados, filtroEstado, searchTerm]);
 
   const handleModalColaboradorSave = (colaborador, shouldClose) => {
@@ -118,14 +72,6 @@ export default function Colaboradores() {
     if (window.confirm("¿Estás seguro de que quieres eliminar este colaborador? Esta acción no se puede deshacer.")) {
       setColaboradores(prev => prev.filter((c) => c.id !== id));
     }
-  };
-
-  const getZonaNombre = (zona_id) => {
-    return zonas.find((z) => z.id === zona_id)?.nombre || "Sin asignar";
-  };
-
-  const getNivelInfo = (nivelId) => {
-    return niveles.find((n) => n.id === nivelId) || null;
   };
 
   // Loading state
@@ -245,8 +191,8 @@ export default function Colaboradores() {
                   key={estado}
                   onClick={() => setFiltroEstado(estado)}
                   className={`px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all ${filtroEstado === estado
-                      ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30"
-                      : "bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                    ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30"
+                    : "bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                     }`}
                 >
                   {estado.charAt(0) + estado.slice(1).toLowerCase()}
@@ -279,7 +225,7 @@ export default function Colaboradores() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                 {colaboradoresFiltrados.map((c) => {
-                  const nivelInfo = getNivelInfo(c.nivel);
+                  const nivelInfo = getNivelInfo(niveles, c.nivel);
 
                   return (
                     <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
@@ -297,10 +243,10 @@ export default function Colaboradores() {
                       </td>
                       <td className="px-4 py-4">
                         <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase ${c.tipo_fiscal === "EMPRESA"
-                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                            : c.tipo_fiscal === "AUTONOMO_ESPECIAL"
-                              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                          : c.tipo_fiscal === "AUTONOMO_ESPECIAL"
+                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                           }`}>
                           {c.tipo_fiscal === "EMPRESA" ? "Empresa" : c.tipo_fiscal === "AUTONOMO_ESPECIAL" ? "Aut. Especial" : "Autónomo"}
                         </span>
@@ -314,10 +260,10 @@ export default function Colaboradores() {
                       </td>
                       <td className="px-4 py-4">
                         <span className={`px-3 py-1 rounded-xl text-xs font-bold ${nivelInfo?.tipo === "MANAGER"
-                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                            : nivelInfo?.tipo === "SUPERVISOR"
-                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                          : nivelInfo?.tipo === "SUPERVISOR"
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                           }`}>
                           {nivelInfo?.nombre || c.nivel}
                         </span>
@@ -366,12 +312,12 @@ export default function Colaboradores() {
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <span className="text-slate-700 dark:text-slate-300 font-medium">{getZonaNombre(c.zona_id)}</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-medium">{getZonaNombre(zonas, c.zona_id)}</span>
                       </td>
                       <td className="px-4 py-4">
                         <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-xl text-xs font-bold ${c.esta_activo
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                            : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                          : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
                           }`}>
                           {c.esta_activo ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
                           {c.esta_activo ? 'Activo' : 'Inactivo'}

@@ -7,7 +7,27 @@ import { crearCampoPersonalizado, ejemploCampoPersonalizado } from '../../../dat
 import Card from "../../ui/Card";
 
 const CustomFieldsSection = React.memo(() => {
-    const [campos, setCampos] = useState([ejemploCampoPersonalizado]);
+    // Cargar campos desde localStorage o usar ejemplo por defecto
+    const [campos, setCampos] = useState(() => {
+        try {
+            const saved = localStorage.getItem("customFields");
+            return saved ? JSON.parse(saved) : [ejemploCampoPersonalizado];
+        } catch (e) {
+            console.error("Error cargando campos personalizados:", e);
+            return [ejemploCampoPersonalizado];
+        }
+    });
+
+    // Guardar cambios en localStorage
+    React.useEffect(() => {
+        try {
+            localStorage.setItem("customFields", JSON.stringify(campos));
+            // Disparar evento para que otros componentes (como VentaFormModal) se enteren
+            window.dispatchEvent(new Event('customFieldsUpdated'));
+        } catch (e) {
+            console.error("Error guardando campos personalizados:", e);
+        }
+    }, [campos]);
     const [nuevoCampo, setNuevoCampo] = useState({
         nombre: '',
         tipo: 'texto',
@@ -206,8 +226,8 @@ const CustomFieldsSection = React.memo(() => {
                                         <button
                                             onClick={() => handleToggleActive(campo.id)}
                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black transition-colors ${campo.activo
-                                                    ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                                                    : 'bg-slate-200 dark:bg-gray-800 text-slate-500 dark:text-gray-500'
+                                                ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                                                : 'bg-slate-200 dark:bg-gray-800 text-slate-500 dark:text-gray-500'
                                                 }`}
                                         >
                                             {campo.activo ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}

@@ -2,7 +2,7 @@
 // VERSIÓN OPTIMIZADA - Consolidación final del módulo ventas
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useData } from '../../context/AppContexts';
+import { useData, useAuth } from '../../context/AppContexts';
 import { computeVenta } from '../../utils/calculos';
 import { useVentasGestion } from '../../hooks/useVentasGestion';
 import { usePagination } from '../../hooks/usePagination';
@@ -318,7 +318,11 @@ export default function VentasPage() {
   // VARIABLES COMPUTADAS
   // ==========================================
 
-  const isAdmin = true; // TODO: Obtener del contexto de usuario
+  // Verificar permisos de administrador
+  const { user } = useAuth();
+  const isAdmin = useMemo(() => {
+    return user?.role === 'admin' || user?.email === 'admin@test.com' || user?.is_admin === true;
+  }, [user]);
 
   // Verificar si hay filtros activos
   const hasActiveFilters = useMemo(() =>

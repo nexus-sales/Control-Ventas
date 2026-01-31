@@ -6,17 +6,20 @@ import { LayoutShell } from "./components/layout/LayoutShell";
 import Loading from "./components/common/Loading";
 import StatusWidgets from "./components/widgets/StatusWidgets";
 
+// Componentes cargados inmediatamente (críticos para la primera carga)
 import Dashboard from "./components/Dashboard";
-import VentasPage from "./components/ventas/VentasPage";
-const LiquidacionesPage = lazy(() => import("./components/LiquidacionesPage"));
-import Colaboradores from "./components/Colaboradores";
-import Reglas from "./components/Reglas";
-import ImportExcelMapperWrapper from "./components/ImportExcelMapperWrapper";
-import Config from "./components/Config.jsx";
 import LoginScreen from "./components/auth/LoginScreen";
 import ResetPasswordScreen from "./components/auth/ResetPasswordScreen";
-import Administracion from "./components/admin/Administracion.jsx";
-import GestionSections from "./components/gestion/GestionSections";
+
+// Lazy loading para componentes pesados (mejora el rendimiento inicial)
+const VentasPage = lazy(() => import("./components/ventas/VentasPage"));
+const LiquidacionesPage = lazy(() => import("./components/LiquidacionesPage"));
+const Colaboradores = lazy(() => import("./components/Colaboradores"));
+const Reglas = lazy(() => import("./components/Reglas"));
+const ImportExcelMapperWrapper = lazy(() => import("./components/ImportExcelMapperWrapper"));
+const Config = lazy(() => import("./components/Config.jsx"));
+const Administracion = lazy(() => import("./components/admin/Administracion.jsx"));
+const GestionSections = lazy(() => import("./components/gestion/GestionSections"));
 
 // Componente Layout que envuelve las rutas principales
 function MainLayout() {
@@ -36,26 +39,19 @@ function AppContent() {
         {/* Rutas públicas */}
         <Route path="/login" element={<LoginScreen />} />
         <Route path="/reset-password" element={<ResetPasswordScreen />} />
-        
+
         {/* Rutas principales con layout */}
-        <Route path="/" element={<MainLayout />}> 
+        <Route path="/" element={<MainLayout />}>
           <Route index element={<Dashboard />} />
-          <Route path="ventas" element={<VentasPage />} />
-          <Route 
-            path="liquidaciones" 
-            element={
-              <Suspense fallback={<Loading />}>
-                <LiquidacionesPage />
-              </Suspense>
-            } 
-          />
-          <Route path="colaboradores" element={<Colaboradores />} />
-          <Route path="reglas" element={<Reglas />} />
-          <Route path="importar" element={<ImportExcelMapperWrapper />} />
-          <Route path="config" element={<Config />} />
-          <Route path="gestion" element={<GestionSections />} />
-          <Route path="admin/administracion" element={<Administracion />} />
-          
+          <Route path="ventas" element={<Suspense fallback={<Loading />}><VentasPage /></Suspense>} />
+          <Route path="liquidaciones" element={<Suspense fallback={<Loading />}><LiquidacionesPage /></Suspense>} />
+          <Route path="colaboradores" element={<Suspense fallback={<Loading />}><Colaboradores /></Suspense>} />
+          <Route path="reglas" element={<Suspense fallback={<Loading />}><Reglas /></Suspense>} />
+          <Route path="importar" element={<Suspense fallback={<Loading />}><ImportExcelMapperWrapper /></Suspense>} />
+          <Route path="config" element={<Suspense fallback={<Loading />}><Config /></Suspense>} />
+          <Route path="gestion" element={<Suspense fallback={<Loading />}><GestionSections /></Suspense>} />
+          <Route path="admin/administracion" element={<Suspense fallback={<Loading />}><Administracion /></Suspense>} />
+
           {/* Redirección por defecto */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
