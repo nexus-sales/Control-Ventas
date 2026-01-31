@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Search, Bell, Download } from "lucide-react";
 import DarkModeToggle from "../ui/DarkModeToggle";
-import { useData } from "../../context/AppContexts";
+import { useData, useApp } from "../../context/AppContexts";
 
 function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -34,6 +34,7 @@ function usePWAInstall() {
 export function Header() {
   const { installable, promptInstall } = usePWAInstall();
   const { data } = useData();
+  const { isOnline } = useApp();
   const [empresaLocal, setEmpresaLocal] = useState(null);
 
   useEffect(() => {
@@ -108,15 +109,59 @@ export function Header() {
             placeholder="Buscar… (Ctrl+/)"
           />
         </div>
-        
+
+        {/* Log de estado de sincronización dinámico */}
+        <div
+          className="flex items-center gap-2 px-4 py-2 rounded-2xl shadow-md"
+          style={{
+            minWidth: 170,
+            background: '#23293C',
+            transition: 'background 0.3s',
+            opacity: isOnline ? 1 : 0.85
+          }}
+        >
+          <div
+            className="flex items-center justify-center w-10 h-10 rounded-xl"
+            style={{
+              background: isOnline ? '#6FCF97' : '#F2994A',
+              transition: 'background 0.3s'
+            }}
+          >
+            {isOnline ? (
+              // Icono WiFi online
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 8.5C7.5 4.5 16.5 4.5 21.5 8.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M5.5 12C9 9 15 9 18.5 12" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M8.5 15.5C10 14.5 14 14.5 15.5 15.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                <circle cx="12" cy="18" r="1.5" fill="#fff"/>
+              </svg>
+            ) : (
+              // Icono WiFi offline (tachado)
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 8.5C7.5 4.5 16.5 4.5 21.5 8.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M5.5 12C9 9 15 9 18.5 12" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M8.5 15.5C10 14.5 14 14.5 15.5 15.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                <circle cx="12" cy="18" r="1.5" fill="#fff"/>
+                <line x1="6" y1="22" x2="22" y2="6" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            )}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs font-bold tracking-widest text-[#AEB6C8]" style={{ letterSpacing: 2 }}>STATUS</span>
+            <span className="text-lg font-extrabold text-white leading-5">
+              {isOnline ? 'Sincronizado' : 'Sin conexión'}
+            </span>
+          </div>
+        </div>
+
         {/* Botón de notificaciones */}
         <button className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-gray-700 text-slate-600 dark:text-gray-400 transition-colors duration-200">
           <Bell className="w-5 h-5" />
         </button>
-        
+
         {/* Botón de dark mode */}
         <DarkModeToggle />
-        
+
         {/* Botón de instalación PWA */}
         {installable && (
           <button
