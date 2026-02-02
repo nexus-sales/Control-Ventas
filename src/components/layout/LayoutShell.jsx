@@ -4,7 +4,7 @@ import {
   Home, TrendingUp, Users, Settings, FileSpreadsheet, PiggyBank, Target,
   ChevronLeft, ChevronRight, Bell, Search, LogOut, Database
 } from "lucide-react";
-import { useAuth } from "../../context/AppContexts";
+import { useAuth, useApp } from "../../context/AppContexts";
 import StatusWidgets from "../widgets/StatusWidgets";
 import DarkModeToggle from "../ui/DarkModeToggle";
 import { LS_KEYS } from "../../utils/constants";
@@ -14,6 +14,7 @@ export function LayoutShell() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(() => getFromStorage(LS_KEYS.ui, { collapsed: false }).collapsed);
   const { user, logout } = useAuth();
+  const { isOnline } = useApp();
 
   const toggle = () => {
     setCollapsed((c) => {
@@ -122,6 +123,49 @@ export function LayoutShell() {
                   aria-label="Buscar"
                 />
               </div>
+
+              {/* Log de estado de sincronización dinámico */}
+              <div
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-sm"
+                style={{
+                  minWidth: 150,
+                  background: '#23293C',
+                  transition: 'background 0.3s',
+                  opacity: isOnline ? 1 : 0.85
+                }}
+              >
+                <div
+                  className="flex items-center justify-center w-7 h-7 rounded-lg"
+                  style={{
+                    background: isOnline ? '#6FCF97' : '#F2994A',
+                    transition: 'background 0.3s'
+                  }}
+                >
+                  {isOnline ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M2.5 8.5C7.5 4.5 16.5 4.5 21.5 8.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M5.5 12C9 9 15 9 18.5 12" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M8.5 15.5C10 14.5 14 14.5 15.5 15.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                      <circle cx="12" cy="18" r="1.5" fill="#fff"/>
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M2.5 8.5C7.5 4.5 16.5 4.5 21.5 8.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M5.5 12C9 9 15 9 18.5 12" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M8.5 15.5C10 14.5 14 14.5 15.5 15.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                      <circle cx="12" cy="18" r="1.5" fill="#fff"/>
+                      <line x1="6" y1="22" x2="22" y2="6" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                  )}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-bold tracking-widest text-[#AEB6C8]" style={{ letterSpacing: 1.2 }}>STATUS</span>
+                  <span className="text-sm font-extrabold text-white leading-3">
+                    {isOnline ? 'Sincronizado' : 'Offline'}
+                  </span>
+                </div>
+              </div>
+
               <DarkModeToggle />
               <button
                 className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-gray-700 text-slate-600 dark:text-gray-400 transition-colors"
