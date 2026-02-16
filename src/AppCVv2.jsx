@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { AppContextProvider } from "./context/AppContexts";
+import { CorporateThemeProvider } from "./context/CorporateTheme";
 import { LayoutShell } from "./components/layout/LayoutShell";
 import Loading from "./components/common/Loading";
 import StatusWidgets from "./components/widgets/StatusWidgets";
@@ -64,9 +65,11 @@ function AppContent() {
 export default function AppCVv2() {
   return (
     <AppContextProvider>
-      <ErrorBoundary>
-        <AppContent />
-      </ErrorBoundary>
+      <CorporateThemeProvider>
+        <ErrorBoundary>
+          <AppContent />
+        </ErrorBoundary>
+      </CorporateThemeProvider>
     </AppContextProvider>
   );
 }

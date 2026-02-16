@@ -1,22 +1,18 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Edit3, Eye, X, Check, Package, CreditCard as CardIcon } from 'lucide-react';
+import { Edit3, Eye, X, Check, Package, CreditCard as CardIcon, ShieldCheck, Zap, MoreHorizontal, User, MapPin, Calendar, ArrowRight } from 'lucide-react';
 import { glassStyles, sectionTitleStyles } from '../../utils/designUtils';
-import '../../styles/table-optimizations.css';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '../../lib/utils';
+import { BorderBeam } from '../ui/BorderBeam';
 
-// Función para formatear fecha
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
   try {
     if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) return dateStr;
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  } catch {
-    return dateStr;
-  }
+    return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch { return dateStr; }
 };
 
 const formatCurrency = (value) => {
@@ -30,9 +26,6 @@ const formatCurrency = (value) => {
   });
 };
 
-/**
- * 🎯 COMPONENTE PREMIUM: VentasTable con Glassmorphism
- */
 export function VentasTable({
   ventasCalc = [],
   productos = [],
@@ -47,21 +40,12 @@ export function VentasTable({
   onView,
   onDelete,
   onActivate,
-  onDefinePvp,
   isAdmin = true,
-  currentPage = 1,
-  pageSize = 25,
-  totalItems = 0,
-  totalPages = 1,
-  onPageChange,
   resolveProductoName,
   resolveColaboradorName,
   resolveZonaName,
   resolveOperadorName,
 }) {
-  const [ariaMessage, setAriaMessage] = useState("");
-
-  // Memoizar indexadores
   const indexers = useMemo(() => ({
     productos: Object.fromEntries(productos.map(p => [p.id, p])),
     colaboradores: Object.fromEntries(colaboradores.map(c => [c.id, c])),
@@ -69,409 +53,234 @@ export function VentasTable({
     operadores: Object.fromEntries(operadores.map(o => [o.id, o])),
   }), [productos, colaboradores, zonas, operadores]);
 
-  // Función para generar key único
-  const generateUniqueKey = useCallback((venta, index) => {
-    const baseKey = `venta-${index}`;
-    const idPart = venta.id ? `id-${venta.id}` : `no-id`;
-    const clientePart = venta.cliente ? `client-${venta.cliente.slice(0, 10)}` : 'no-client';
-    const fechaPart = venta.fecha ? `date-${venta.fecha}` : 'no-date';
-
-    const combinedStr = `${idPart}-${clientePart}-${fechaPart}`;
-    const hash = combinedStr.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-
-    return `${baseKey}-${Math.abs(hash)}`;
-  }, []);
-
-  // Helpers para mostrar nombres
   const getNombreProducto = useCallback((venta) => {
-    if (venta.productoNombre && venta.productoNombre !== venta.producto_id) {
-      return venta.productoNombre;
-    }
-
-    if (resolveProductoName) {
-      const resolved = resolveProductoName(venta.producto_id);
-      if (resolved && resolved !== venta.producto_id) {
-        return resolved;
-      }
-    }
-
-    const producto = indexers.productos[venta.producto_id];
-    if (producto?.nombre) {
-      return producto.nombre;
-    }
-
-    const productoFallback = productos.find(p => p?.id === venta.producto_id);
-    if (productoFallback?.nombre) {
-      return productoFallback.nombre;
-    }
-
-    const displayId = venta.producto_id || "";
-    if (displayId.startsWith('prod_')) {
-      const parts = displayId.split('_');
-      return parts[1] || displayId;
-    }
-
-    return displayId || "Sin producto";
-  }, [resolveProductoName, indexers.productos, productos]);
-
-  const getNombreZona = useCallback((venta) => {
-    if (venta.zonaNombre && venta.zonaNombre !== venta.zona_id) {
-      return venta.zonaNombre;
-    }
-
-    if (resolveZonaName) {
-      const resolved = resolveZonaName(venta.zona_id);
-      if (resolved && resolved !== venta.zona_id) {
-        return resolved;
-      }
-    }
-
-    const zona = indexers.zonas[venta.zona_id];
-    if (zona?.nombre) {
-      return zona.nombre;
-    }
-
-    const zonaFallback = zonas.find(z => z?.id === venta.zona_id);
-    if (zonaFallback?.nombre) {
-      return zonaFallback.nombre;
-    }
-
-    const displayId = venta.zona_id || "";
-    if (displayId.startsWith('zona_')) {
-      const parts = displayId.split('_');
-      return parts[1] || displayId;
-    }
-
-    return displayId || "Sin zona";
-  }, [resolveZonaName, indexers.zonas, zonas]);
-
-  const getNombreColaborador = useCallback((venta) => {
-    if (venta.colaboradorNombre && venta.colaboradorNombre !== venta.colaborador_id) {
-      return venta.colaboradorNombre;
-    }
-
-    if (resolveColaboradorName) {
-      const resolved = resolveColaboradorName(venta.colaborador_id);
-      if (resolved && resolved !== venta.colaborador_id) {
-        return resolved;
-      }
-    }
-
-    const colaborador = indexers.colaboradores[venta.colaborador_id];
-    if (colaborador?.nombre) {
-      return colaborador.nombre;
-    }
-
-    const colaboradorFallback = colaboradores.find(c => c?.id === venta.colaborador_id);
-    if (colaboradorFallback?.nombre) {
-      return colaboradorFallback.nombre;
-    }
-
-    const displayId = venta.colaborador_id || "";
-    if (displayId.startsWith('colab_') || displayId.startsWith('c_')) {
-      const parts = displayId.split('_');
-      return parts[1] || displayId;
-    }
-
-    return displayId || "Sin colaborador";
-  }, [resolveColaboradorName, indexers.colaboradores, colaboradores]);
-
-  const getNombreOperador = useCallback((venta) => {
-    if (venta.operadorNombre) {
-      return venta.operadorNombre;
-    }
-
-    if (resolveOperadorName) {
-      const resolved = resolveOperadorName(venta.operador_id);
-      if (resolved) {
-        return resolved;
-      }
-    }
-
-    let operador = indexers.operadores[venta.operador_id];
-
-    if (!operador && venta.producto_id) {
-      const producto = indexers.productos[venta.producto_id];
-      if (producto?.operador_id) {
-        operador = indexers.operadores[producto.operador_id];
-      }
-    }
-
-    if (operador?.nombre) {
-      return operador.nombre;
-    }
-
-    if (venta.operador_id) {
-      const operadorFallback = operadores.find(o => o?.id === venta.operador_id);
-      if (operadorFallback?.nombre) {
-        return operadorFallback.nombre;
-      }
-    }
-
-    const displayId = venta.operador_id || "";
-    if (displayId.startsWith('oper_') || displayId.startsWith('op_')) {
-      const parts = displayId.split('_');
-      return parts[1] || displayId;
-    }
-
-    return displayId || "-";
-  }, [resolveOperadorName, indexers, operadores]);
-
-  // PVP con resolución inteligente
-  const getPvpVenta = useCallback((venta) => {
-    if (venta.pvpResuelto > 0) {
-      return venta.pvpResuelto;
-    }
-
-    if (venta.pvp > 0) {
-      return venta.pvp;
-    }
-
-    const producto = indexers.productos[venta.producto_id];
-    if (producto?.pvp > 0) {
-      return producto.pvp;
-    }
-
-    if (venta._calc?.detalle?.producto?.pvp > 0) {
-      return venta._calc.detalle.producto.pvp;
-    }
-
-    return 0;
+    if (venta.productoNombre && venta.productoNombre !== venta.producto_id) return venta.productoNombre;
+    return indexers.productos[venta.producto_id]?.nombre || venta.producto_id || "Sin producto";
   }, [indexers.productos]);
 
-  // Función para obtener estilo del estado
+  const getNombreZona = useCallback((venta) => {
+    if (venta.zonaNombre && venta.zonaNombre !== venta.zona_id) return venta.zonaNombre;
+    return indexers.zonas[venta.zona_id]?.nombre || venta.zona_id || "Global";
+  }, [indexers.zonas]);
+
+  const getNombreColaborador = useCallback((venta) => {
+    if (venta.colaboradorNombre && venta.colaboradorNombre !== venta.colaborador_id) return venta.colaboradorNombre;
+    return indexers.colaboradores[venta.colaborador_id]?.nombre || venta.colaborador_id || "-";
+  }, [indexers.colaboradores]);
+
+  const getNombreOperador = useCallback((venta) => {
+    if (venta.operadorNombre) return venta.operadorNombre;
+    return indexers.operadores[venta.operador_id]?.nombre || venta.operador_id || "-";
+  }, [indexers.operadores]);
+
   const getEstadoStyle = useCallback((estado) => {
     const estilos = {
-      ACTIVO: "bg-emerald-100/50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800",
-      PENDIENTE: "bg-amber-100/50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800",
-      "PENDIENTE VALIDAR": "bg-yellow-100/50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800",
-      SCORING: "bg-blue-100/50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800",
-      INCIDENCIA: "bg-orange-100/50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-200 dark:border-orange-800",
-      INSTALACION: "bg-indigo-100/50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800",
-      ENVIADA: "bg-cyan-100/50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800",
-      "PENDIENTE INSTALACION": "bg-purple-100/50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800",
-      CITADA: "bg-lime-100/50 text-lime-700 dark:bg-lime-900/30 dark:text-lime-400 border border-lime-200 dark:border-lime-800",
-      TRAMITACION: "bg-sky-100/50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 border border-sky-200 dark:border-sky-800",
-      CANCELADA: "bg-red-100/50 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800",
-      BAJA: "bg-gray-100/50 text-gray-700 dark:bg-gray-700/30 dark:text-gray-400 border border-gray-200 dark:border-gray-800",
-      "OFERTA FIRMADA": "bg-green-100/50 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800",
+      ACTIVO: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)]",
+      PENDIENTE: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+      SCORING: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      INCIDENCIA: "bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.15)]",
+      CANCELADA: "bg-slate-500/10 text-slate-500 border-slate-500/20 grayscale",
     };
-    return estilos[estado] || "bg-slate-100/50 text-slate-700 dark:bg-gray-700/30 dark:text-gray-400";
+    return estilos[estado] || "bg-slate-500/10 text-slate-500 border-slate-500/20";
   }, []);
 
-  // Feedback ARIA para cambios de página
-  const handlePageChange = useCallback((newPage) => {
-    if (onPageChange) onPageChange(newPage);
-    setAriaMessage(`Página ${newPage}`);
-  }, [onPageChange]);
-
-  // Verificar si hay datos válidos
-  const hasValidData = useMemo(() =>
-    ventasCalc && Array.isArray(ventasCalc) && ventasCalc.length > 0,
-    [ventasCalc]
-  );
-
-  const isDevMode = useMemo(() => {
-    return false;
-  }, []);
-
-  if (!hasValidData) {
+  if (!ventasCalc || ventasCalc.length === 0) {
     return (
-      <div className={`${glassStyles} p-12 text-center`}>
-        <div aria-live="polite" className="sr-only">
-          {ariaMessage}
-        </div>
-        <h2 className={sectionTitleStyles}>Lista de Ventas</h2>
-        <div className="flex flex-col items-center justify-center">
-          <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
-            <Package className="w-8 h-8 text-slate-400" />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={cn(glassStyles(), "p-24 text-center rounded-[3rem] border-dashed border-2 border-slate-200 dark:border-white/5")}
+      >
+        <div className="flex flex-col items-center justify-center space-y-6">
+          <div className="w-24 h-24 rounded-[2rem] bg-slate-100 dark:bg-white/[0.03] flex items-center justify-center shadow-inner">
+            <Package className="w-10 h-10 text-slate-300 dark:text-slate-700" />
           </div>
-          <h3 className="text-lg font-bold text-slate-600 dark:text-slate-300 mb-2">No hay ventas</h3>
-          <p className="text-slate-500 dark:text-slate-400 max-w-sm">
-            No se encontraron ventas con los filtros actuales. Intenta ajustar los criterios de búsqueda.
-          </p>
+          <div className="space-y-2">
+            <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Radar sin detecciones</h3>
+            <p className="text-slate-500 dark:text-slate-400 max-w-sm font-medium mx-auto">
+              No se han encontrado registros que coincidan con los parámetros de búsqueda actuales.
+            </p>
+          </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className={`${glassStyles} overflow-hidden p-0`}>
-      <div aria-live="polite" className="sr-only">
-        {ariaMessage}
-      </div>
-
-      <div className="p-6 pb-2">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className={sectionTitleStyles}>Listado de Ventas <span className="text-sm font-normal text-slate-500 ml-2">({ventasCalc.length})</span></h2>
-
-          {/* Indicadores de estado de datos */}
-          <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg">
-            <span>Prod: {productos.length}</span>
-            <span className="w-1 h-3 bg-slate-200 dark:bg-slate-700 mx-1"></span>
-            <span>Colab: {colaboradores.length}</span>
-            <span className="w-1 h-3 bg-slate-200 dark:bg-slate-700 mx-1"></span>
-            <span>Zona: {zonas.length}</span>
-          </div>
-        </div>
-      </div>
-
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={cn(glassStyles(), "relative overflow-hidden p-0 rounded-[3rem] border border-white/20 dark:border-white/5 shadow-2xl")}
+    >
       <div className="overflow-x-auto">
-        <table
-          className="min-w-full text-xs md:text-sm"
-          role="table"
-          aria-label="Tabla de ventas"
-        >
-          <thead className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 backdrop-blur-sm sticky top-0 z-10">
-            <tr className="text-left text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold">
-              <th className="px-4 py-3 w-10">
+        <table className="w-full border-separate border-spacing-0">
+          <thead>
+            <tr className="bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-200 dark:border-white/5">
+              <th className="px-8 py-6 text-left w-12 text-center">
                 <input
                   type="checkbox"
                   checked={Boolean(isAllSelected)}
                   onChange={onSelectAll}
-                  aria-label="Seleccionar todas las ventas"
-                  className="rounded border-slate-300 text-sky-500 focus:ring-sky-500 bg-white/50"
+                  className="w-5 h-5 rounded-lg border-2 border-slate-200 dark:border-white/10 bg-transparent text-blue-600 focus:ring-blue-500/20 transition-all cursor-pointer"
                 />
               </th>
-              <th className="px-4 py-3">Fecha</th>
-              <th className="px-4 py-3">Cliente</th>
-              <th className="px-4 py-3">Producto</th>
-              <th className="px-4 py-3 hidden md:table-cell">Zona</th>
-              <th className="px-4 py-3 hidden lg:table-cell">Colaborador</th>
-              <th className="px-4 py-3 hidden xl:table-cell">Operador</th>
-              <th className="px-4 py-3 text-right">PVP</th>
-              <th className="px-4 py-3 text-right hidden lg:table-cell">Comisión</th>
-              <th className="px-4 py-3 text-right font-black">Neto</th>
-              <th className="px-4 py-3 text-center">Estado</th>
-              <th className="px-4 py-3 text-center">Acciones</th>
+              <th className="px-6 py-6 text-left text-[10px] font-black uppercase tracking-[4px] text-slate-400 dark:text-slate-500">
+                <div className="flex items-center gap-2">
+                  <User className="w-3 h-3" /> Titular / Expediente
+                </div>
+              </th>
+              <th className="px-6 py-6 text-left text-[10px] font-black uppercase tracking-[4px] text-slate-400 dark:text-slate-500">
+                <div className="flex items-center gap-2">
+                  <Package className="w-3 h-3" /> Servicio
+                </div>
+              </th>
+              <th className="px-6 py-6 text-left text-[10px] font-black uppercase tracking-[4px] text-slate-400 dark:text-slate-500 hidden xl:table-cell">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-3 h-3" /> Ubicación
+                </div>
+              </th>
+              <th className="px-6 py-6 text-right text-[10px] font-black uppercase tracking-[4px] text-slate-400 dark:text-slate-500">Valores Core</th>
+              <th className="px-6 py-6 text-center text-[10px] font-black uppercase tracking-[4px] text-slate-400 dark:text-slate-500">Status Master</th>
+              <th className="px-8 py-6 text-center text-[10px] font-black uppercase tracking-[4px] text-slate-400 dark:text-slate-500">Control</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
             {ventasCalc.map((venta, idx) => {
-              const estadoLabel = venta.estado || "SIN ESTADO";
-              const comisionBase = venta._calc?.detalle?.comBase || 0;
-              const comisionBruta = venta._calc?.detalle?.comBruta || 0;
+              const pvpValue = venta.pvpResuelto || indexers.productos[venta.producto_id]?.pvp || 0;
               const neto = venta._calc?.detalle?.netoColab || 0;
-
-              const nombreProducto = getNombreProducto(venta);
-              const nombreZona = getNombreZona(venta);
-              const nombreColaborador = getNombreColaborador(venta);
-              const nombreOperador = getNombreOperador(venta);
-              const pvpValue = getPvpVenta(venta);
-
-              const uniqueKey = generateUniqueKey(venta, idx);
+              const estadoStyle = getEstadoStyle(venta.estado);
 
               return (
-                <tr
-                  key={uniqueKey}
-                  className="bg-white/40 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group"
+                <motion.tr
+                  key={venta.id || idx}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.03, ease: "easeOut" }}
+                  whileHover={{ backgroundColor: "var(--brand-primary)", opacity: 0.05 }}
+                  className="group relative transition-all duration-300"
                 >
-                  <td className="px-4 py-3 align-middle">
+                  <td className="px-8 py-6 text-center">
                     <input
                       type="checkbox"
                       checked={Boolean(selectedIds?.includes(venta.id))}
                       onChange={() => onSelect && onSelect(venta.id)}
-                      aria-label={`Seleccionar venta ${venta.id}`}
-                      className="rounded border-slate-300 text-sky-500 focus:ring-sky-500 bg-white/50"
+                      className="w-5 h-5 rounded-lg border-2 border-slate-200 dark:border-white/10 bg-transparent text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]/20 transition-all cursor-pointer"
                     />
                   </td>
-                  <td className="px-4 py-3 align-middle text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap">
-                    {formatDate(venta.fecha)}
-                  </td>
-                  <td className="px-4 py-3 align-middle">
-                    <div className="text-slate-900 dark:text-white font-bold uppercase tracking-tight text-xs leading-tight mb-0.5">
-                      {venta.cliente || "Sin cliente"}
-                    </div>
-                    {venta.cif && (
-                      <div className="text-[10px] bg-slate-100 dark:bg-slate-900 text-slate-500 inline-block px-1.5 rounded">{venta.cif}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 align-middle text-slate-700 dark:text-slate-300">
-                    <div className="max-w-[150px] truncate text-xs font-medium" title={nombreProducto}>
-                      {nombreProducto}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 align-middle text-slate-500 dark:text-slate-400 hidden md:table-cell">
-                    <div className="max-w-[120px] truncate text-xs" title={nombreZona}>
-                      {nombreZona}
+
+                  <td className="px-6 py-6">
+                    <div className="flex flex-col gap-2">
+                      <div className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight group-hover:text-[var(--brand-primary)] transition-colors">
+                        {venta.cliente || "EXP_SIN_NOMBRE"}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-white/[0.04] px-2 py-0.5 rounded-full border border-slate-200 dark:border-white/5 flex items-center gap-1">
+                          <Calendar className="w-2.5 h-2.5" />
+                          {formatDate(venta.fecha)}
+                        </span>
+                        {venta.cif && <span className="text-[10px] font-bold text-slate-400 tracking-widest opacity-60">· {venta.cif}</span>}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 align-middle text-slate-600 dark:text-slate-300 hidden lg:table-cell">
-                    <div className="max-w-[140px] truncate text-xs" title={nombreColaborador}>
-                      {nombreColaborador}
+
+                  <td className="px-6 py-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-[1rem] bg-[var(--brand-primary)]/10 flex items-center justify-center border border-[var(--brand-primary)]/20 group-hover:scale-110 transition-transform duration-500 shadow-inner">
+                        <Package className="w-5 h-5 text-[var(--brand-primary)]/70" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={getNombreProducto(venta)}>
+                          {getNombreProducto(venta)}
+                        </span>
+                        <span className="text-[9px] font-black text-slate-400/80 uppercase tracking-[2px] mt-0.5">{getNombreOperador(venta)}</span>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 align-middle text-slate-500 dark:text-slate-400 hidden xl:table-cell">
-                    <div className="max-w-[120px] truncate text-xs" title={nombreOperador}>
-                      {nombreOperador}
+
+                  <td className="px-6 py-6 hidden xl:table-cell">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <MapPin className="w-3 h-3 opacity-50 text-sky-500" />
+                        {getNombreZona(venta)}
+                      </span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase truncate max-w-[150px]">
+                        {getNombreColaborador(venta)}
+                      </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 align-middle text-right font-bold text-slate-800 dark:text-slate-200">
-                    {formatCurrency(pvpValue)}
+
+                  <td className="px-6 py-6 text-right">
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-tight">{formatCurrency(pvpValue)}</span>
+                      <div className="px-2 py-0.5 bg-emerald-500/10 rounded-lg flex items-center gap-1.5 group-hover:scale-105 transition-transform duration-300 border border-emerald-500/10">
+                        <Zap className="w-2.5 h-2.5 text-emerald-500" />
+                        <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(neto)}</span>
+                      </div>
+                    </div>
                   </td>
-                  <td className="px-4 py-3 align-middle text-right text-indigo-600 dark:text-indigo-400 font-medium text-xs hidden lg:table-cell">
-                    {formatCurrency(comisionBase)}
-                  </td>
-                  <td className="px-4 py-3 align-middle text-right">
-                    <span className="text-emerald-600 dark:text-emerald-400 font-black">
-                      {formatCurrency(neto)}
+
+                  <td className="px-6 py-6 text-center">
+                    <span className={cn(
+                      "inline-flex items-center justify-center px-4 py-2 rounded-[1.25rem] text-[9px] font-black uppercase tracking-[2px] border transition-all duration-300 group-hover:shadow-lg",
+                      estadoStyle
+                    )}>
+                      {venta.estado || "N/A"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 align-middle text-center">
-                    <span
-                      className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm ${getEstadoStyle(
-                        estadoLabel
-                      )}`}
-                    >
-                      {estadoLabel}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 align-middle">
-                    <div className="flex items-center justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                      <button
+
+                  <td className="px-8 py-6 text-center">
+                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
+                      <motion.button
+                        whileHover={{ scale: 1.1, backgroundColor: "rgba(var(--brand-primary-rgb), 0.1)" }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => onView && onView(venta)}
-                        className="p-1.5 rounded-lg bg-white dark:bg-slate-700 text-sky-500 shadow-sm hover:scale-110 transition-transform"
-                        title="Ver detalles"
+                        className="p-3 rounded-2xl bg-white/50 dark:bg-white/[0.03] text-slate-500 dark:text-slate-400 hover:text-[var(--brand-primary)] border border-slate-200 dark:border-white/5 shadow-sm"
                       >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
+                        <Eye className="w-4 h-4" />
+                      </motion.button>
+
                       {isAdmin && (
-                        <>
-                          <button
+                        <div className="flex items-center gap-2 border-l border-slate-200 dark:border-white/5 pl-2">
+                          <motion.button
+                            whileHover={{ scale: 1.1, backgroundColor: "rgba(var(--brand-primary-rgb), 0.1)" }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => onEdit && onEdit(venta)}
-                            className="p-1.5 rounded-lg bg-white dark:bg-slate-700 text-amber-500 shadow-sm hover:scale-110 transition-transform"
-                            title="Editar venta"
+                            className="p-3 rounded-2xl bg-white/50 dark:bg-white/[0.03] text-[var(--brand-primary)] border border-[var(--brand-primary)]/10 shadow-sm"
                           >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
+                            <Edit3 className="w-4 h-4" />
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.1, rotate: 90, backgroundColor: "rgba(244, 63, 94, 0.1)" }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => onDelete && onDelete(venta.id)}
-                            className="p-1.5 rounded-lg bg-white dark:bg-slate-700 text-rose-500 shadow-sm hover:scale-110 transition-transform"
-                            title="Eliminar venta"
+                            className="p-3 rounded-2xl bg-rose-500/5 text-rose-500 border border-rose-500/10 shadow-sm"
                           >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => onActivate && onActivate(venta.id)}
-                            className="p-1.5 rounded-lg bg-white dark:bg-slate-700 text-emerald-500 shadow-sm hover:scale-110 transition-transform"
-                            title="Activar venta"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                        </>
+                            <X className="w-4 h-4" />
+                          </motion.button>
+                        </div>
                       )}
                     </div>
                   </td>
-                </tr>
+                </motion.tr>
               );
             })}
           </tbody>
         </table>
       </div>
-    </div>
+
+      <div className="p-8 bg-slate-50/80 dark:bg-white/[0.01] border-t border-slate-200 dark:border-white/5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-[var(--brand-primary)] animate-pulse" />
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">Core v3.0 // Master Interface</span>
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="h-4 w-px bg-slate-200 dark:bg-white/10" />
+          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">
+            Total Vista: {formatCurrency(ventasCalc.reduce((acc, v) => acc + (v.pvpResuelto || 0), 0))}
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 

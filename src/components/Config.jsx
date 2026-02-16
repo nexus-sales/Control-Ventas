@@ -44,11 +44,10 @@ export default function Config() {
           </p>
           <button
             onClick={() => setActiveSection("campos")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-              activeSection === "campos"
-                ? "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg dark:from-darkAccent dark:to-purple-900"
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${activeSection === "campos"
+                ? "bg-[var(--brand-primary)] text-white shadow-lg"
                 : "text-slate-600 dark:text-white hover:bg-slate-100 dark:hover:bg-darkCard"
-            }`}
+              }`}
           >
             <SlidersHorizontal className="w-4 h-4" />
             Campos Personalizados

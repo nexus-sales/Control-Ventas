@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Edit3, Save, Euro, Percent, AlertCircle, CheckCircle, Smartphone, Phone, ShoppingBag, User, Calendar, CreditCard } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '../../../lib/utils';
 import Modal from '../../ui/Modal';
-import { Input, Select, Label, Button } from '../../ui/FormElements';
+import { Input, Select, Label, Button, TextArea } from '../../ui/FormElements';
 import { SECTORES, FAMILIAS_POR_SECTOR } from '../../../utils/constants';
 import { getColaboradorComision } from '../../../utils/calculos';
 
@@ -593,513 +595,582 @@ export const VentaFormModal = ({
   // Render
   if (!isOpen) return null;
 
-  const modalTitle = isEditing ? 'Editar Venta' : 'Registrar Nueva Venta';
-  const Icon = isEditing ? Edit3 : Plus;
+  const modalTitle = isEditing ? 'Editar Expediente' : 'Registrar Nueva Venta';
+  const ModalIcon = isEditing ? Edit3 : Plus;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
       title={modalTitle}
-      icon={Icon}
-      iconColor={isEditing ? 'text-amber-600' : 'text-emerald-600'}
+      icon={ModalIcon}
+      iconColor={isEditing ? 'text-amber-500' : 'text-emerald-500'}
       maxWidth="max-w-7xl"
     >
-      {/* Header Info Bar */}
-      <div className="flex flex-wrap items-center gap-4 mb-8 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
-        <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${formStats.isComplete ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-lg' : 'text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg'}`}>
-          <CheckCircle className="w-4 h-4" />
-          <span>{formStats.isComplete ? 'Datos Completos' : 'Datos Incompletos'}</span>
-        </div>
-
-        <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${formStats.hasErrors ? 'text-red-600 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg' : 'text-slate-500'}`}>
-          <AlertCircle className="w-4 h-4" />
-          <span>{formStats.hasErrors ? `${Object.keys(validationErrors).length} Errores` : 'Sin Errores'}</span>
-        </div>
-
-        {formStats.hasMissingData && (
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-lg">
-            <AlertCircle className="w-4 h-4" />
-            <span>Faltan Datos Maestros</span>
-          </div>
-        )}
-
-        {formStats.comisionEstimada > 0 && (
-          <div className="ml-auto flex items-center gap-2 text-sm font-black text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl shadow-sm">
-            <Euro className="w-5 h-5" />
-            <span>Est: {formStats.comisionEstimada.toFixed(2)}€</span>
-          </div>
-        )}
-      </div>
-
-      {/* Alertas de datos faltantes */}
-      {formStats.hasMissingData && (
-        <div className="mb-6 p-4 bg-orange-50/50 border border-orange-200/50 rounded-xl flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-orange-800">
-            <strong className="block mb-1">Atención Requerida</strong>
-            <ul className="list-disc pl-4 space-y-1 opacity-90">
-              {colaboradoresDisponibles.length === 0 && <li>No hay colaboradores válidos en el sistema.</li>}
-              {zonasDisponibles.length === 0 && <li>No hay zonas válidas en el sistema.</li>}
-            </ul>
-          </div>
-        </div>
-      )}
-
-      {/* Formulario */}
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {errors.submit && (
-          <div className="p-4 bg-red-50/50 border border-red-200/50 rounded-xl flex items-center gap-3 text-red-700">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span className="font-medium">{errors.submit}</span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Columna 1: Información del Cliente */}
-          <div className="space-y-6">
-            <h4 className="font-black text-slate-800 dark:text-white pb-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
-              <User className="w-5 h-5 text-indigo-500" />
-              Información del Cliente
-            </h4>
-
+      <div className="space-y-10">
+        {/* Info Bar / Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-wrap items-center gap-6 p-6 rounded-[2rem] bg-slate-100/30 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 backdrop-blur-sm shadow-inner"
+        >
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg",
+              formStats.isComplete ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-amber-500 text-white shadow-amber-500/20"
+            )}>
+              <CheckCircle className="w-5 h-5" />
+            </div>
             <div>
-              <Label>Cliente *</Label>
-              <Input
-                icon={User}
-                placeholder="Nombre completo o razón social"
-                value={formData.cliente || ''}
-                onChange={(e) => updateField('cliente', e.target.value)}
-                className={errors.cliente ? 'bg-red-50 focus:ring-red-500/50' : ''}
-              />
-              {errors.cliente && <p className="text-xs text-red-600 mt-1 font-bold">{errors.cliente}</p>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>CIF/DNI</Label>
-                <Input
-                  icon={CreditCard}
-                  placeholder="DNI/CIF"
-                  value={formData.cif || ''}
-                  onChange={(e) => updateField('cif', e.target.value)}
-                  className={errors.cif ? 'bg-red-50 focus:ring-red-500/50' : ''}
-                />
-                {errors.cif && <p className="text-xs text-red-600 mt-1 font-bold">{errors.cif}</p>}
-              </div>
-              <div>
-                <Label>Fecha *</Label>
-                <Input
-                  type="date"
-                  icon={Calendar}
-                  value={formData.fecha || ''}
-                  onChange={(e) => updateField('fecha', e.target.value)}
-                  className={errors.fecha ? 'bg-red-50 focus:ring-red-500/50' : ''}
-                />
-                {errors.fecha && <p className="text-xs text-red-600 mt-1 font-bold">{errors.fecha}</p>}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>ID Pedido</Label>
-                <Input
-                  placeholder="Opcional"
-                  value={formData.id_pedido || ''}
-                  onChange={(e) => updateField('id_pedido', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>ID Cliente</Label>
-                <Input
-                  placeholder="Opcional"
-                  value={formData.id_cliente || ''}
-                  onChange={(e) => updateField('id_cliente', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Teléfono Fijo</Label>
-                <Input
-                  icon={Phone}
-                  placeholder="Opcional"
-                  value={formData.telefono_fijo || ''}
-                  onChange={(e) => updateField('telefono_fijo', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Móvil</Label>
-                <Input
-                  icon={Smartphone}
-                  placeholder="Opcional"
-                  value={formData.telefono_movil || ''}
-                  onChange={(e) => updateField('telefono_movil', e.target.value)}
-                />
-              </div>
+              <p className="text-[10px] font-black uppercase tracking-[2px] opacity-50">Estado Carga</p>
+              <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">
+                {formStats.isComplete ? 'Validación OK' : 'Datos Incompletos'}
+              </p>
             </div>
           </div>
 
-          {/* Columna 2: Detalles del Servicio */}
-          <div className="space-y-6">
-            <h4 className="font-black text-slate-800 dark:text-white pb-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-indigo-500" />
-              Detalles del Servicio
-            </h4>
+          <div className="h-10 w-px bg-slate-200 dark:bg-white/5 mx-2 hidden md:block" />
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Sector</Label>
-                  <Select
-                    value={formData.sector || ''}
-                    onChange={(e) => handleSectorChange(e.target.value)}
-                  >
-                    <option value="">Seleccionar</option>
-                    {Object.entries(SECTORES).map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
-                  </Select>
-                </div>
-                <div>
-                  <Label>Zona *</Label>
-                  <Select
-                    value={formData.zona_id || ''}
-                    onChange={(e) => updateField('zona_id', e.target.value)}
-                    className={errors.zona_id ? 'bg-red-50 focus:ring-red-500/50' : ''}
-                  >
-                    <option value="">Seleccionar</option>
-                    {zonasDisponibles.map((z) => (
-                      <option key={z.id} value={z.id}>{z.nombreDisplay}</option>
-                    ))}
-                  </Select>
-                  {errors.zona_id && <p className="text-xs text-red-600 mt-1 font-bold">{errors.zona_id}</p>}
-                </div>
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg",
+              formStats.hasErrors ? "bg-rose-500 text-white shadow-rose-500/20" : "bg-slate-500 text-white shadow-slate-500/20"
+            )}>
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[2px] opacity-50">Check Seguridad</p>
+              <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">
+                {formStats.hasErrors ? `${Object.keys(validationErrors).length} Errores` : 'Integridad OK'}
+              </p>
+            </div>
+          </div>
+
+          {formStats.comisionEstimada > 0 && (
+            <div className="ml-auto flex items-center gap-4 px-6 py-3 rounded-2xl bg-[var(--brand-primary)] text-white shadow-xl shadow-[var(--brand-primary)]/20">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Euro className="w-5 h-5" />
               </div>
-
               <div>
-                <Label>Operador</Label>
-                <Select
-                  value={formData.operador_id || ''}
-                  onChange={(e) => handleOperadorChange(e.target.value)}
-                >
-                  <option value="">Seleccionar operador</option>
-                  {operadoresDisponibles.map((op) => (
-                    <option key={op.id} value={op.id}>
-                      {op.nombreDisplay}
-                      {op.codigo && op.codigo !== op.nombreDisplay && ` (${op.codigo})`}
-                    </option>
-                  ))}
-                </Select>
-                {operadoresDisponibles.length === 0 && <p className="text-xs text-orange-600 mt-1 font-bold">⚠️ Sin operadores disponibles</p>}
+                <p className="text-[10px] font-black uppercase tracking-[2px] opacity-70">Estimación Neta</p>
+                <p className="text-lg font-black tracking-tighter">{formStats.comisionEstimada.toFixed(2)}€</p>
+              </div>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Global Warnings */}
+        <AnimatePresence>
+          {(formStats.hasMissingData || errors.submit) && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="p-6 rounded-[2rem] bg-amber-500/5 border border-amber-500/10 flex items-start gap-5 shadow-xl shadow-amber-500/5"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-6 h-6 text-amber-600" />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-black text-amber-800 dark:text-amber-500 uppercase tracking-widest">Atención Requerida</p>
+                <div className="text-sm text-slate-600 dark:text-amber-200/60 font-medium">
+                  {errors.submit ? (
+                    <p>{errors.submit}</p>
+                  ) : (
+                    <ul className="list-disc pl-4 space-y-1">
+                      {colaboradoresDisponibles.length === 0 && <li>No hay colaboradores válidos en el sistema. Los despliegues están bloqueados.</li>}
+                      {zonasDisponibles.length === 0 && <li>Configuración de zonas incompleta. Verifica la base maestra.</li>}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <form onSubmit={handleSubmit} className="space-y-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            {/* Columna 1: Titular */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="space-y-8"
+            >
+              <div className="flex items-center gap-4 pb-4 border-b border-slate-200 dark:border-white/5">
+                <div className="w-10 h-10 rounded-xl bg-[var(--brand-primary)]/10 flex items-center justify-center">
+                  <User className="w-5 h-5 text-[var(--brand-primary)]" />
+                </div>
+                <h4 className="text-[10px] font-black uppercase tracking-[4px] text-slate-800 dark:text-white">Titular Operación</h4>
               </div>
 
-              <div>
-                <Label>Producto ({productosFiltrados.length})</Label>
-                <Select
-                  value={formData.producto_id || ''}
-                  onChange={(e) => handleProductChange(e.target.value)}
-                  disabled={!formData.operador_id}
-                >
-                  <option value="">{formData.operador_id ? "Seleccionar producto" : "Selecciona operador primero"}</option>
-                  {productosFiltrados.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombreDisplay}
-                      {(!p.pvp || p.pvp === 0) && " (Sin PVP)"}
-                      {p.pvp > 0 && ` (${p.pvp}€)`}
-                    </option>
-                  ))}
-                </Select>
-                {productoSeleccionado && (
-                  <div className="mt-2 text-xs space-y-1">
-                    <p className="font-bold text-green-600">PVP: {productoSeleccionado.pvp ? `${productoSeleccionado.pvp}€` : 'No definido'}</p>
-                    <p className="text-slate-500">Vigencia: {productoSeleccionado.comision_vigencia_desde || '—'} → {productoSeleccionado.comision_vigencia_hasta || '—'}</p>
-                    {formData.comision_fuera_vigencia && <p className="text-amber-600 font-bold">⚠️ Fuera de vigencia</p>}
-                  </div>
-                )}
-              </div>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Nombre Completo / Razón Social *</Label>
+                  <Input
+                    icon={User}
+                    placeholder="Introduce el nombre del cliente"
+                    value={formData.cliente || ''}
+                    onChange={(e) => updateField('cliente', e.target.value)}
+                    className={cn(errors.cliente && "border-rose-500 bg-rose-500/5 ring-rose-500/20 shadow-none")}
+                  />
+                  {errors.cliente && <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mt-2 ml-2">{errors.cliente}</p>}
+                </div>
 
-              {(formData.sector || productoSeleccionado?.sector || '').toUpperCase() === 'TELEFONIA' && (
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Tipo Cliente</Label>
-                    <Select
-                      value={formData.cliente_tipo || 'NUEVO'}
-                      onChange={(e) => updateField('cliente_tipo', e.target.value)}
-                    >
-                      <option value="NUEVO">Nuevo</option>
-                      <option value="EXISTENTE">Existente</option>
-                    </Select>
+                  <div className="space-y-2">
+                    <Label>Documento Identidad</Label>
+                    <Input
+                      icon={CreditCard}
+                      placeholder="DNI, CIF, NIE"
+                      value={formData.cif || ''}
+                      onChange={(e) => updateField('cif', e.target.value)}
+                    />
                   </div>
-                  <div>
-                    <Label>Activación</Label>
-                    <Select
-                      value={formData.tipo_activacion || 'ALTA'}
-                      onChange={(e) => updateField('tipo_activacion', e.target.value)}
-                    >
-                      <option value="ALTA">Alta nueva</option>
-                      <option value="PORTABILIDAD">Portabilidad</option>
-                    </Select>
+                  <div className="space-y-2">
+                    <Label>Fecha Solicitud *</Label>
+                    <Input
+                      type="date"
+                      icon={Calendar}
+                      value={formData.fecha || ''}
+                      onChange={(e) => updateField('fecha', e.target.value)}
+                      className={cn(errors.fecha && "border-rose-500 bg-rose-500/5 shadow-none")}
+                    />
                   </div>
                 </div>
-              )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Estado</Label>
-                  <Select
-                    value={formData.estado || 'Confirmada'}
-                    onChange={(e) => updateField('estado', e.target.value)}
-                    className="font-bold text-slate-700"
-                  >
-                    {ESTADOS_VALIDOS.map((est) => (
-                      <option key={est} value={est}>{est}</option>
-                    ))}
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>ID Pedido Externo</Label>
+                    <Input
+                      placeholder="Nº Referencia CRM"
+                      value={formData.id_pedido || ''}
+                      onChange={(e) => updateField('id_pedido', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Código Cliente</Label>
+                    <Input
+                      placeholder="Ref. Operadora"
+                      value={formData.id_cliente || ''}
+                      onChange={(e) => updateField('id_cliente', e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label>Colaborador *</Label>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Teléfono Contacto</Label>
+                    <Input
+                      icon={Phone}
+                      placeholder="Fijo o Secundario"
+                      value={formData.telefono_fijo || ''}
+                      onChange={(e) => updateField('telefono_fijo', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Terminal Móvil</Label>
+                    <Input
+                      icon={Smartphone}
+                      placeholder="Número de contacto"
+                      value={formData.telefono_movil || ''}
+                      onChange={(e) => updateField('telefono_movil', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Columna 2: Servicio */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="space-y-8"
+            >
+              <div className="flex items-center gap-4 pb-4 border-b border-slate-200 dark:border-white/5">
+                <div className="w-10 h-10 rounded-xl bg-[var(--brand-primary)]/10 flex items-center justify-center">
+                  <ShoppingBag className="w-5 h-5 text-[var(--brand-primary)]" />
+                </div>
+                <h4 className="text-[10px] font-black uppercase tracking-[4px] text-slate-800 dark:text-white">Parámetros Servicio</h4>
+              </div>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Unidad de Negocio</Label>
+                    <Select
+                      value={formData.sector || ''}
+                      onChange={(e) => handleSectorChange(e.target.value)}
+                    >
+                      <option value="">Selección Global</option>
+                      {Object.entries(SECTORES).map(([key, label]) => (
+                        <option key={key} value={key}>{label}</option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Zona Geográfica *</Label>
+                    <Select
+                      value={formData.zona_id || ''}
+                      onChange={(e) => updateField('zona_id', e.target.value)}
+                      className={cn(errors.zona_id && "border-rose-500 bg-rose-500/5 shadow-none")}
+                    >
+                      <option value="">Selecciona Provincia</option>
+                      {zonasDisponibles.map((z) => (
+                        <option key={z.id} value={z.id}>{z.nombreDisplay}</option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Partner / Operador</Label>
                   <Select
-                    value={formData.colaborador_id || ''}
-                    onChange={(e) => handleColaboradorChange(e.target.value)}
-                    className={errors.colaborador_id ? 'bg-red-50 focus:ring-red-500/50' : ''}
+                    value={formData.operador_id || ''}
+                    onChange={(e) => handleOperadorChange(e.target.value)}
                   >
-                    <option value="">Seleccionar</option>
-                    {colaboradoresDisponibles.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nombreDisplay}
+                    <option value="">Seleccionar Master Partner</option>
+                    {operadoresDisponibles.map((op) => (
+                      <option key={op.id} value={op.id}>
+                        {op.nombreDisplay}
+                        {op.codigo && op.codigo !== op.nombreDisplay && ` [${op.codigo}]`}
                       </option>
                     ))}
                   </Select>
-                  {errors.colaborador_id && <p className="text-xs text-red-600 mt-1 font-bold">{errors.colaborador_id}</p>}
                 </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Columna 3: Precios y Comisiones */}
-          <div className="space-y-6">
-            <h4 className="font-black text-slate-800 dark:text-white pb-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
-              <Euro className="w-5 h-5 text-indigo-500" />
-              Económico y Notas
-            </h4>
-
-            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 space-y-4">
-              <div>
-                <Label>PVP Producto</Label>
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-600">
-                  <span className="text-slate-400 font-bold">€</span>
-                  <span className="text-lg font-black text-slate-800 dark:text-white">{formStats.pvp || 0}</span>
-                </div>
-                {formStats.pvp === 0 && <p className="text-xs text-amber-600 mt-1 font-bold">⚠️ Sin PVP definido</p>}
-              </div>
-
-              <div>
-                <Label>Comisión Base</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.comision_base || 0}
-                    onChange={(e) => updateField('comision_base', parseFloat(e.target.value) || 0)}
-                    className="font-bold"
-                  />
+                <div className="space-y-2">
+                  <Label>Solución Técnica ({productosFiltrados.length} disponibles)</Label>
                   <Select
-                    value={formData.comision_tipo || 'porcentaje'}
-                    onChange={(e) => updateField('comision_tipo', e.target.value)}
-                    className="w-24 font-bold"
+                    value={formData.producto_id || ''}
+                    onChange={(e) => handleProductChange(e.target.value)}
+                    disabled={!formData.operador_id}
+                    className={cn(!formData.operador_id && "opacity-50 cursor-not-allowed")}
                   >
-                    <option value="porcentaje">%</option>
-                    <option value="fijo">€</option>
+                    <option value="">{formData.operador_id ? "Busca el producto..." : "Bloqueado: Elige Partner"}</option>
+                    {productosFiltrados.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombreDisplay}
+                        {p.pvp > 0 ? ` [${p.pvp}€]` : " [Sin PVP]"}
+                      </option>
+                    ))}
                   </Select>
+                  {productoSeleccionado && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 shadow-sm space-y-2 mt-3"
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] font-black uppercase tracking-[2px] text-slate-400">PVP Base</span>
+                        <span className="text-xs font-black text-emerald-600">{productoSeleccionado.pvp ? `${productoSeleccionado.pvp}€` : 'PVP Variable'}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] font-black uppercase tracking-[2px] text-slate-400">Vigencia</span>
+                        <span className="text-[10px] font-bold text-slate-500">{productoSeleccionado.comision_vigencia_desde || 'Master'} → {productoSeleccionado.comision_vigencia_hasta || 'Infinito'}</span>
+                      </div>
+                      {formData.comision_fuera_vigencia && (
+                        <div className="flex items-center gap-2 text-rose-500 mt-2 p-2 bg-rose-500/5 rounded-xl border border-rose-500/10">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          <span className="text-[9px] font-black uppercase tracking-[1px]">ALERTA: Tarifa Caducada</span>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
                 </div>
-                {formData.comision_base > 0 && (
-                  <p className="text-xs text-green-600 mt-1 font-bold">
-                    {formData.comision_tipo === 'porcentaje'
-                      ? `${(formData.comision_base || 0).toFixed(1)}% del PVP`
-                      : `${(formData.comision_base || 0).toFixed(2)}€ fijos`
-                    }
-                  </p>
-                )}
-              </div>
 
-              <div>
-                <Label>Comisión Colaborador</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    step="0.001"
-                    max="1"
-                    value={formData.comision_colaborador || 0}
-                    onChange={(e) => updateField('comision_colaborador', parseFloat(e.target.value) || 0)}
-                    className="font-bold bg-blue-50/50"
-                  />
-                  <div className="flex items-center justify-center px-4 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold text-slate-500">%</div>
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Equivale a: <span className="font-bold text-blue-600">{((formData.comision_colaborador || 0) * 100).toFixed(1)}%</span>
-                </p>
-                {formStats.comisionEstimada > 0 && (
-                  <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/30 rounded-lg border border-green-100 dark:border-green-800">
-                    <p className="text-sm text-green-700 dark:text-green-400 flex items-center justify-between">
-                      <span className="font-medium">Estimado:</span>
-                      <span className="font-black text-lg">{formStats.comisionEstimada.toFixed(2)}€</span>
-                    </p>
+                {(formData.sector || productoSeleccionado?.sector || '').toUpperCase() === 'TELEFONIA' && (
+                  <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5">
+                    <div className="space-y-2">
+                      <Label>Captación</Label>
+                      <Select
+                        value={formData.cliente_tipo || 'NUEVO'}
+                        onChange={(e) => updateField('cliente_tipo', e.target.value)}
+                        className="bg-transparent shadow-none"
+                      >
+                        <option value="NUEVO">Cliente Nuevo</option>
+                        <option value="EXISTENTE">Fidelización</option>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tráfico</Label>
+                      <Select
+                        value={formData.tipo_activacion || 'ALTA'}
+                        onChange={(e) => updateField('tipo_activacion', e.target.value)}
+                        className="bg-transparent shadow-none"
+                      >
+                        <option value="ALTA">Alta Nueva</option>
+                        <option value="PORTABILIDAD">Portabilidad</option>
+                      </Select>
+                    </div>
                   </div>
                 )}
-              </div>
-            </div>
 
-            <div className="space-y-4">
-              <div>
-                <Label>Cantidad</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={formData.cantidad || 1}
-                  onChange={(e) => updateField('cantidad', parseInt(e.target.value) || 1)}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Documento</Label>
-                  <Input
-                    placeholder="Nº Contrato/Doc"
-                    value={formData.documento || ''}
-                    onChange={(e) => updateField('documento', e.target.value)}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Estado Gestión</Label>
+                    <Select
+                      value={formData.estado || 'Confirmada'}
+                      onChange={(e) => updateField('estado', e.target.value)}
+                      className="font-black text-blue-600 dark:text-blue-400"
+                    >
+                      {ESTADOS_VALIDOS.map((est) => (
+                        <option key={est} value={est}>{est}</option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Agente Asignado *</Label>
+                    <Select
+                      value={formData.colaborador_id || ''}
+                      onChange={(e) => handleColaboradorChange(e.target.value)}
+                      className={cn(errors.colaborador_id && "border-rose-500 bg-rose-500/5 shadow-none")}
+                    >
+                      <option value="">Selecciona el agente</option>
+                      {colaboradoresDisponibles.map((c) => (
+                        <option key={c.id} value={c.id}>{c.nombreDisplay}</option>
+                      ))}
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <Label>Numeración</Label>
-                  <Input
-                    placeholder="Línea/ID"
-                    value={formData.numeracion || ''}
-                    onChange={(e) => updateField('numeracion', e.target.value)}
-                  />
+              </div>
+            </motion.div>
+
+            {/* Columna 3: Liquidación */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              className="space-y-8"
+            >
+              <div className="flex items-center gap-4 pb-4 border-b border-slate-200 dark:border-white/5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <Euro className="w-5 h-5 text-emerald-500" />
                 </div>
+                <h4 className="text-[10px] font-black uppercase tracking-[4px] text-slate-800 dark:text-white">Motor Económico</h4>
               </div>
-              <div>
-                <Label>Observaciones</Label>
-                <textarea
-                  className="w-full rounded-2xl border-none outline-none resize-none bg-slate-50 dark:bg-slate-800/50 text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400/50 shadow-inner px-4 py-3 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/30 transition-all"
-                  rows="3"
-                  value={formData.observaciones || ''}
-                  onChange={(e) => updateField('observaciones', e.target.value)}
-                  maxLength="500"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        {/* Campos personalizados */}
-        {
-          customFieldsConfig?.length > 0 && (
-            <div className="border-t border-slate-200 dark:border-slate-600 pt-6">
-              <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">
-                🎛️ Campos Personalizados
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {customFieldsConfig.map((field) => {
-                  const fieldKey = `cf_${field.id}`;
-                  const hasError = !!errors[fieldKey];
-                  return (
-                    <div key={field.id}>
-                      <label className="text-sm text-slate-500 dark:text-slate-400" htmlFor={`customfield-${field.id}`}>
-                        {field.nombre}{field.requerido && ' *'}
-                      </label>
-                      {field.tipo === 'texto' && (
-                        <input
-                          id={`customfield-${field.id}`}
-                          className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${hasError
-                            ? 'border-red-500 focus:ring-red-400'
-                            : 'focus:ring-yellow-400'
-                            } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                          value={formData[fieldKey] || ''}
-                          onChange={e => updateField(fieldKey, e.target.value)}
-                          required={field.requerido}
-                        />
-                      )}
-                      {field.tipo === 'número' && (
-                        <input
-                          id={`customfield-${field.id}`}
-                          type="number"
-                          className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${hasError
-                            ? 'border-red-500 focus:ring-red-400'
-                            : 'focus:ring-yellow-400'
-                            } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                          value={formData[fieldKey] || ''}
-                          onChange={e => updateField(fieldKey, e.target.value)}
-                          required={field.requerido}
-                        />
-                      )}
-                      {field.tipo === 'fecha' && (
-                        <input
-                          id={`customfield-${field.id}`}
-                          type="date"
-                          className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${hasError
-                            ? 'border-red-500 focus:ring-red-400'
-                            : 'focus:ring-yellow-400'
-                            } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                          value={formData[fieldKey] || ''}
-                          onChange={e => updateField(fieldKey, e.target.value)}
-                          required={field.requerido}
-                        />
-                      )}
-                      {field.tipo === 'select' && (
-                        <select
-                          id={`customfield-${field.id}`}
-                          className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 ${hasError
-                            ? 'border-red-500 focus:ring-red-400'
-                            : 'focus:ring-yellow-400'
-                            } dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100`}
-                          value={formData[fieldKey] || ''}
-                          onChange={e => updateField(fieldKey, e.target.value)}
-                          required={field.requerido}
-                        >
-                          <option value="">Seleccionar</option>
-                          {field.opciones?.map(opt => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      )}
-                      {hasError && (
-                        <p className="text-xs text-red-600 mt-1">{errors[fieldKey]}</p>
-                      )}
+
+              <div className="p-8 rounded-[2.5rem] bg-slate-950 text-white shadow-2xl relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-transparent opacity-50 transition-opacity group-hover:opacity-70" />
+                <div className="relative z-10 space-y-8">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase tracking-[3px] text-blue-400">PVP Declarado</p>
+                    <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xl font-black">
+                      {formStats.pvp || 0}€
                     </div>
-                  );
-                })}
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label className="text-white/50">Base Liquidación (Agencia)</Label>
+                    <div className="flex gap-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.comision_base || 0}
+                        onChange={(e) => updateField('comision_base', parseFloat(e.target.value) || 0)}
+                        className="bg-white/5 border-white/10 text-white focus:bg-white/10"
+                      />
+                      <Select
+                        value={formData.comision_tipo || 'porcentaje'}
+                        onChange={(e) => updateField('comision_tipo', e.target.value)}
+                        className="w-28 bg-white/5 border-white/10 text-white"
+                      >
+                        <option value="porcentaje" className="text-slate-900">% Var</option>
+                        <option value="fijo" className="text-slate-900">€ Fijo</option>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label className="text-white/50">Factor Distribución Agente</Label>
+                    <div className="flex gap-3">
+                      <Input
+                        type="number"
+                        step="0.001"
+                        max="1"
+                        value={formData.comision_colaborador || 0}
+                        onChange={(e) => updateField('comision_colaborador', parseFloat(e.target.value) || 0)}
+                        className="bg-blue-500/10 border-blue-500/20 text-blue-400 focus:bg-blue-500/20"
+                      />
+                      <div className="flex items-center justify-center px-4 bg-white/5 rounded-2xl font-black text-blue-400">
+                        {((formData.comision_colaborador || 0) * 100).toFixed(0)}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-white/10 my-6" />
+
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[3px] text-emerald-500 mb-1">Liquidación Neta</p>
+                      <p className="text-4xl font-black tracking-tighter text-emerald-400">
+                        {formStats.comisionEstimada.toFixed(2)}€
+                      </p>
+                    </div>
+                    <div className="p-3 bg-emerald-500/20 rounded-2xl">
+                      <Euro className="w-8 h-8 text-emerald-400" />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          )
-        }
-        {/* Botones de acción */}
-        <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-600">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="px-8 py-3 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-            disabled={isSubmitting}
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={formStats.hasErrors || isSubmitting}
-            className={`flex items-center gap-2 px-8 py-3 rounded-xl text-white transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${isEditing
-              ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700'
-              : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
-              }`}
-          >
-            <Save className="w-4 h-4" />
-            {isSubmitting
-              ? (isEditing ? 'Guardando...' : 'Creando...')
-              : (isEditing ? 'Guardar Cambios' : 'Crear Venta')
-            }
-          </button>
-        </div>
-      </form >
-    </Modal >
+
+              <div className="space-y-6 pt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Contrato nº / Doc</Label>
+                    <Input
+                      placeholder="Referencia papel"
+                      value={formData.documento || ''}
+                      onChange={(e) => updateField('documento', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Numeración / ID</Label>
+                    <Input
+                      placeholder="Línea o Recurso"
+                      value={formData.numeracion || ''}
+                      onChange={(e) => updateField('numeracion', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Notas de Seguimiento</Label>
+                  <TextArea
+                    placeholder="Anotaciones para administración o reporting..."
+                    rows="4"
+                    value={formData.observaciones || ''}
+                    onChange={(e) => updateField('observaciones', e.target.value)}
+                    className="custom-scrollbar"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Custom Fields Section */}
+          <AnimatePresence>
+            {customFieldsConfig?.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-10 rounded-[3rem] bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-8"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <h4 className="text-[10px] font-black uppercase tracking-[4px] text-slate-800 dark:text-white">Campos Dinámicos Master</h4>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                  {customFieldsConfig.map((field) => {
+                    const fieldKey = `cf_${field.id}`;
+                    const hasError = !!errors[fieldKey];
+                    return (
+                      <div key={field.id} className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          {field.nombre}
+                          {field.requerido && <span className="text-rose-500 font-black">*</span>}
+                        </Label>
+
+                        {field.tipo === 'texto' && (
+                          <Input
+                            id={`customfield-${field.id}`}
+                            value={formData[fieldKey] || ''}
+                            onChange={e => updateField(fieldKey, e.target.value)}
+                            className={cn(hasError && "border-rose-500 bg-rose-500/5 shadow-none")}
+                          />
+                        )}
+                        {field.tipo === 'número' && (
+                          <Input
+                            id={`customfield-${field.id}`}
+                            type="number"
+                            value={formData[fieldKey] || ''}
+                            onChange={e => updateField(fieldKey, e.target.value)}
+                            className={cn(hasError && "border-rose-500 bg-rose-500/5 shadow-none")}
+                          />
+                        )}
+                        {field.tipo === 'fecha' && (
+                          <Input
+                            id={`customfield-${field.id}`}
+                            type="date"
+                            value={formData[fieldKey] || ''}
+                            onChange={e => updateField(fieldKey, e.target.value)}
+                            className={cn(hasError && "border-rose-500 bg-rose-500/5 shadow-none")}
+                          />
+                        )}
+                        {field.tipo === 'select' && (
+                          <Select
+                            id={`customfield-${field.id}`}
+                            value={formData[fieldKey] || ''}
+                            onChange={e => updateField(fieldKey, e.target.value)}
+                            className={cn(hasError && "border-rose-500 bg-rose-500/5 shadow-none")}
+                          >
+                            <option value="">Selección</option>
+                            {field.opciones?.map(opt => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </Select>
+                        )}
+                        {hasError && <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mt-1 ml-1">{errors[fieldKey]}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Form Actions */}
+          <div className="flex justify-end gap-5 pt-10 border-t border-slate-200 dark:border-white/5">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className="px-10 py-4 h-auto rounded-[1.5rem]"
+            >
+              Abandonar Terminal
+            </Button>
+
+            <Button
+              type="submit"
+              variant={isEditing ? "primary" : "success"}
+              disabled={formStats.hasErrors || isSubmitting}
+              className="px-12 py-4 h-auto rounded-[1.5rem] shadow-2xl relative overflow-hidden group min-w-[200px]"
+            >
+              <AnimatePresence mode="wait">
+                {isSubmitting ? (
+                  <motion.div
+                    key="loader"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-3"
+                  >
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>{isEditing ? 'Sincronizando...' : 'Procesando...'}</span>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="submit"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-3"
+                  >
+                    <Save className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                    <span>{isEditing ? 'Actualizar Registro' : 'Lanzar Operación'}</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Button>
+          </div>
+        </form>
+      </div>
+    </Modal>
   );
 }
 

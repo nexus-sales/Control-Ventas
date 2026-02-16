@@ -7,6 +7,7 @@ import { AuthContext, DataContext, ThemeContext, AppContext } from './contexts';
 // Importar constantes y helpers
 import { AUTH_BYPASS, MOCK_USER } from '../constants';
 import { getFromStorage, saveToStorage } from '../utils/storage';
+import { supabase } from '../lib/supabase';
 
 // =================== STORAGE KEYS (fuera del componente) ===================
 const STORAGE_KEYS = {
@@ -24,54 +25,143 @@ const STORAGE_KEYS = {
 };
 
 // =================== 🔐 AUTH PROVIDER ===================
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => AUTH_BYPASS ? MOCK_USER : null);
+  const [profile, setProfile] = useState(() => AUTH_BYPASS ? { ...MOCK_USER, rol: 'admin', activo: true, app_access: ['CV'] } : null);
+  const [loading, setLoading] = useState(!AUTH_BYPASS);
 
-  useEffect(() => {
-    if (AUTH_BYPASS) {
-      setUser(MOCK_USER);
-      setLoading(false);
-      return;
+  // Función para cargar el perfil del usuario desde usuarios_cv
+  const fetchProfile = useCallback(async (userId, email) => {
+    try {
+      const { data, error } = await supabase
+        .from('usuarios_cv')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Si no existe el perfil, lo creamos automáticamente
+          console.warn('Perfil no encontrado, creando perfil automáticamente...');
+
+          const { data: newProfile, error: insertError } = await supabase
+            .from('usuarios_cv')
+            .insert({
+              user_id: userId,
+              email: email,
+              nombre_completo: email,
+              rol: 'admin', // Primer usuario como admin
+              activo: true,
+              app_access: ['CV']
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('Error creando perfil:', insertError);
+            return null;
+          }
+
+          console.log('✅ Perfil creado automáticamente:', newProfile);
+          return newProfile;
+        }
+        throw error;
+      }
+      return data;
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+      return null;
     }
-
-    // Simulación de carga de usuario
-    setTimeout(() => {
-      setUser(MOCK_USER);
-      setLoading(false);
-    }, 500);
   }, []);
 
+  useEffect(() => {
+    // 1. Escuchar cambios en la autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (AUTH_BYPASS && !session) return;
+
+      const currentUser = session?.user || (AUTH_BYPASS ? MOCK_USER : null);
+      setUser(currentUser);
+
+      if (currentUser) {
+        const userProfile = await fetchProfile(currentUser.id, currentUser.email);
+        setProfile(userProfile);
+      } else {
+        setProfile(null);
+      }
+
+      setLoading(false);
+    });
+
+    // 2. Verificar sesión inicial
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (AUTH_BYPASS && !session) {
+        setLoading(false);
+        return;
+      }
+
+      const currentUser = session?.user || (AUTH_BYPASS ? MOCK_USER : null);
+      setUser(currentUser);
+
+      if (currentUser) {
+        const userProfile = await fetchProfile(currentUser.id, currentUser.email);
+        setProfile(userProfile);
+      }
+
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchProfile]);
+
   const signIn = useCallback(async (email, password) => {
-    if (AUTH_BYPASS) return { user: MOCK_USER, error: null };
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { user: data?.user, error };
+  }, []);
 
-    // Validación básica
-    if (email === 'admin@test.com' && password === 'admin123') {
-      setUser(MOCK_USER);
-      return { user: MOCK_USER, error: null };
-    }
-
-    return { error: { message: 'Credenciales incorrectas' } };
+  const signUp = useCallback(async (email, password, fullName) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
+    });
+    return { user: data?.user, error };
   }, []);
 
   const signOut = useCallback(async () => {
-    setUser(null);
-    // Limpiar datos sensibles del localStorage
-    localStorage.clear();
-    // Redirigir al login/inicio
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+      setUser(null);
+      setProfile(null);
+      localStorage.clear();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
     }
-    return { error: null };
+    return { error };
   }, []);
 
   const value = useMemo(() => ({
     user,
+    profile,
     loading,
     signIn,
+    signUp,
     signOut,
-    isAuthenticated: !!user
-  }), [user, loading, signIn, signOut]);
+    isAuthenticated: !!user,
+    isAdmin: profile?.rol === 'admin',
+    isActive: profile?.activo === true,
+    hasAppAccess: profile?.app_access?.includes('CV')
+  }), [user, profile, loading, signIn, signUp, signOut]);
 
   if (loading) {
     return (
@@ -111,44 +201,83 @@ export function DataProvider({ children }) {
   const [isDataLoading, setIsDataLoading] = useState(false);
   const initRef = useRef(false);
 
-  // Función para cargar datos desde localStorage
+  // Función para cargar datos (Híbrida: Supabase -> Local)
   const loadAllData = useCallback(async () => {
-    // Debug: DataProvider cargando datos
     setIsDataLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const newData = {};
 
-      // Cargar cada colección
-      Object.keys(STORAGE_KEYS).forEach(collection => {
-        const key = STORAGE_KEYS[collection];
-        const stored = getFromStorage(key, []);
-        newData[collection] = Array.isArray(stored) ? stored : [];
-        // Debug: collection loaded
-      });
+      for (const collection of Object.keys(STORAGE_KEYS)) {
+        let collectionData = [];
+
+        // 1. Intentar cargar desde Supabase si hay sesión
+        if (session) {
+          const tableName = `${collection}_cv`;
+          const { data: remoteData, error: remoteError } = await supabase
+            .from(tableName)
+            .select('*');
+
+          if (!remoteError && remoteData) {
+            collectionData = remoteData;
+          } else {
+            // Si hay error en Supabase, fallback a Local
+            collectionData = getFromStorage(STORAGE_KEYS[collection], []);
+          }
+        } else {
+          // 2. Si no hay sesión, cargar desde LocalStorage
+          collectionData = getFromStorage(STORAGE_KEYS[collection], []);
+        }
+
+        newData[collection] = Array.isArray(collectionData) ? collectionData : [];
+
+        // Sincronizar localmente lo que bajamos (opcional, pero útil para offline posterior)
+        if (session && collectionData.length > 0) {
+          saveToStorage(STORAGE_KEYS[collection], collectionData);
+        }
+      }
 
       setData(newData);
       setDataInitialized(true);
-      // Debug: datos cargados correctamente
 
     } catch (error) {
-      console.error('❌ DataProvider: Error cargando datos:', error);
+      console.error('❌ DataProvider: Error crítico cargando datos:', error);
       setDataInitialized(false);
     } finally {
       setIsDataLoading(false);
     }
-  }, []); // Sin dependencias porque STORAGE_KEYS es constante
+  }, []);
 
-  // Función para guardar una colección
-  const saveCollectionData = useCallback((collection, newData) => {
+  // Función para guardar una colección (Híbrida: Local + Supabase)
+  const saveCollectionData = useCallback(async (collection, newData) => {
     const key = STORAGE_KEYS[collection];
-    if (!key) {
-      console.warn(`DataProvider: No hay clave storage para ${collection}`);
-      return false;
+    if (!key) return false;
+
+    // 1. Guardar en LocalStorage
+    saveToStorage(key, newData);
+
+    // 2. Intentar guardar en Supabase si hay sesión y conexión
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Mapeo selectivo por tabla real en Supabase
+        const tableName = `${collection}_cv`;
+
+        // Upsert masivo (requiere que los registros tengan ID UUID o PK manejable)
+        // Nota: Esto es un ejemplo, dependiendo de la tabla puede ser diferente
+        const { error } = await supabase
+          .from(tableName)
+          .upsert(newData, { onConflict: 'id' });
+
+        if (error) console.error(`Error sync Supabase [${tableName}]:`, error);
+      }
+    } catch (err) {
+      console.warn('Sync Supabase failed (offline mode):', err);
     }
 
-    return saveToStorage(key, newData);
-  }, []); // Sin dependencias porque STORAGE_KEYS es constante
+    return true;
+  }, []);
 
   // Setters para cada colección
   const createSetter = useCallback((collection) => {

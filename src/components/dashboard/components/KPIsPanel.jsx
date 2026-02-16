@@ -1,9 +1,29 @@
 import React from 'react';
 import { Euro, TrendingUp, Target, BarChart3 } from 'lucide-react';
 import { euro, glassStyles, cardHoverStyles } from '../../../utils/designUtils';
+import { cn } from '../../../lib/utils';
+import { motion } from 'framer-motion';
+import { BorderBeam } from '../../ui/BorderBeam';
 
-const KPICard = ({ title, value, subtitle, icon: Icon, colorClass, gradientFrom, gradientTo }) => (
-    <div className={`${glassStyles} ${cardHoverStyles} rounded-3xl p-6 relative overflow-hidden group`}>
+const KPICard = ({ title, value, subtitle, icon: Icon, colorClass, gradientFrom, gradientTo, delay = 0 }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay }}
+        className={cn(
+            glassStyles(),
+            cardHoverStyles(),
+            "rounded-3xl p-6 relative overflow-hidden group border border-white/20 dark:border-slate-800/50"
+        )}
+    >
+        {/* Border Beam Effect (Magic UI) */}
+        <BorderBeam
+            size={120}
+            duration={12}
+            delay={delay * 2}
+            colorFrom={gradientFrom.replace('from-', '#')}
+            colorTo={gradientTo.replace('to-', '#')}
+        />
         {/* Fondo decorativo con gradiente */}
         <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full bg-gradient-to-br ${gradientFrom} ${gradientTo} opacity-10 group-hover:opacity-20 transition-opacity duration-500`} />
 
@@ -23,7 +43,7 @@ const KPICard = ({ title, value, subtitle, icon: Icon, colorClass, gradientFrom,
                 <Icon className="w-6 h-6 text-white" />
             </div>
         </div>
-    </div>
+    </motion.div>
 );
 
 const KPIsPanel = ({ kpis, hayDatos, total, ticketMedio, facturacionTotal, byEstado, crecimiento }) => {
@@ -38,6 +58,7 @@ const KPIsPanel = ({ kpis, hayDatos, total, ticketMedio, facturacionTotal, byEst
                 icon={Euro}
                 gradientFrom="from-sky-500"
                 gradientTo="to-blue-600"
+                delay={0.1}
             />
 
             <KPICard
@@ -47,6 +68,7 @@ const KPIsPanel = ({ kpis, hayDatos, total, ticketMedio, facturacionTotal, byEst
                 icon={TrendingUp}
                 gradientFrom="from-emerald-500"
                 gradientTo="to-teal-600"
+                delay={0.2}
             />
 
             <KPICard
@@ -56,6 +78,7 @@ const KPIsPanel = ({ kpis, hayDatos, total, ticketMedio, facturacionTotal, byEst
                 icon={Target}
                 gradientFrom="from-purple-500"
                 gradientTo="to-indigo-600"
+                delay={0.3}
             />
 
             <KPICard
@@ -65,6 +88,7 @@ const KPIsPanel = ({ kpis, hayDatos, total, ticketMedio, facturacionTotal, byEst
                 icon={BarChart3}
                 gradientFrom="from-rose-500"
                 gradientTo="to-pink-600"
+                delay={0.4}
             />
         </div>
     );

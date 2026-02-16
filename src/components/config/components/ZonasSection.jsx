@@ -8,7 +8,7 @@ const ZonasSection = React.memo(({ zonas = [] }) => {
     return (
         <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center gap-3 mb-2">
-                <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400">
+                <div className="bg-[var(--brand-primary)]/10 p-2 rounded-lg text-[var(--brand-primary)]">
                     <Globe className="w-6 h-6" />
                 </div>
                 <div>
@@ -27,10 +27,10 @@ const ZonasSection = React.memo(({ zonas = [] }) => {
                     {uniqueZonas.map(zona => (
                         <div
                             key={zona.id}
-                            className="group p-5 rounded-2xl bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300"
+                            className="group p-5 rounded-2xl bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 hover:border-[var(--brand-primary)]/50 hover:shadow-xl hover:shadow-[var(--brand-primary)]/5 transition-all duration-300"
                         >
                             <div className="flex items-start justify-between mb-3">
-                                <div className="font-bold text-lg text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                <div className="font-bold text-lg text-slate-900 dark:text-white group-hover:text-[var(--brand-primary)] transition-colors">
                                     {zona.nombre}
                                 </div>
                                 {zona.codigo && (

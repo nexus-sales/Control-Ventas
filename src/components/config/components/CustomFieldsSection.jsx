@@ -104,7 +104,7 @@ const CustomFieldsSection = React.memo(() => {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
                 <h3 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                    <Settings2 className="w-7 h-7 text-purple-600" />
+                    <Settings2 className="w-7 h-7 text-[var(--brand-primary)]" />
                     Campos Personalizados
                 </h3>
                 <p className="text-slate-500 dark:text-gray-400 mt-1">Añade información extra a tus ventas, productos o operadores de forma flexible.</p>
@@ -123,7 +123,7 @@ const CustomFieldsSection = React.memo(() => {
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-slate-400 dark:text-gray-500 uppercase ml-1">Nombre del campo</label>
                             <input
-                                className="w-full border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-2.5 bg-white dark:bg-gray-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                className="w-full border border-slate-200 dark:border-gray-700 rounded-xl px-4 py-2.5 bg-white dark:bg-gray-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--brand-primary)]/50 outline-none"
                                 name="nombre"
                                 placeholder="Ej: Código de Instalación"
                                 value={nuevoCampo.nombre}
@@ -181,14 +181,14 @@ const CustomFieldsSection = React.memo(() => {
                                     onChange={handleChange}
                                     className="sr-only peer"
                                 />
-                                <div className="w-10 h-5 bg-slate-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-purple-600 transition-colors"></div>
+                                <div className="w-10 h-5 bg-slate-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-[var(--brand-primary)] transition-colors"></div>
                                 <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform"></div>
                             </div>
-                            <span className="text-sm font-bold text-slate-600 dark:text-gray-300 group-hover:text-purple-600 transition-colors">Campo obligatorio</span>
+                            <span className="text-sm font-bold text-slate-600 dark:text-gray-300 group-hover:text-[var(--brand-primary)] transition-colors">Campo obligatorio</span>
                         </label>
 
                         <button
-                            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-2.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-purple-500/20 active:scale-95 flex items-center gap-2"
+                            className="bg-[var(--brand-primary)] hover:opacity-90 text-white px-8 py-2.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-[var(--brand-primary)]/20 active:scale-95 flex items-center gap-2"
                             type="submit"
                         >
                             <Plus className="w-4 h-4" />
@@ -212,7 +212,7 @@ const CustomFieldsSection = React.memo(() => {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300">{campo.modulo}</span>
+                                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">{campo.modulo}</span>
                                                 {campo.requerido && <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300">REQUERIDO</span>}
                                                 <h5 className="font-bold text-slate-900 dark:text-white">{campo.nombre}</h5>
                                             </div>

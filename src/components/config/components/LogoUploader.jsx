@@ -27,7 +27,7 @@ const LogoUploader = React.memo(({ logoUrl, onChange }) => {
     return (
         <div className="flex flex-col items-center gap-4 p-6 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl shadow-sm w-full transition-all">
             <div className="flex items-center gap-2 font-bold text-slate-700 dark:text-gray-200 uppercase text-xs tracking-wider">
-                <ImageIcon className="w-4 h-4 text-purple-500" />
+                <ImageIcon className="w-4 h-4 text-[var(--brand-primary)]" />
                 Logo de la empresa
             </div>
 
@@ -59,7 +59,7 @@ const LogoUploader = React.memo(({ logoUrl, onChange }) => {
             <div className="flex flex-col w-full gap-2">
                 <button
                     type="button"
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow transition active:scale-95 text-sm font-semibold"
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--brand-primary)] hover:opacity-90 text-white rounded-xl shadow transition active:scale-95 text-sm font-semibold"
                     onClick={() => fileInput.current?.click()}
                 >
                     <Upload className="w-4 h-4" />

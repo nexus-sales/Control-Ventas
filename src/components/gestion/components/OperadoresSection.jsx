@@ -39,14 +39,14 @@ const TopOperadorCard = ({ operador, index }) => (
     <div className={`${glassStyles()} ${cardHoverStyles()} rounded-2xl p-4 text-center relative overflow-hidden group`}>
         {index < 3 && (
             <div className={`absolute top-2 right-2 p-1.5 rounded-lg ${index === 0 ? 'bg-amber-100 text-amber-600' :
-                    index === 1 ? 'bg-slate-100 text-slate-500' :
-                        'bg-orange-100 text-orange-600'
+                index === 1 ? 'bg-slate-100 text-slate-500' :
+                    'bg-orange-100 text-orange-600'
                 }`}>
                 <Trophy className="w-3 h-3" />
             </div>
         )}
         <p className="font-bold text-slate-800 dark:text-white text-sm truncate">{operador.nombre}</p>
-        <p className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">{operador.totalProductos}</p>
+        <p className="text-2xl font-black text-[var(--brand-primary)] mt-1">{operador.totalProductos}</p>
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1 capitalize">{operador.sector}</p>
     </div>
 );
@@ -224,7 +224,7 @@ const OperadoresSection = React.memo(() => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg">
+                        <div className="p-2 bg-[var(--brand-primary)] rounded-xl shadow-lg">
                             <Building className="w-6 h-6 text-white" />
                         </div>
                         Gestión de Operadores
@@ -236,7 +236,7 @@ const OperadoresSection = React.memo(() => {
                 <div className="flex gap-2 flex-wrap">
                     <button
                         onClick={() => { setEditingOperador(null); setShowModal(true); }}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl hover:from-purple-600 hover:to-indigo-700 transition-all shadow-lg hover:shadow-purple-500/30 text-xs font-bold uppercase tracking-widest active:scale-95"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-[var(--brand-primary)] text-white rounded-xl hover:opacity-90 transition-all shadow-lg shadow-[var(--brand-primary)]/20 text-xs font-bold uppercase tracking-widest active:scale-95"
                     >
                         <Plus className="w-4 h-4" />
                         Nuevo Operador
@@ -316,11 +316,11 @@ const OperadoresSection = React.memo(() => {
                     {/* Búsqueda */}
                     <div className="relative flex-1 group">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-slate-400 group-focus-within:text-purple-500 transition-colors" />
+                            <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[var(--brand-primary)] transition-colors" />
                         </div>
                         <input
                             type="text"
-                            className="block w-full pl-11 pr-4 py-3 rounded-2xl border-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-purple-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-inner text-sm font-medium"
+                            className="block w-full pl-11 pr-4 py-3 rounded-2xl border-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-[var(--brand-primary)]/50 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-inner text-sm font-medium"
                             placeholder="Buscar operador por nombre o código..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
@@ -342,7 +342,7 @@ const OperadoresSection = React.memo(() => {
                         {filtroSector && (
                             <button
                                 onClick={() => setFiltroSector("")}
-                                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-bold uppercase tracking-widest"
+                                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] text-xs font-bold uppercase tracking-widest"
                             >
                                 {filtroSector}
                                 <span className="ml-1">✕</span>
@@ -388,9 +388,9 @@ const OperadoresSection = React.memo(() => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider ${op.sector === 'telefonia' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                op.sector === 'energia' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                                    op.sector === 'seguridad' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                                        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                                            op.sector === 'energia' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                                op.sector === 'seguridad' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                    'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
                                             }`}>
                                             {op.sector || 'Sin sector'}
                                         </span>
@@ -399,8 +399,8 @@ const OperadoresSection = React.memo(() => {
                                         <div className="flex items-center justify-center gap-2">
                                             <Package className="w-4 h-4 text-slate-400" />
                                             <span className={`font-black ${(productosConteo[op.id] || 0) > 0
-                                                    ? 'text-emerald-600 dark:text-emerald-400'
-                                                    : 'text-slate-400'
+                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                : 'text-slate-400'
                                                 }`}>
                                                 {productosConteo[op.id] || 0}
                                             </span>
@@ -410,7 +410,7 @@ const OperadoresSection = React.memo(() => {
                                         <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => { setEditingOperador(op); setShowModal(true); }}
-                                                className="p-2 rounded-xl text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
+                                                className="p-2 rounded-xl text-slate-400 hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10 transition-all"
                                                 title="Editar"
                                             >
                                                 <Edit3 className="w-4 h-4" />

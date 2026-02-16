@@ -7,6 +7,8 @@ import { QuickActions } from "./widgets/DashboardWidgets";
 import { useNavigate } from "react-router-dom";
 import { computeVenta } from "../utils/calculos";
 import { glassStyles, cardHoverStyles, sectionTitleStyles } from "../utils/designUtils";
+import { cn } from "../lib/utils";
+import { motion } from "framer-motion";
 import {
   Users,
   Calendar,
@@ -25,19 +27,40 @@ const getImporteVenta = (venta) => {
   return pvp * cantidad;
 };
 
-const SummaryBadge = ({ label, value, icon: Icon, color, warning }) => (
-  <div className={`${glassStyles} ${cardHoverStyles} p-5 rounded-3xl flex items-center gap-4 group transition-all duration-300`}>
-    <div className={`p-3 rounded-2xl bg-gradient-to-br ${color} shadow-lg shadow-inner group-hover:scale-110 transition-transform`}>
+import { BorderBeam } from "./ui/BorderBeam";
+
+const SummaryBadge = ({ label, value, icon: Icon, color, warning, delay = 0, className = "" }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.9 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{ duration: 0.4, delay }}
+    whileHover={{ y: -5, scale: 1.02 }}
+    className={cn(
+      glassStyles(),
+      cardHoverStyles(),
+      "p-5 rounded-3xl flex items-center gap-4 group transition-all duration-300 border border-slate-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-xl relative overflow-hidden",
+      className
+    )}
+  >
+    <BorderBeam
+      size={80}
+      duration={10}
+      delay={delay}
+      colorFrom={color === 'brand' ? 'var(--brand-primary)' : (color.includes('from-') ? color.split(' ')[0].replace('from-', '#') : '#3b82f6')}
+      colorTo={color === 'brand' ? 'var(--brand-primary)' : (color.includes('to-') ? color.split(' ')[1].replace('to-', '#') : '#8b5cf6')}
+    />
+
+    <div className={`p-3 rounded-2xl bg-gradient-to-br ${color === 'brand' ? 'from-[var(--brand-primary)] to-[var(--brand-primary)] opacity-90' : color} shadow-lg shadow-inner group-hover:rotate-12 transition-transform`}>
       <Icon className="w-6 h-6 text-white" />
     </div>
-    <div>
-      <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">{label}</p>
-      <p className="text-2xl font-black text-slate-800 dark:text-white leading-none">{value}</p>
+    <div className="relative z-10">
+      <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[2px] mb-1">{label}</p>
+      <p className="text-2xl font-black text-slate-800 dark:text-white leading-none tracking-tighter">{value}</p>
       {warning && (
-        <p className="text-[10px] font-bold text-rose-500 mt-1 animate-pulse">¡Actualización necesaria!</p>
+        <p className="text-[8px] font-bold text-rose-500 mt-1 uppercase tracking-wider animate-pulse">Update Required</p>
       )}
     </div>
-  </div>
+  </motion.div>
 );
 
 export default function Dashboard() {
@@ -227,20 +250,25 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-10 pb-20 animate-in fade-in duration-1000">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5 }}
+      className="max-w-[1600px] mx-auto space-y-12 pb-20 px-2"
+    >
       <StatusWidgets />
 
       {/* Header Principal Premium */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
         <div className="space-y-1">
           <div className="flex items-center gap-2 mb-2">
-            <span className="px-2 py-0.5 rounded-md bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest">
+            <span className="px-2 py-0.5 rounded-md bg-[var(--brand-primary)] text-white text-[10px] font-black uppercase tracking-widest">
               Live Analytics
             </span>
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
           </div>
           <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter">
-            Panel de Control <span className="text-indigo-600 dark:text-indigo-400">Comercial</span>
+            Panel de Control <span className="text-[var(--brand-primary)]">Comercial</span>
           </h1>
           <p className="text-slate-500 dark:text-slate-400 font-medium max-w-lg">
             Visión global del rendimiento operativo, métricas de ventas y análisis de colaboradores en tiempo real.
@@ -248,8 +276,8 @@ export default function Dashboard() {
         </div>
 
         {/* Botón de Período Estilizado */}
-        <div className={`${glassStyles} p-2 rounded-2xl flex items-center gap-2`}>
-          <Calendar className="w-4 h-4 text-indigo-500 ml-2" />
+        <div className={cn(glassStyles(), "p-2 rounded-2xl flex items-center gap-2")}>
+          <Calendar className="w-4 h-4 text-[var(--brand-primary)] ml-2" />
           <select
             className="bg-transparent border-none text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-0 cursor-pointer pr-8"
             value={periodoEvolucion}
@@ -277,13 +305,50 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Grid de Estado del Sistema */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-        <SummaryBadge label="Colaboradores" value={colaboradores.length} icon={Users} color="from-blue-500 to-indigo-600" warning={colaboradores.length === 0} />
-        <SummaryBadge label="Operadores" value={operadores.length} icon={Briefcase} color="from-purple-500 to-fuchsia-600" warning={operadores.length === 0} />
-        <SummaryBadge label="Productos" value={productos.length} icon={Package} color="from-amber-500 to-orange-600" warning={productos.length === 0} />
-        <SummaryBadge label="Cobertura" value={`${byZona.length} Zonas`} icon={MapPin} color="from-emerald-500 to-teal-600" warning={byZona.length === 0} />
-        <SummaryBadge label="Volumen" value={`${total} u.`} icon={TrendingUp} color="from-rose-500 to-pink-600" warning={total === 0} />
+      {/* Grid de Estado del Sistema - Bento Style */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 px-1">
+        <SummaryBadge
+          label="Volumen Total"
+          value={`${total} u.` || "0 u."}
+          icon={TrendingUp}
+          color="from-rose-500 to-pink-600"
+          warning={total === 0}
+          className="lg:col-span-2 lg:row-span-1"
+          delay={0.1}
+        />
+        <SummaryBadge
+          label="Colaboradores"
+          value={colaboradores.length}
+          icon={Users}
+          color="from-blue-500 to-indigo-600"
+          warning={colaboradores.length === 0}
+          delay={0.2}
+        />
+        <SummaryBadge
+          label="Operadores"
+          value={operadores.length}
+          icon={Briefcase}
+          color="from-purple-500 to-fuchsia-600"
+          warning={operadores.length === 0}
+          delay={0.3}
+        />
+        <SummaryBadge
+          label="Productos"
+          value={productos.length}
+          icon={Package}
+          color="from-amber-500 to-orange-600"
+          warning={productos.length === 0}
+          delay={0.4}
+        />
+        <SummaryBadge
+          label="Cobertura Territorial"
+          value={`${byZona.length} Sedes`}
+          icon={MapPin}
+          color="from-emerald-500 to-teal-600"
+          warning={byZona.length === 0}
+          delay={0.5}
+          className="md:col-span-2 lg:col-span-1"
+        />
       </div>
 
       {/* Acciones Rápidas Consolidadas */}
@@ -327,6 +392,6 @@ export default function Dashboard() {
           productos={productos}
         />
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -6,42 +6,59 @@ import AccessDeniedScreen from './AccessDeniedScreen';
 import { checkUserPermission } from '../../utils/accessControl';
 
 export function GuardedRoute({ children, roles, permission }) {
-  const { 
-    isLogged, 
-    isAuthLoading, 
-    profile, 
-    user,
-    hasAccess,
-    accessMessage,
-    isAccessLoading
+  const {
+    isAuthenticated,
+    loading: isAuthLoading,
+    profile,
+    user
   } = useAuth();
   const location = useLocation();
 
   // Mostrar loading mientras se verifica autenticación
-  if (isAuthLoading || isAccessLoading) {
+  if (isAuthLoading) {
     return <Loading message="Verificando autenticación..." />;
   }
 
   // Si no está logueado, redirigir al login
-  if (!isLogged) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Si no tiene acceso al sistema, mostrar pantalla de acceso denegado
-  if (!hasAccess) {
-    return (
-      <AccessDeniedScreen 
-        email={user?.email}
-        accessInfo={accessMessage}
-        onRetry={() => window.location.reload()}
-      />
-    );
+  // Validaciones de activación y acceso a la App CV
+  if (profile) {
+    if (!profile.activo) {
+      return (
+        <AccessDeniedScreen
+          email={user?.email}
+          accessInfo={{
+            type: 'warning',
+            title: 'Acceso en Espera',
+            message: 'Tu cuenta está registrada pero aún no ha sido activada por un administrador. Por favor, contacta con gerencia.'
+          }}
+          onRetry={() => window.location.reload()}
+        />
+      );
+    }
+
+    if (!profile.app_access?.includes('CV')) {
+      return (
+        <AccessDeniedScreen
+          email={user?.email}
+          accessInfo={{
+            type: 'error',
+            title: 'Acceso Denegado',
+            message: 'No tienes permisos para acceder al módulo de Control de Ventas (CV).'
+          }}
+          onRetry={() => window.location.reload()}
+        />
+      );
+    }
   }
 
   // Verificar roles específicos de la ruta (compatibilidad con el sistema anterior)
   if (roles && roles.length > 0 && !roles.includes(profile?.rol)) {
     return (
-      <AccessDeniedScreen 
+      <AccessDeniedScreen
         email={user?.email}
         accessInfo={{
           type: 'warning',
@@ -56,7 +73,7 @@ export function GuardedRoute({ children, roles, permission }) {
   // Verificar permisos específicos (nueva funcionalidad)
   if (permission && !checkUserPermission(user?.email, permission)) {
     return (
-      <AccessDeniedScreen 
+      <AccessDeniedScreen
         email={user?.email}
         accessInfo={{
           type: 'warning',

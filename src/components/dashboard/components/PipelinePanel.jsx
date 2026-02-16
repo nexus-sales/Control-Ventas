@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { glassStyles, cardHoverStyles } from '../../../utils/designUtils';
+import { cn } from '../../../lib/utils';
 
 const PipelinePanel = ({ byEstado, total }) => {
     const palette = {
@@ -81,19 +82,19 @@ const PipelinePanel = ({ byEstado, total }) => {
                 return (
                     <div
                         key={estado}
-                        className={`${glassStyles} ${cardHoverStyles} p-6 rounded-3xl text-center group`}
+                        className={cn(glassStyles(), cardHoverStyles(), "p-6 rounded-3xl text-center group")}
                     >
                         <div className={`relative w-16 h-16 mx-auto mb-4 rounded-2xl ${style.bg} flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform duration-300`}>
                             <span className="text-xl font-black text-white">{count}</span>
                             <div className="absolute -inset-1 rounded-2xl bg-white/20 blur opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
 
-                        <p className="text-sm font-bold text-slate-800 dark:text-white mb-1">
+                        <p className="text-sm font-bold text-slate-800 dark:text-white mb-2 text-center">
                             {style.label}
                         </p>
 
-                        <div className="flex items-center justify-center gap-1.5">
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 max-w-[60px]">
+                        <div className="flex flex-col items-center gap-1">
+                            <div className="w-16 bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
                                 <div
                                     className={`h-1.5 rounded-full ${style.bg}`}
                                     style={{ width: `${percentage}%` }}

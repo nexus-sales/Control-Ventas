@@ -14,6 +14,10 @@ import {
   LiquidacionesResumenColab,
   LiquidacionesTabla
 } from "./LiquidacionesComponents";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "../lib/utils";
+import { PiggyBank, Receipt, AlertCircle, FileCheck } from "lucide-react";
+import { glassStyles, sectionTitleStyles } from "../utils/designUtils";
 
 // Estados que consideramos válidos para incluir una venta en la liquidación mensual
 const ESTADOS_LIQUIDABLES = new Set([
@@ -238,51 +242,100 @@ export default function LiquidacionesPage() {
   if (!dataInitialized) return <div className="p-6 animate-pulse space-y-4"><div className="h-8 bg-slate-200 rounded w-1/4" /><div className="h-64 bg-slate-200 rounded" /></div>;
 
   return (
-    <div className="grid gap-4 animate-in fade-in duration-500">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-8 pb-20 px-1"
+    >
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: "", type: "info" })} />
 
-      {colaboradores.some(c => !c.zona_id) && (
-        <Card className="bg-amber-50 border-amber-200 p-4"><p className="text-amber-800 font-bold">⚠️ Colaboradores sin zona fiscal asignada</p></Card>
-      )}
-
-      {decomisionesPeriodo.length > 0 && (
-        <Card className="bg-red-50 border-red-200 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-red-800 font-bold">🚨 {decomisionesPeriodo.length} decomisiones detectadas</p>
-            <button onClick={() => setShowDecomisiones(!showDecomisiones)} className="px-3 py-1 bg-red-100 text-red-800 rounded-lg text-sm font-bold">
-              {showDecomisiones ? 'Ocultar' : 'Ver'}
-            </button>
+      {/* Header Premium */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-[var(--brand-primary)] flex items-center justify-center shadow-xl shadow-[var(--brand-primary)]/20">
+            <PiggyBank className="w-7 h-7 text-white" />
           </div>
+          <div>
+            <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase font-outfit">Liquidaciones</h1>
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Cierre mensual y gestión de pagos</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6">
+
+        <AnimatePresence>
+          {colaboradores.some(c => !c.zona_id) && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+              <Card className="bg-amber-500/10 border-amber-500/20 p-4 border-l-4">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600" />
+                  <p className="text-amber-700 dark:text-amber-400 font-bold text-sm uppercase tracking-tight">⚠️ Colaboradores sin zona fiscal asignada</p>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {decomisionesPeriodo.length > 0 && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+              <Card className="bg-rose-500/10 border-rose-500/20 p-4 border-l-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-rose-600" />
+                    <p className="text-rose-700 dark:text-rose-400 font-bold text-sm uppercase tracking-tight">🚨 {decomisionesPeriodo.length} decomisiones detectadas</p>
+                  </div>
+                  <button
+                    onClick={() => setShowDecomisiones(!showDecomisiones)}
+                    className="px-4 py-1.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-rose-700 transition-colors"
+                  >
+                    {showDecomisiones ? 'Ocultar' : 'Ver Detalles'}
+                  </button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <Card className={cn(glassStyles(), "p-6 border border-slate-200/50 dark:border-gray-800/50")}>
+          <div className="flex items-center gap-3 mb-6">
+            <Receipt className="w-5 h-5 text-[var(--brand-primary)]" />
+            <SectionTitle className="mb-0">Generar Liquidaciones</SectionTitle>
+          </div>
+          <LiquidacionesGenerar periodo={periodo} setPeriodo={setPeriodo} generar={generar} setToast={setToast}
+            showInactivos={showInactivos} setShowInactivos={setShowInactivos} />
         </Card>
-      )}
 
-      <Card className="p-6"><SectionTitle>Generar Liquidaciones</SectionTitle>
-        <LiquidacionesGenerar periodo={periodo} setPeriodo={setPeriodo} generar={generar} setToast={setToast}
-          showInactivos={showInactivos} setShowInactivos={setShowInactivos} />
-      </Card>
+        {showDecomisiones && decomisionesPeriodo.length > 0 && (
+          <LiquidacionesDecomisiones decomisionesPeriodo={decomisionesPeriodo} colaboradores={colaboradores} periodo={periodo} setToast={setToast} />
+        )}
 
-      {showDecomisiones && decomisionesPeriodo.length > 0 && (
-        <LiquidacionesDecomisiones decomisionesPeriodo={decomisionesPeriodo} colaboradores={colaboradores} periodo={periodo} setToast={setToast} />
-      )}
+        <Card className={cn(glassStyles(), "p-6 border border-slate-200/50 dark:border-gray-800/50")}>
+          <LiquidacionesResumenColab porColab={porColab} zonas={zonas} periodo={periodo} setToast={setToast} />
+        </Card>
 
-      <Card className="p-6"><LiquidacionesResumenColab porColab={porColab} zonas={zonas} periodo={periodo} setToast={setToast} /></Card>
+        <Card className={cn(glassStyles(), "p-6 border border-slate-200/50 dark:border-gray-800/50")}>
+          <div className="flex items-center gap-3 mb-6">
+            <FileCheck className="w-5 h-5 text-[var(--brand-primary)]" />
+            <SectionTitle className="mb-0">Liquidaciones Generadas</SectionTitle>
+          </div>
+          <LiquidacionesTabla filteredLiquidaciones={filteredLiquidaciones} colaboradores={colaboradores} search={search} setSearch={setSearch}
+            setToast={setToast} generarInformePDF={(liq, periodo, colabs) => generarInformePDF(liq, periodo, colabs)} porColab={porColab} periodo={periodo}
+            filtroColaborador={filtroColaborador} setFiltroColaborador={setFiltroColaborador} filtroPeriodo={filtroPeriodo} setFiltroPeriodo={setFiltroPeriodo}
+            onPreview={setPreviewLiquidacion} onDelete={(liq) => setLiquidaciones(prev => prev.filter(i => i.id !== liq.id))} />
+        </Card>
 
-      <Card className="p-6"><SectionTitle>Liquidaciones Generadas</SectionTitle>
-        <LiquidacionesTabla filteredLiquidaciones={filteredLiquidaciones} colaboradores={colaboradores} search={search} setSearch={setSearch}
-          setToast={setToast} generarInformePDF={(liq, periodo, colabs) => generarInformePDF(liq, periodo, colabs)} porColab={porColab} periodo={periodo}
-          filtroColaborador={filtroColaborador} setFiltroColaborador={setFiltroColaborador} filtroPeriodo={filtroPeriodo} setFiltroPeriodo={setFiltroPeriodo}
-          onPreview={setPreviewLiquidacion} onDelete={(liq) => setLiquidaciones(prev => prev.filter(i => i.id !== liq.id))} />
-      </Card>
-
-      {previewLiquidacion && (
-        <LiquidacionPreviewModal
-          liquidacion={previewLiquidacion}
-          colaborador={previewColaborador}
-          ventas={previewVentas}
-          decomisiones={previewDecomisiones}
-          onClose={() => setPreviewLiquidacion(null)}
-        />
-      )}
-    </div>
+        {previewLiquidacion && (
+          <LiquidacionPreviewModal
+            liquidacion={previewLiquidacion}
+            colaborador={previewColaborador}
+            ventas={previewVentas}
+            decomisiones={previewDecomisiones}
+            onClose={() => setPreviewLiquidacion(null)}
+          />
+        )}
+      </div>
+    </motion.div>
   );
 }

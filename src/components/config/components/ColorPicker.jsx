@@ -5,7 +5,7 @@ const ColorPicker = React.memo(({ color, onChange }) => {
     return (
         <div className="flex flex-col items-center gap-4 p-6 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl shadow-sm w-full transition-all">
             <div className="flex items-center gap-2 font-bold text-slate-700 dark:text-gray-200 uppercase text-xs tracking-wider">
-                <Palette className="w-4 h-4 text-purple-500" />
+                <Palette className="w-4 h-4 text-[var(--brand-primary)]" />
                 Color Corporativo
             </div>
 
@@ -34,7 +34,7 @@ const ColorPicker = React.memo(({ color, onChange }) => {
                     <button
                         key={preset}
                         onClick={() => onChange(preset)}
-                        className={`w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 shadow-sm transition-transform hover:scale-125 ${color === preset ? 'ring-2 ring-purple-400' : ''}`}
+                        className={`w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 shadow-sm transition-transform hover:scale-125 ${color === preset ? 'ring-2 ring-[var(--brand-primary)]' : ''}`}
                         style={{ background: preset }}
                     />
                 ))}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Save } from "lucide-react";
 import EmpresaForm from "./components/EmpresaForm";
 import LogoUploader from "./components/LogoUploader";
 import ColorPicker from "./components/ColorPicker";
@@ -55,6 +56,11 @@ export default function ConfigSections({ zonas = [] }) {
     });
   }, []);
 
+  const handleSave = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('empresaDataUpdated', { detail: empresa }));
+    alert('Datos de empresa guardados correctamente');
+  }, [empresa]);
+
   // Secciones de configuración
   const sections = useMemo(() => [
     { id: 'admin', label: 'Empresa', icon: '🏢', color: 'purple' },
@@ -74,7 +80,7 @@ export default function ConfigSections({ zonas = [] }) {
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
                 className={`flex items-center gap-3 px-5 py-2.5 rounded-lg font-bold transition-all ${isActive
-                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
+                  ? 'bg-[var(--brand-primary)] text-white shadow-lg shadow-[var(--brand-primary)]/20'
                   : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-gray-800'
                   }`}
               >
@@ -101,13 +107,10 @@ export default function ConfigSections({ zonas = [] }) {
                   <EmpresaForm empresa={empresa} onChange={handleEmpresaChange} />
                   <div className="flex justify-end">
                     <button
-                      className="px-6 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg flex items-center gap-2"
-                      onClick={() => {
-                        window.dispatchEvent(new CustomEvent('empresaDataUpdated', { detail: empresa }));
-                        alert('Datos de empresa guardados correctamente');
-                      }}
+                      onClick={handleSave}
+                      className="px-6 py-2.5 bg-[var(--brand-primary)] text-white rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg flex items-center gap-2"
                     >
-                      <span className="text-xl">💾</span>
+                      <Save className="w-4 h-4" />
                       Guardar Cambios
                     </button>
                   </div>

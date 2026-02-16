@@ -1,5 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { X, User, Building2, Percent, Phone, MapPin, Shield, Save, Zap } from 'lucide-react';
+import { X, User, Building2, Percent, Phone, MapPin, Shield, Save, Zap, Mail, Calendar, Briefcase, FileText, AlertCircle } from 'lucide-react';
+import Modal from "../ui/Modal";
+import { Input, Select, Label, Button, TextArea } from "../ui/FormElements";
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '../../lib/utils';
 
 export default function ColaboradorEditModal({ colaborador, onSave, onClose, niveles, zonas = [] }) {
   const [draft, setDraft] = useState(
@@ -73,7 +77,8 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
     return null;
   };
 
-  const handleSave = () => {
+  const handleSave = (e) => {
+    if (e) e.preventDefault();
     if (!draft.nombre?.trim()) {
       setError("El nombre del colaborador es obligatorio");
       return;
@@ -90,7 +95,7 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       setError("La fecha de baja debe ser posterior a la fecha de alta");
       return;
     }
-    
+
     const cleanedData = {
       ...draft,
       nombre: draft.nombre.trim(),
@@ -108,7 +113,7 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       })(),
       fecha_baja: draft.fecha_baja || null,
     };
-    
+
     onSave(cleanedData, true);
   };
 
@@ -119,11 +124,11 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
     const normalizeKey = (value) =>
       value
         ? value
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-zA-Z0-9]+/g, ' ')
-            .trim()
-            .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-zA-Z0-9]+/g, ' ')
+          .trim()
+          .toLowerCase()
         : '';
 
     const uniqueMap = new Map();
@@ -145,313 +150,310 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
   }, [zonas]);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 border border-slate-200 dark:border-gray-700 rounded-xl shadow-2xl p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto relative">
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 p-2 hover:bg-slate-100 dark:hover:bg-gray-800 rounded-full text-slate-500 dark:text-gray-400"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-gray-100 flex items-center gap-2">
-          <User className="w-6 h-6 text-sky-600" />
-          {colaborador ? `Editar: ${colaborador.nombre}` : 'Nuevo Colaborador'}
-        </h2>
-
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={colaborador ? "Configurar Agente Maestro" : "Nuevo Agente Master"}
+      subtitle={colaborador ? `ID: ${colaborador.id || 'N/A'}` : "Nueva Incorporación"}
+      icon={User}
+      iconColor="text-sky-500"
+      maxWidth="max-w-7xl"
+    >
+      <form onSubmit={handleSave} className="space-y-10">
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl text-red-700 dark:text-red-300 text-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-black uppercase tracking-widest flex items-center gap-3"
+          >
+            <AlertCircle className="w-5 h-5" />
             {error}
-          </div>
+          </motion.div>
         )}
 
-        {/* Datos básicos */}
-        <div className="grid md:grid-cols-2 gap-4 mb-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Nombre completo *</label>
-            <input
-              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-              value={draft.nombre}
-              onChange={(e) => {
-                setDraft((d) => ({ ...d, nombre: e.target.value }));
-                setError("");
-              }}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">CIF/DNI</label>
-            <input
-              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-              placeholder="12345678Z o B12345678"
-              value={draft.cif_dni}
-              onChange={(e) => setDraft((d) => ({ ...d, cif_dni: e.target.value }))}
-            />
-          </div>
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          {/* Columna 1: Identidad y Contacto */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="space-y-8"
+          >
+            <div className="flex items-center gap-4 pb-4 border-b border-slate-200 dark:border-white/5">
+              <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center">
+                <User className="w-5 h-5 text-sky-500" />
+              </div>
+              <h3 className="text-xs font-black uppercase tracking-[3px] text-slate-500">Perfil Profesional</h3>
+            </div>
 
-        {/* Nivel y tipo fiscal */}
-        <div className="grid md:grid-cols-2 gap-4 mb-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Nivel de Comisión *</label>
-            <select
-              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-              value={draft.nivel}
-              onChange={(e) => {
-                setDraft((d) => ({ ...d, nivel: e.target.value }));
-                setError("");
-              }}
-            >
-              <option value="">Selecciona un nivel</option>
-              {niveles.map((nivel) => (
-                <option key={nivel.id} value={nivel.id}>
-                  {nivel.nombre} ({nivel.id})
-                </option>
-              ))}
-            </select>
-            {nivelSeleccionado && (
-              <div className="text-xs text-slate-600 dark:text-gray-300 bg-slate-50 dark:bg-gray-800/70 p-2 rounded">
-                <div className="flex gap-4">
-                  <span>📞 {(nivelSeleccionado.pct_telefonia * 100).toFixed(0)}%</span>
-                  <span>⚡ {(nivelSeleccionado.pct_energia * 100).toFixed(0)}%</span>
-                  <span>🛡️ €{nivelSeleccionado.fijo_seguridad}</span>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label>Nombre Completo Master *</Label>
+                <Input
+                  icon={User}
+                  placeholder="Ej: Juan Pérez Sánchez"
+                  value={draft.nombre}
+                  onChange={(e) => setDraft((d) => ({ ...d, nombre: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>CIF / DNI / NIE</Label>
+                <Input
+                  icon={FileText}
+                  placeholder="12345678Z"
+                  value={draft.cif_dni}
+                  onChange={(e) => setDraft((d) => ({ ...d, cif_dni: e.target.value }))}
+                />
+              </div>
+
+              <div className="p-6 rounded-[2rem] bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-4">
+                <div className="space-y-2">
+                  <Label>Localización y Envío</Label>
+                  <Input
+                    icon={MapPin}
+                    placeholder="Dirección fiscal completa"
+                    value={draft.direccion}
+                    onChange={(e) => setDraft((d) => ({ ...d, direccion: e.target.value }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-[10px]">Teléfono Directo</Label>
+                    <Input icon={Phone} placeholder="600000000" value={draft.telefono} onChange={(e) => setDraft((d) => ({ ...d, telefono: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px]">Email Corporativo</Label>
+                    <Input icon={Mail} placeholder="agente@nexus.com" value={draft.email} onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))} />
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Tipo Fiscal</label>
-            <select
-              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-              value={draft.tipo_fiscal}
-              onChange={(e) => setDraft((d) => ({ ...d, tipo_fiscal: e.target.value }))}
-            >
-              <option value="AUTONOMO">Autónomo</option>
-              <option value="AUTONOMO_ESPECIAL">Autónomo Especial</option>
-              <option value="EMPRESA">Empresa</option>
-            </select>
-          </div>
-        </div>
 
-        {/* Fechas y estado */}
-        <div className="grid md:grid-cols-3 gap-4 mb-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Fecha de alta *</label>
-            <input
-              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-              type="date"
-              value={draft.fecha_alta}
-              onChange={(e) => setDraft((d) => ({ ...d, fecha_alta: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Fecha de baja</label>
-            <input
-              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-              type="date"
-              value={draft.fecha_baja}
-              onChange={(e) => setDraft((d) => ({ ...d, fecha_baja: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Estado</label>
-            <select
-              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-              value={draft.estado}
-              onChange={(e) => setDraft((d) => ({ ...d, estado: e.target.value }))}
-            >
-              <option value="ACTIVO">Activo</option>
-              <option value="INACTIVO">Inactivo</option>
-              <option value="SUSPENDIDO">Suspendido</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Información de contacto */}
-        <div className="mb-6 p-4 bg-slate-50 dark:bg-gray-800/50 border border-slate-200 dark:border-gray-700 rounded-xl">
-          <h3 className="font-semibold text-slate-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-            <Phone className="w-4 h-4" />
-            Información de Contacto
-          </h3>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Teléfono</label>
-              <input
-                className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-                placeholder="600123456"
-                value={draft.telefono}
-                onChange={(e) => setDraft((d) => ({ ...d, telefono: e.target.value }))}
-              />
+              <div className="space-y-2">
+                <Label>Nivel de Red Master *</Label>
+                <Select
+                  value={draft.nivel}
+                  onChange={(e) => setDraft((d) => ({ ...d, nivel: e.target.value }))}
+                  required
+                >
+                  <option value="">Selección de nivel...</option>
+                  {niveles.map((nivel) => (
+                    <option key={nivel.id} value={nivel.id}>
+                      {nivel.nombre} [{nivel.id}]
+                    </option>
+                  ))}
+                </Select>
+                {nivelSeleccionado && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex justify-between p-4 rounded-2xl bg-sky-500/5 text-sky-600 dark:text-sky-400 border border-sky-500/10 mt-2"
+                  >
+                    <div className="text-center">
+                      <p className="text-[8px] font-black uppercase tracking-tighter opacity-50">Telco</p>
+                      <p className="font-black">{(nivelSeleccionado.pct_telefonia * 100).toFixed(0)}%</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[8px] font-black uppercase tracking-tighter opacity-50">Energía</p>
+                      <p className="font-black">{(nivelSeleccionado.pct_energia * 100).toFixed(0)}%</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[8px] font-black uppercase tracking-tighter opacity-50">Segur.</p>
+                      <p className="font-black">€{nivelSeleccionado.fijo_seguridad}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Email</label>
-              <input
-                className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-                placeholder="colaborador@email.com"
-                type="email"
-                value={draft.email}
-                onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
-              />
-            </div>
-          </div>
-          <div className="space-y-2 mt-4">
-            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Dirección</label>
-            <input
-              className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-              placeholder="Calle, número, ciudad, código postal"
-              value={draft.direccion}
-              onChange={(e) => setDraft((d) => ({ ...d, direccion: e.target.value }))}
-            />
-          </div>
-        </div>
+          </motion.div>
 
-        {/* Zona */}
-        {zonasDisponibles.length > 0 && (
-          <div className="mb-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-gray-300 flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Zona de trabajo
-              </label>
-              <select
-                className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-                value={draft.zona_id}
-                onChange={(e) => setDraft((d) => ({ ...d, zona_id: e.target.value }))}
+          {/* Columna 2: Gestión y Fiscalidad */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="space-y-8"
+          >
+            <div className="flex items-center gap-4 pb-4 border-b border-slate-200 dark:border-white/5">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-emerald-500" />
+              </div>
+              <h3 className="text-xs font-black uppercase tracking-[3px] text-slate-500">Configuración Legal</h3>
+            </div>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tipo Fiscal Maestro</Label>
+                  <Select
+                    value={draft.tipo_fiscal}
+                    onChange={(e) => setDraft((d) => ({ ...d, tipo_fiscal: e.target.value }))}
+                  >
+                    <option value="AUTONOMO">Autónomo</option>
+                    <option value="AUTONOMO_ESPECIAL">Autónomo Especial</option>
+                    <option value="EMPRESA">Empresa</option>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Zona de Operación</Label>
+                  <Select
+                    value={draft.zona_id}
+                    onChange={(e) => setDraft((d) => ({ ...d, zona_id: e.target.value }))}
+                  >
+                    <option value="">Zona Nacional / Global</option>
+                    {zonasDisponibles.map((zona) => (
+                      <option key={zona.id} value={zona.id}>
+                        {zona.nombre || zona.codigo || zona.id}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 p-6 rounded-[2rem] bg-emerald-500/5 border border-emerald-500/10">
+                <div className="space-y-2">
+                  <Label>Fecha Alta *</Label>
+                  <Input
+                    type="date"
+                    icon={Calendar}
+                    value={draft.fecha_alta}
+                    onChange={(e) => setDraft((d) => ({ ...d, fecha_alta: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Estado Agente</Label>
+                  <Select
+                    value={draft.estado}
+                    onChange={(e) => setDraft((d) => ({ ...d, estado: e.target.value }))}
+                  >
+                    <option value="ACTIVO">Activo</option>
+                    <option value="INACTIVO">Inactivo</option>
+                    <option value="SUSPENDIDO">Suspendido</option>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Fecha Baja (Si procede)</Label>
+                <Input
+                  type="date"
+                  icon={Calendar}
+                  value={draft.fecha_baja}
+                  onChange={(e) => setDraft((d) => ({ ...d, fecha_baja: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notas de Seguimiento HR</Label>
+                <TextArea
+                  placeholder="Detalles contractuales, acuerdos previos..."
+                  className="rounded-3xl"
+                  rows={4}
+                  value={draft.observaciones}
+                  onChange={(e) => setDraft((d) => ({ ...d, observaciones: e.target.value }))}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-white/5">
+                <Button variant="secondary" onClick={onClose} className="rounded-2xl px-8">Cancelar</Button>
+                <Button variant="primary" onClick={handleSave} icon={Save} className="rounded-2xl px-10">Guardar Agente</Button>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Columna 3: Comisiones Personalizadas */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="space-y-8"
+          >
+            <div className="flex items-center gap-4 pb-4 border-b border-slate-200 dark:border-white/5">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                <Percent className="w-5 h-5 text-purple-500" />
+              </div>
+              <h3 className="text-xs font-black uppercase tracking-[3px] text-slate-500">Esquema Especial</h3>
+            </div>
+
+            <div className="space-y-6">
+              <div
+                onClick={() => setDraft(d => ({ ...d, comision_personalizada_activa: !d.comision_personalizada_activa }))}
+                className={cn(
+                  "p-6 rounded-[2.5rem] border-2 border-dashed transition-all cursor-pointer flex flex-col items-center text-center gap-4",
+                  draft.comision_personalizada_activa
+                    ? "bg-purple-500/10 border-purple-500 border-solid shadow-xl shadow-purple-500/10"
+                    : "bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 opacity-60 hover:opacity-100"
+                )}
               >
-                <option value="">Sin asignar</option>
-                {zonasDisponibles.map((zona) => (
-                  <option key={zona.id} value={zona.id}>
-                    {zona.nombre || zona.codigo || zona.id}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-
-        {/* Comisiones personalizadas */}
-        <div className="mb-6 p-4 bg-slate-50 dark:bg-gray-800/50 border border-slate-200 dark:border-gray-700 rounded-xl">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-800 dark:text-gray-100 flex items-center gap-2">
-              <Percent className="w-4 h-4" />
-              Comisiones Personalizadas
-            </h3>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={draft.comision_personalizada_activa}
-                onChange={(e) => setDraft((d) => ({ ...d, comision_personalizada_activa: e.target.checked }))}
-                className="rounded accent-sky-600"
-              />
-              <span className="text-sm text-slate-700 dark:text-gray-300">Activar comisiones personalizadas</span>
-            </label>
-          </div>
-
-          {draft.comision_personalizada_activa && (
-            <div className="grid md:grid-cols-3 gap-4">
-              {/* Telefonía */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-gray-300 flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-blue-600" />
-                  Telefonía
-                </label>
-                <select
-                  className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-                  value={draft.telefonia_tipo}
-                  onChange={(e) => setDraft((d) => ({ ...d, telefonia_tipo: e.target.value }))}
-                >
-                  <option value="porcentaje">Porcentaje</option>
-                  <option value="fijo">Importe fijo</option>
-                </select>
-                <input
-                  className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-                  type="number"
-                  step="0.01"
-                  placeholder={draft.telefonia_tipo === 'porcentaje' ? '0.05' : '50'}
-                  value={draft.telefonia_valor}
-                  onChange={(e) => setDraft((d) => ({ ...d, telefonia_valor: parseFloat(e.target.value) || 0 }))}
-                />
+                <div className={cn(
+                  "w-14 h-14 rounded-[1.5rem] flex items-center justify-center shadow-lg transition-transform",
+                  draft.comision_personalizada_activa ? "bg-purple-500 text-white rotate-6" : "bg-slate-200 dark:bg-slate-800 text-slate-400"
+                )}>
+                  <Zap className="w-7 h-7" />
+                </div>
+                <div>
+                  <h4 className="font-black text-sm uppercase tracking-wide">Liquidez Personalizada</h4>
+                  <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-bold">
+                    {draft.comision_personalizada_activa ? "Override del Nivel Activo" : "Usando Valores del Nivel"}
+                  </p>
+                </div>
               </div>
 
-              {/* Energía */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-gray-300 flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-yellow-600" />
-                  Energía
-                </label>
-                <select
-                  className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-                  value={draft.energia_tipo}
-                  onChange={(e) => setDraft((d) => ({ ...d, energia_tipo: e.target.value }))}
-                >
-                  <option value="porcentaje">Porcentaje</option>
-                  <option value="fijo">Importe fijo</option>
-                </select>
-                <input
-                  className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-                  type="number"
-                  step="0.01"
-                  placeholder={draft.energia_tipo === 'porcentaje' ? '0.05' : '50'}
-                  value={draft.energia_valor}
-                  onChange={(e) => setDraft((d) => ({ ...d, energia_valor: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
+              <AnimatePresence>
+                {draft.comision_personalizada_activa && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                    exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                    className="space-y-6 overflow-hidden"
+                  >
+                    <div className="space-y-4 p-6 rounded-[2rem] bg-blue-500/5 border border-blue-500/10">
+                      <Label className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> Telefonía</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Select value={draft.telefonia_tipo} onChange={(e) => setDraft(d => ({ ...d, telefonia_tipo: e.target.value }))}>
+                          <option value="porcentaje">Porcentaje %</option>
+                          <option value="fijo">Importe Fijo €</option>
+                        </Select>
+                        <Input type="number" step="0.01" value={draft.telefonia_valor} onChange={(e) => setDraft(d => ({ ...d, telefonia_valor: parseFloat(e.target.value) || 0 }))} />
+                      </div>
+                    </div>
 
-              {/* Seguridad */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-gray-300 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-green-600" />
-                  Seguridad
-                </label>
-                <select
-                  className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-                  value={draft.seguridad_tipo}
-                  onChange={(e) => setDraft((d) => ({ ...d, seguridad_tipo: e.target.value }))}
-                >
-                  <option value="fijo">Importe fijo</option>
-                  <option value="porcentaje">Porcentaje</option>
-                </select>
-                <input
-                  className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-                  type="number"
-                  step="0.01"
-                  placeholder={draft.seguridad_tipo === 'fijo' ? '250' : '0.15'}
-                  value={draft.seguridad_valor}
-                  onChange={(e) => setDraft((d) => ({ ...d, seguridad_valor: parseFloat(e.target.value) || 0 }))}
-                />
+                    <div className="space-y-4 p-6 rounded-[2rem] bg-amber-500/5 border border-amber-500/10">
+                      <Label className="flex items-center gap-2"><Zap className="w-3.5 h-3.5" /> Energía</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Select value={draft.energia_tipo} onChange={(e) => setDraft(d => ({ ...d, energia_tipo: e.target.value }))}>
+                          <option value="porcentaje">Porcentaje %</option>
+                          <option value="fijo">Importe Fijo €</option>
+                        </Select>
+                        <Input type="number" step="0.01" value={draft.energia_valor} onChange={(e) => setDraft(d => ({ ...d, energia_valor: parseFloat(e.target.value) || 0 }))} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 p-6 rounded-[2rem] bg-emerald-500/5 border border-emerald-500/10">
+                      <Label className="flex items-center gap-2"><Shield className="w-3.5 h-3.5" /> Seguridad</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Select value={draft.seguridad_tipo} onChange={(e) => setDraft(d => ({ ...d, seguridad_tipo: e.target.value }))}>
+                          <option value="fijo">Importe Fijo €</option>
+                          <option value="porcentaje">Porcentaje %</option>
+                        </Select>
+                        <Input type="number" step="0.01" value={draft.seguridad_valor} onChange={(e) => setDraft(d => ({ ...d, seguridad_valor: parseFloat(e.target.value) || 0 }))} />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="p-10 rounded-[2.5rem] bg-indigo-500/5 border border-indigo-500/10 flex flex-col items-center text-center">
+                <Briefcase className="w-10 h-10 text-indigo-500/30 mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-[3px] text-slate-400 mb-2">Resumen Contractual</p>
+                <p className="text-xs font-bold text-slate-500 max-w-[200px] leading-relaxed">
+                  Asegúrese de validar el CIF y la fecha de alta antes de proceder con el registro maestro.
+                </p>
               </div>
             </div>
-          )}
+          </motion.div>
         </div>
-
-        {/* Observaciones */}
-        <div className="space-y-2 mb-6">
-          <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Observaciones</label>
-          <textarea
-            className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500"
-            rows="3"
-            placeholder="Notas adicionales sobre el colaborador..."
-            value={draft.observaciones}
-            onChange={(e) => setDraft((d) => ({ ...d, observaciones: e.target.value }))}
-          />
-        </div>
-
-        {/* Botones */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-gray-700">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-slate-300 dark:border-gray-600 rounded-xl text-slate-600 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-gray-800"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl hover:from-sky-600 hover:to-sky-700 dark:from-sky-600 dark:to-sky-700 dark:hover:from-sky-700 dark:hover:to-sky-800 flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            Guardar Colaborador
-          </button>
-        </div>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }

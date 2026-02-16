@@ -1,6 +1,8 @@
 import React from 'react';
-import { Plus, Trash2, AlertCircle } from 'lucide-react';
-import { glassStyles } from '../../utils/designUtils';
+import { Plus, Trash2, AlertCircle, ShoppingBag, Sparkles } from 'lucide-react';
+import { glassStyles, cardHoverStyles, primaryButtonStyles } from '../../utils/designUtils';
+import { cn } from '../../lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function VentasActions({
   ventasCount,
@@ -11,50 +13,75 @@ export function VentasActions({
   ventasSinPvp = 0
 }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Aviso si hay productos sin PVP */}
-      {ventasSinPvp > 0 && isAdmin && (
-        <div className={`${glassStyles} bg-amber-50/50 border-amber-200/50 dark:bg-amber-900/20 dark:border-amber-700/30 p-4 rounded-2xl flex items-start gap-3`}>
-          <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
-            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+      <AnimatePresence>
+        {ventasSinPvp > 0 && isAdmin && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, y: -20 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -20 }}
+            className={cn(
+              glassStyles(),
+              "bg-amber-500/5 border-amber-500/20 dark:bg-amber-500/5 p-5 rounded-[2rem] flex items-start gap-4 shadow-xl shadow-amber-500/5"
+            )}
+          >
+            <div className="p-3 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl shadow-lg shadow-amber-500/20">
+              <AlertCircle className="w-6 h-6 text-white flex-shrink-0 animate-pulse" />
+            </div>
+            <div className="flex-1">
+              <p className="text-amber-800 dark:text-amber-200 font-black text-sm uppercase tracking-[2px]">
+                Configuración Requerida
+              </p>
+              <p className="text-amber-700/80 dark:text-amber-400/80 text-xs mt-1 font-bold leading-relaxed max-w-2xl">
+                Se han detectado <span className="text-amber-900 dark:text-amber-100 font-black decoration-double underline">{ventasSinPvp} operaciones</span> con valoración pendiente (PVP 0.00€).
+                Es fundamental regularizar estos valores para garantizar la integridad de las liquidaciones.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Barra de Herramientas */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-slate-100/30 dark:bg-white/[0.02] p-2 rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 backdrop-blur-sm">
+        <div className="flex items-center gap-5 px-6 py-2">
+          <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 flex items-center justify-center shadow-lg border border-slate-200/50 dark:border-slate-800">
+            <ShoppingBag className="w-6 h-6 text-blue-500" />
           </div>
           <div>
-            <p className="text-amber-900 dark:text-amber-100 font-bold text-sm uppercase tracking-wide">
-              Atención: Productos sin PVP definido
-            </p>
-            <p className="text-amber-700 dark:text-amber-300 text-xs mt-1 font-medium leading-relaxed">
-              Hay <span className="font-black">{ventasSinPvp}</span> ventas con productos que no tienen PVP definido.
-              Puedes definir el PVP haciendo clic en el botón de edición en la columna PVP de cada venta.
-            </p>
+            <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-widest uppercase"> Terminal</h3>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px]">Acciones de Registro</p>
           </div>
         </div>
-      )}
 
-      {/* Acciones principales */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">
-            Gestión de Ventas
-          </h3>
-        </div>
+        <div className="flex items-center gap-3 w-full lg:w-auto p-2">
+          <AnimatePresence>
+            {isAdmin && selectedIds.length > 0 && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9, x: 20 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.9, x: 20 }}
+                onClick={onDeleteSelected}
+                className="flex-1 lg:flex-none justify-center flex items-center gap-2 px-8 py-4 bg-rose-500 text-white rounded-[1.5rem] hover:bg-rose-600 transition-all shadow-xl shadow-rose-500/20 active:scale-95 text-[10px] font-black uppercase tracking-[2px]"
+              >
+                <Trash2 className="w-4 h-4" />
+                Purgar Selección ({selectedIds.length})
+              </motion.button>
+            )}
+          </AnimatePresence>
 
-        <div className="flex gap-2 w-full sm:w-auto">
-          {isAdmin && selectedIds.length > 0 && (
-            <button
-              onClick={onDeleteSelected}
-              className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-xl hover:from-rose-600 hover:to-rose-700 transition-all shadow-lg hover:shadow-rose-500/30 active:scale-95 text-xs font-bold uppercase tracking-widest"
-            >
-              <Trash2 className="w-4 h-4" />
-              Eliminar ({selectedIds.length})
-            </button>
-          )}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={onNewVenta}
-            className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl hover:from-sky-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-sky-500/30 active:scale-95 text-xs font-bold uppercase tracking-widest"
+            className="flex-1 lg:flex-none justify-center flex items-center gap-3 px-10 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-700 text-white rounded-[1.5rem] shadow-2xl shadow-blue-500/30 hover:shadow-blue-500/40 transition-all text-[10px] font-black uppercase tracking-[3px] group"
           >
-            <Plus className="w-5 h-5" />
-            Nueva Venta
-          </button>
+            <div className="relative">
+              <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" />
+              <Sparkles className="w-3 h-3 text-yellow-300 absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            Registrar Operación
+          </motion.button>
         </div>
       </div>
     </div>

@@ -9,6 +9,9 @@ import {
   Trash2
 } from "lucide-react";
 import { exportarCSV } from "./liquidaciones/liquidacionesUtils";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "../lib/utils";
+import { glassStyles, sectionTitleStyles } from "../utils/designUtils";
 
 // ==========================================
 // COMPONENTE CONSOLIDADO: LIQUIDACIONES
@@ -34,22 +37,24 @@ export const LiquidacionesGenerar = ({ periodo, setPeriodo, generar, setToast, s
         <input
           id="periodo"
           type="month"
-          className="border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:focus:ring-emerald-500"
+          className="border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
           value={periodo}
           onChange={e => setPeriodo(e.target.value)}
           aria-label="Seleccionar periodo"
         />
-        <button
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => {
             generar();
             setToast && setToast({ message: 'Intentando generar liquidaciones...', type: 'info' });
           }}
-          className="px-4 py-2 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-colors"
+          className="px-6 py-2.5 rounded-xl bg-[var(--brand-primary)] text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-[var(--brand-primary)]/20 hover:opacity-90 transition-all"
           aria-label="Generar liquidaciones para el periodo seleccionado"
           role="button"
         >
           Generar Liquidaciones
-        </button>
+        </motion.button>
       </div>
       <div className="flex items-center gap-2">
         <input
@@ -57,7 +62,7 @@ export const LiquidacionesGenerar = ({ periodo, setPeriodo, generar, setToast, s
           id="showInactivos"
           checked={showInactivos}
           onChange={e => setShowInactivos(e.target.checked)}
-          className="rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 focus:ring-2 dark:bg-slate-800 dark:checked:bg-emerald-500"
+          className="rounded border-slate-300 dark:border-slate-600 text-[var(--brand-primary)] focus:ring-[var(--brand-primary)] focus:ring-2 dark:bg-slate-800 dark:checked:bg-[var(--brand-primary)]"
           aria-checked={showInactivos}
           aria-label="Incluir colaboradores dados de baja en el período"
         />
@@ -75,7 +80,7 @@ export const LiquidacionesGenerar = ({ periodo, setPeriodo, generar, setToast, s
 export const LiquidacionesDecomisiones = ({ decomisionesPeriodo, colaboradores, periodo, setToast }) => {
   const [page, setPage] = useState(1);
   const [ariaMessage, setAriaMessage] = useState("");
-  
+
   if (!decomisionesPeriodo.length) return null;
 
   const totalPages = Math.max(1, Math.ceil(decomisionesPeriodo.length / PAGE_SIZE));
@@ -114,72 +119,88 @@ export const LiquidacionesDecomisiones = ({ decomisionesPeriodo, colaboradores, 
   };
 
   return (
-    <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-rose-500/5 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/50 rounded-2xl p-5 mb-6"
+    >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-red-700 dark:text-red-300">Decomisiones por Bajas Anticipadas ({periodo})</h3>
-        <button
+        <h3 className="font-black text-rose-700 dark:text-rose-400 text-sm uppercase tracking-tighter">Decomisiones por Bajas Anticipadas ({periodo})</h3>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleExport}
-          className="flex items-center gap-1 px-2 py-1 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-rose-600 text-white rounded-xl hover:bg-rose-700 shadow-lg shadow-rose-500/20 transition-all"
           title="Exportar decomisiones a Excel"
           aria-label="Exportar decomisiones a Excel"
         >
           <FileSpreadsheet className="w-4 h-4" />
           Exportar
-        </button>
+        </motion.button>
       </div>
-      
+
       <div aria-live="polite" className="sr-only">{ariaMessage}</div>
-      
-      <div className="overflow-x-auto rounded-lg border border-red-100 dark:border-red-900/40 bg-white dark:bg-slate-950/40">
-        <table className="min-w-full text-xs md:text-sm bg-white dark:bg-transparent" role="table" aria-label="Tabla de decomisiones">
-          <thead className="bg-red-100 dark:bg-red-900/40">
-            <tr>
-              <th scope="col" className="px-3 py-2 text-left">Cliente</th>
-              <th scope="col" className="px-3 py-2 text-left">Operador</th>
-              <th scope="col" className="px-3 py-2 text-left">Colaborador</th>
-              <th scope="col" className="px-3 py-2 text-left">Fecha Venta</th>
-              <th scope="col" className="px-3 py-2 text-left">Fecha Baja</th>
-              <th scope="col" className="px-3 py-2 text-center">Meses Comprometidos</th>
-              <th scope="col" className="px-3 py-2 text-center">Meses Transcurridos</th>
-              <th scope="col" className="px-3 py-2 text-center">% Cumplido</th>
-              <th scope="col" className="px-3 py-2 text-left">Regla</th>
-              <th scope="col" className="px-3 py-2 text-center">% Decomisión</th>
-              <th scope="col" className="px-3 py-2 text-right">Comisión Original (€)</th>
-              <th scope="col" className="px-3 py-2 text-right">Importe Decomisión (€)</th>
-              <th scope="col" className="px-3 py-2 text-left">Estado</th>
+
+      <div className="overflow-x-auto rounded-xl border border-rose-100 dark:border-rose-900/40 bg-white/50 dark:bg-slate-950/40 backdrop-blur-sm">
+        <table className="min-w-full text-xs" role="table" aria-label="Tabla de decomisiones">
+          <thead className="bg-rose-100/50 dark:bg-rose-900/40 border-b border-rose-200 dark:border-rose-800">
+            <tr className="text-[10px] font-black uppercase tracking-widest text-rose-800 dark:text-rose-300">
+              <th scope="col" className="px-3 py-3 text-left">Cliente</th>
+              <th scope="col" className="px-3 py-3 text-left">Operador</th>
+              <th scope="col" className="px-3 py-3 text-left">Colaborador</th>
+              <th scope="col" className="px-3 py-3 text-left">Venta</th>
+              <th scope="col" className="px-3 py-3 text-left">Baja</th>
+              <th scope="col" className="px-3 py-3 text-center">Pactado</th>
+              <th scope="col" className="px-3 py-3 text-center">Transcurr.</th>
+              <th scope="col" className="px-3 py-3 text-center">% Cumpl.</th>
+              <th scope="col" className="px-3 py-3 text-left">Regla</th>
+              <th scope="col" className="px-3 py-3 text-center">% Deco</th>
+              <th scope="col" className="px-3 py-3 text-right">Base (€)</th>
+              <th scope="col" className="px-3 py-3 text-right">Importe (€)</th>
+              <th scope="col" className="px-3 py-3 text-left">Estado</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-rose-100 dark:divide-rose-900/20">
             {pagedDecomisiones.length === 0 ? (
               <tr>
-                <td colSpan={13} className="text-center py-4 text-slate-500 dark:text-slate-300 px-3">No hay decomisiones para mostrar.</td>
+                <td colSpan={13} className="text-center py-8 text-slate-500 dark:text-slate-400 px-3 italic underline decoration-rose-200">No hay decomisiones registradas.</td>
               </tr>
             ) : (
               pagedDecomisiones.map((d, idx) => {
                 const colaborador = colaboradores.find(c => c.id === d.colaborador_id);
                 return (
-                  <tr key={d.id || idx} tabIndex={0} className="bg-white odd:bg-white even:bg-red-50/40 dark:bg-transparent dark:odd:bg-slate-900 dark:even:bg-red-950/20 hover:bg-red-100/70 dark:hover:bg-red-900/40 focus:outline focus:outline-2 focus:outline-red-400 dark:focus:outline-red-500">
-                    <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{d.cliente_nombre}</td>
-                    <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{d.operador_nombre || 'Sin operador'}</td>
-                    <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{colaborador?.nombre || d.colaborador_id}</td>
-                    <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{new Date(d.fecha_venta).toLocaleDateString('es-ES')}</td>
-                    <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{new Date(d.fecha_baja_cliente).toLocaleDateString('es-ES')}</td>
-                    <td className="px-3 py-2 text-center text-slate-700 dark:text-slate-200">{d.meses_comprometidos}</td>
-                    <td className="px-3 py-2 text-center text-slate-700 dark:text-slate-200">{d.meses_transcurridos.toFixed(1)}</td>
-                    <td className="px-3 py-2 text-center text-slate-700 dark:text-slate-200">{d.porcentaje_cumplido}%</td>
-                    <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{d.regla_aplicada === 'antes_limite' ? 'Antes del límite' : 'Después del límite'}</td>
-                    <td className="px-3 py-2 text-center text-slate-700 dark:text-slate-200">{d.porcentaje_decomision}%</td>
-                    <td className="px-3 py-2 text-right text-slate-700 dark:text-slate-200">{d.comision_original.toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right font-bold text-red-600 dark:text-red-300">{d.importe_decomision.toFixed(2)}</td>
-                    <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{d.estado}</td>
-                  </tr>
+                  <motion.tr
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    key={d.id || idx}
+                    className="hover:bg-rose-100/30 dark:hover:bg-rose-900/20 transition-colors"
+                  >
+                    <td className="px-3 py-2.5 font-bold text-slate-800 dark:text-slate-200">{d.cliente_nombre}</td>
+                    <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400">{d.operador_nombre || 'N/A'}</td>
+                    <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 truncate max-w-[100px]">{colaborador?.nombre || d.colaborador_id}</td>
+                    <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{new Date(d.fecha_venta).toLocaleDateString('es-ES')}</td>
+                    <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{new Date(d.fecha_baja_cliente).toLocaleDateString('es-ES')}</td>
+                    <td className="px-3 py-2.5 text-center text-slate-600 dark:text-slate-400">{d.meses_comprometidos}m</td>
+                    <td className="px-3 py-2.5 text-center text-slate-600 dark:text-slate-400">{d.meses_transcurridos.toFixed(1)}m</td>
+                    <td className="px-3 py-2.5 text-center font-bold text-slate-700 dark:text-slate-300">{d.porcentaje_cumplido}%</td>
+                    <td className="px-3 py-2.5 text-[10px] font-black uppercase text-slate-500">{d.regla_aplicada === 'antes_limite' ? 'Early' : 'Late'}</td>
+                    <td className="px-3 py-2.5 text-center text-slate-600 dark:text-slate-400">{d.porcentaje_decomision}%</td>
+                    <td className="px-3 py-2.5 text-right text-slate-600 dark:text-slate-400">{d.comision_original.toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-right font-black text-rose-600 dark:text-rose-400">{d.importe_decomision.toFixed(2)}</td>
+                    <td className="px-3 py-2.5">
+                      <span className="px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/40 text-[9px] font-black uppercase tracking-tighter text-rose-600 dark:text-rose-400">
+                        {d.estado}
+                      </span>
+                    </td>
+                  </motion.tr>
                 );
               })
             )}
           </tbody>
         </table>
       </div>
-      
+
       {/* Paginación optimizada */}
       {totalPages > 1 && (
         <nav className="flex items-center justify-between mt-4" aria-label="Paginación de decomisiones">
@@ -204,7 +225,7 @@ export const LiquidacionesDecomisiones = ({ decomisionesPeriodo, colaboradores, 
           </button>
         </nav>
       )}
-    </div>
+    </motion.div>
   );
 };
 
@@ -246,10 +267,10 @@ export const LiquidacionesResumenColab = ({ porColab, zonas, periodo, setToast }
   return (
     <div className="mb-4">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-bold text-blue-700 dark:text-blue-300">Resumen por colaborador ({periodo})</h3>
+        <h2 className={sectionTitleStyles()}>Resumen por colaborador ({periodo})</h2>
         <button
           onClick={handleExport}
-          className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-500 transition-colors"
+          className="flex items-center gap-1 px-3 py-2 text-sm bg-[var(--brand-primary)] text-white rounded-lg hover:opacity-90 transition-colors"
           title="Exportar resumen de colaboradores"
           aria-label="Exportar resumen de colaboradores"
         >
@@ -283,7 +304,7 @@ export const LiquidacionesTabla = ({
 }) => {
   const [page, setPage] = useState(1);
   const [ariaMessage, setAriaMessage] = useState("");
-  
+
   const totalPages = Math.max(1, Math.ceil(filteredLiquidaciones.length / PAGE_SIZE));
   const pagedLiquidaciones = filteredLiquidaciones.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -293,8 +314,8 @@ export const LiquidacionesTabla = ({
       return {
         'Período': liq.periodo,
         'Colaborador': colaborador?.nombre || liq.colaborador_id,
-        'Tipo': liq.colaborador_tipo === 'autonomo' ? 'Autónomo' : 
-                liq.colaborador_tipo === 'empresa' ? 'Empresa' : 'Empleado',
+        'Tipo': liq.colaborador_tipo === 'autonomo' ? 'Autónomo' :
+          liq.colaborador_tipo === 'empresa' ? 'Empresa' : 'Empleado',
         'Zona Fiscal': liq.zona_fiscal || 'No definida',
         'Comisión Bruta (€)': liq.bruto.toFixed(2),
         'IRPF (€)': liq.irpf.toFixed(2),
@@ -339,45 +360,45 @@ export const LiquidacionesTabla = ({
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex flex-col md:flex-row md:items-center gap-2">
           <div className="flex gap-2">
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-1 px-3 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Exportar liquidaciones a Excel (CSV)"
-            aria-label="Exportar liquidaciones a Excel"
-            disabled={filteredLiquidaciones.length === 0}
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            Excel
-          </button>
-          <button
-            onClick={() => {
-              generarInformePDF(filteredLiquidaciones, porColab, periodo, colaboradores);
-              setAriaMessage("Informe PDF generado");
-            }}
-            className="flex items-center gap-1 px-3 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Generar informe PDF para imprimir"
-            aria-label="Generar informe PDF para imprimir"
-            disabled={filteredLiquidaciones.length === 0}
-          >
-            <FileText className="w-4 h-4" />
-            PDF
-          </button>
-        </div>
-        <input
-          type="text"
-          className="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm flex-1 md:max-w-xs bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500"
-          placeholder="Buscar colaborador, periodo..."
-          value={search}
-          onChange={e => { setSearch(e.target.value); setPage(1); }}
-          aria-label="Buscar en liquidaciones"
-        />
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-1 px-3 py-2 text-sm bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Exportar liquidaciones a Excel (CSV)"
+              aria-label="Exportar liquidaciones a Excel"
+              disabled={filteredLiquidaciones.length === 0}
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Excel
+            </button>
+            <button
+              onClick={() => {
+                generarInformePDF(filteredLiquidaciones, porColab, periodo, colaboradores);
+                setAriaMessage("Informe PDF generado");
+              }}
+              className="flex items-center gap-1 px-3 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Generar informe PDF para imprimir"
+              aria-label="Generar informe PDF para imprimir"
+              disabled={filteredLiquidaciones.length === 0}
+            >
+              <FileText className="w-4 h-4" />
+              PDF
+            </button>
+          </div>
+          <input
+            type="text"
+            className="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm flex-1 md:max-w-xs bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+            placeholder="Buscar colaborador, periodo..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
+            aria-label="Buscar en liquidaciones"
+          />
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <div className="flex-1">
             <label htmlFor="filtroColaborador" className="sr-only">Filtrar por colaborador</label>
             <select
               id="filtroColaborador"
-              className="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm w-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500"
+              className="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm w-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
               value={filtroColaborador}
               onChange={e => handleFiltroColaborador(e.target.value)}
             >
@@ -392,7 +413,7 @@ export const LiquidacionesTabla = ({
             <input
               id="filtroPeriodo"
               type="month"
-              className="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500"
+              className="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
               value={filtroPeriodo || ""}
               onChange={e => handleFiltroPeriodo(e.target.value)}
             />
@@ -410,11 +431,11 @@ export const LiquidacionesTabla = ({
           </div>
         </div>
       </div>
-      
+
       <div aria-live="polite" className="sr-only">{ariaMessage}</div>
-      
+
       {/* Tabla principal */}
-      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950/30">
+      <div className={cn(glassStyles(), "overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700")}>
         <table className="min-w-full text-xs md:text-sm bg-white dark:bg-transparent" role="table" aria-label="Tabla de liquidaciones generadas">
           <thead className="bg-slate-100 dark:bg-slate-800/70">
             <tr>
@@ -459,13 +480,12 @@ export const LiquidacionesTabla = ({
                   <tr key={liq.id || idx} tabIndex={0} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 focus:outline focus:outline-2 focus:outline-blue-400 dark:focus:outline-blue-500">
                     <td className="px-3 py-2 font-medium text-slate-700 dark:text-slate-200">{colaborador?.nombre || liq.colaborador_id}</td>
                     <td className="px-3 py-2">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        liq.colaborador_tipo === 'autonomo' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200' : 
-                        liq.colaborador_tipo === 'empresa' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' : 
-                        'bg-gray-100 text-gray-800 dark:bg-gray-800/60 dark:text-gray-200'
-                      }`}>
-                        {liq.colaborador_tipo === 'autonomo' ? 'Autónomo' : 
-                         liq.colaborador_tipo === 'empresa' ? 'Empresa' : 'Empleado'}
+                      <span className={`px-2 py-1 rounded-full text-xs ${liq.colaborador_tipo === 'autonomo' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200' :
+                        liq.colaborador_tipo === 'empresa' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' :
+                          'bg-gray-100 text-gray-800 dark:bg-gray-800/60 dark:text-gray-200'
+                        }`}>
+                        {liq.colaborador_tipo === 'autonomo' ? 'Autónomo' :
+                          liq.colaborador_tipo === 'empresa' ? 'Empresa' : 'Empleado'}
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right font-mono text-slate-700 dark:text-slate-200">{liq.bruto.toFixed(2)}</td>
@@ -475,11 +495,10 @@ export const LiquidacionesTabla = ({
                     <td className="px-3 py-2 text-right font-mono text-red-600 dark:text-red-300">{liq.decomisiones?.toFixed(2) || '0.00'}</td>
                     <td className="px-3 py-2 text-right font-mono font-bold text-green-600 dark:text-green-300">{liq.neto.toFixed(2)}</td>
                     <td className="px-3 py-2">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        liq.estado === 'Generada' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200' : 
-                        liq.estado === 'Pagada' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' : 
-                        'bg-gray-100 text-gray-800 dark:bg-gray-800/60 dark:text-gray-200'
-                      }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs ${liq.estado === 'Generada' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200' :
+                        liq.estado === 'Pagada' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' :
+                          'bg-gray-100 text-gray-800 dark:bg-gray-800/60 dark:text-gray-200'
+                        }`}>
                         {liq.estado}
                       </span>
                     </td>
@@ -523,7 +542,7 @@ export const LiquidacionesTabla = ({
           </tbody>
         </table>
       </div>
-      
+
       {/* Paginación optimizada */}
       {totalPages > 1 && (
         <nav className="flex items-center justify-between mt-4" aria-label="Paginación de liquidaciones">

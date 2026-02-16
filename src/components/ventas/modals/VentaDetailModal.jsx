@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Eye, X, Edit3 } from 'lucide-react';
-import Card from '../../ui/Card';
-import Pill from '../../ui/Pill';
+import { Eye, X, Edit3, User, Briefcase, MapPin, Calendar, CreditCard, PieChart, Info, Sparkles, ShieldCheck, Clock, AlertCircle, Phone, ShoppingBag } from 'lucide-react';
+import { glassStyles, cardHoverStyles, euro } from '../../../utils/designUtils';
+import { cn } from '../../../lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import Modal from '../../ui/Modal';
 
 // Función para formatear fecha
 const formatDate = (dateStr) => {
@@ -19,9 +21,32 @@ const formatDate = (dateStr) => {
   }
 };
 
-export function VentaDetailModal({ 
-  isOpen, 
-  onClose, 
+const InfoChip = ({ icon: Icon, label, value, color = "blue" }) => {
+  const colorClasses = {
+    blue: "text-blue-600 bg-blue-500/10 border-blue-500/20",
+    emerald: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20",
+    amber: "text-amber-600 bg-amber-500/10 border-amber-500/20",
+    purple: "text-purple-600 bg-purple-500/10 border-purple-500/20",
+    slate: "text-slate-600 bg-slate-500/10 border-slate-500/20"
+  };
+
+  return (
+    <div className={cn("p-4 rounded-3xl border flex items-center gap-4 transition-all hover:shadow-lg", colorClasses[color] || colorClasses.blue)}>
+      <div className="p-2.5 rounded-2xl bg-white dark:bg-slate-900 shadow-inner">
+        <Icon className="w-5 h-5" />
+      </div>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[2px] opacity-70 mb-0.5">{label}</p>
+        <p className="text-sm font-black text-slate-800 dark:text-white truncate">{value || '---'}</p>
+      </div>
+    </div>
+  );
+};
+
+
+export function VentaDetailModal({
+  isOpen,
+  onClose,
   onEdit,
   venta,
   productos = [],
@@ -31,7 +56,7 @@ export function VentaDetailModal({
 }) {
   const [activeTab, setActiveTab] = useState('info');
 
-  if (!isOpen || !venta) return null;
+  if (!venta) return null;
 
   // Funciones para obtener nombres por ID o desde campos precalculados
   const getProductoNombre = () =>
@@ -53,16 +78,21 @@ export function VentaDetailModal({
   const pvpValue = producto?.pvp || venta.pvp || 0;
   const blocked = isVentaBlocked ? isVentaBlocked(venta) : false;
 
-  // Función para obtener estilo del estado
-  const getEstadoStyle = (estado) => {
-    const estilos = {
-      ACTIVO: "bg-emerald-100 text-emerald-700",
-      PENDIENTE: "bg-amber-100 text-amber-700",
-      CANCELADA: "bg-red-100 text-red-700",
-      BAJA: "bg-gray-100 text-gray-700",
-      RECHAZADA: "bg-rose-100 text-rose-700",
+  const getEstadoBadge = (estado) => {
+    const configs = {
+      ACTIVO: { color: "bg-emerald-500", text: "Verificado", icon: ShieldCheck },
+      PENDIENTE: { color: "bg-amber-500", text: "Pendiente", icon: Clock },
+      CANCELADA: { color: "bg-rose-500", text: "Anulada", icon: X },
+      INCIDENCIA: { color: "bg-orange-500", text: "Incidencia", icon: AlertCircle },
     };
-    return estilos[estado] || "bg-slate-100 text-slate-700";
+    const config = configs[estado] || { color: "bg-slate-500", text: estado, icon: Info };
+
+    return (
+      <div className={cn("flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[2px] text-white shadow-lg", config.color)}>
+        <config.icon className="w-3.5 h-3.5" />
+        {config.text}
+      </div>
+    );
   };
 
   // Calcular comisiones correctamente
@@ -72,324 +102,196 @@ export function VentaDetailModal({
   const irpf = venta._calc?.detalle?.irpf || 0;
 
   return (
-    <div className="fixed inset-0 bg-pink-200/40 dark:bg-pink-900/60 flex items-center justify-center p-4 z-50">
-      <Card className="max-w-3xl w-full max-h-[90vh] overflow-auto card-pastel">
-        {/* Header */}
-        <div className="sticky top-0 bg-pink-50 dark:bg-pink-200 border-b border-pink-200 dark:border-pink-400 pb-4 mb-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold text-pink-900 dark:text-pink-700 flex items-center gap-2">
-              <Eye className="w-5 h-5 text-pink-700 dark:text-pink-900" />
-              Detalles de Venta
-            </h3>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Expediente"
+      subtitle={`Ref: ${venta.id?.slice(0, 8) || 'N/A'}`}
+      headerExtra={getEstadoBadge(venta.estado)}
+      icon={Eye}
+      maxWidth="max-w-4xl"
+    >
+      <div className="flex flex-col h-full">
+        {/* Navigation Tabs */}
+        <div className="flex gap-8 border-b border-slate-200/50 dark:border-white/5 mb-8">
+          {[
+            { id: 'info', label: 'Operativa', icon: Briefcase },
+            { id: 'comisiones', label: 'Liquidación', icon: CreditCard },
+            { id: 'extras', label: 'Metadatos', icon: Sparkles },
+          ].map((tab) => (
             <button
-              onClick={onClose}
-              className="p-2 hover:bg-pink-100 dark:hover:bg-pink-300 rounded-lg transition-colors"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "flex items-center gap-2 py-4 text-[10px] font-black uppercase tracking-[3px] border-b-2 transition-all relative",
+                activeTab === tab.id
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              )}
             >
-              <X className="w-5 h-5 text-pink-700 dark:text-pink-900" />
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+              {activeTab === tab.id && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]"
+                />
+              )}
             </button>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-2 mt-4">
-            <button
-              className={`px-4 py-2 rounded-t-lg font-medium ${
-                activeTab === 'info'
-                  ? 'bg-pink-100 text-pink-700'
-                  : 'bg-pink-50 text-pink-900'
-              }`}
-              onClick={() => setActiveTab('info')}
-            >
-              Información
-            </button>
-            <button
-              className={`px-4 py-2 rounded-t-lg font-medium ${
-                activeTab === 'extras'
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-pink-50 text-pink-900'
-              }`}
-              onClick={() => setActiveTab('extras')}
-            >
-              Extras
-            </button>
-          </div>
+          ))}
         </div>
 
-        {/* Contenido principal */}
-        <div className="space-y-6">
-          {activeTab === 'info' && (
-            <>
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Información cliente */}
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-pink-900 dark:text-pink-700 pb-2 border-b border-pink-200 dark:border-pink-400">
-                    Información del Cliente
+        {/* Scrollable Content */}
+        <div className="flex-1 min-h-0">
+          <AnimatePresence mode="wait">
+            {activeTab === 'info' && (
+              <motion.div
+                key="info"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-8"
+              >
+                <div className="space-y-6">
+                  <h4 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[4px] text-slate-400">
+                    <User className="w-3.5 h-3.5" /> Titular de la Operación
                   </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm text-pink-700 dark:text-pink-900">
-                        Cliente
-                      </label>
-                      <p className="font-medium text-pink-900 dark:text-pink-700">
-                        {venta.cliente}
-                      </p>
+                  <div className="grid grid-cols-1 gap-4">
+                    <InfoChip icon={User} label="Cliente" value={venta.cliente} color="slate" />
+                    <InfoChip icon={Info} label="DNI/CIF" value={venta.cif} color="blue" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <InfoChip icon={Phone} label="Móvil" value={venta.telefono_movil} color="emerald" />
+                      <InfoChip icon={Calendar} label="Fecha Registro" value={formatDate(venta.fecha)} color="amber" />
                     </div>
-                    <div>
-                      <label className="text-sm text-pink-700 dark:text-pink-900">
-                        CIF/DNI
-                      </label>
-                      <p className="font-medium text-pink-900 dark:text-pink-700">
-                        {venta.cif || "No especificado"}
-                      </p>
-                    </div>
-                    {venta.telefono_fijo && (
-                      <div>
-                        <label className="text-sm text-pink-700 dark:text-pink-900">
-                          Teléfono Fijo
-                        </label>
-                        <p className="font-medium text-pink-900 dark:text-pink-700">
-                          {venta.telefono_fijo}
-                        </p>
-                      </div>
-                    )}
-                    {venta.telefono_movil && (
-                      <div>
-                        <label className="text-sm text-pink-700 dark:text-pink-900">
-                          Teléfono Móvil
-                        </label>
-                        <p className="font-medium text-pink-900 dark:text-pink-700">
-                          {venta.telefono_movil}
-                        </p>
-                      </div>
-                    )}
-                    {venta.documento && (
-                      <div>
-                        <label className="text-sm text-pink-700 dark:text-pink-900">
-                          Documento
-                        </label>
-                        <p className="font-medium text-pink-900 dark:text-pink-700">
-                          {venta.documento}
-                        </p>
-                      </div>
-                    )}
-                    {venta.numeracion && (
-                      <div>
-                        <label className="text-sm text-pink-700 dark:text-pink-900">
-                          Numeración
-                        </label>
-                        <p className="font-medium text-pink-900 dark:text-pink-700">
-                          {venta.numeracion}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
 
-                {/* Información servicio */}
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-slate-800 pb-2 border-b border-slate-200">
-                    Información del Servicio
+                <div className="space-y-6">
+                  <h4 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[4px] text-slate-400">
+                    <ShoppingBag className="w-3.5 h-3.5" /> Servicio Contratado
                   </h4>
-
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm text-slate-500">Fecha</label>
-                      <p className="font-medium text-slate-800">
-                        {formatDate(venta.fecha)}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-500">Producto</label>
-                      <p className="font-medium text-slate-800">
-                        {getProductoNombre()}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-500">Zona</label>
-                      <p className="font-medium text-slate-800">
-                        {getZonaNombre()}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-500">Colaborador</label>
-                      <p className="font-medium text-slate-800">
-                        {getColaboradorNombre()}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-500">
-                        PVP del Producto
-                      </label>
-                      {pvpValue > 0 ? (
-                        <p className="font-medium text-slate-800 text-lg text-sky-600">
-                          {Number(pvpValue).toFixed(2)}€
-                        </p>
-                      ) : (
-                        <p className="text-slate-400 italic">Por definir</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-500">
-                        Comisión Base del Producto
-                      </label>
-                      <p className="font-medium text-slate-800 text-lg text-indigo-600">
-                        {comisionBase > 0 ? `${comisionBase.toFixed(2)}€` : "0.00€"}
-                      </p>
-                      {producto?.comision_tipo && (
-                        <p className="text-xs text-slate-500">
-                          Tipo: {producto.comision_tipo} 
-                          {producto.comision_tipo === 'porcentaje' ? 
-                            ` (${producto.comision_valor || 0}% del PVP)` :
-                            ` (${producto.comision_valor || 0}€ fijos)`
-                          }
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-500">
-                        Comisión Comercial
-                      </label>
-                      <p className="font-medium text-slate-800 text-lg text-emerald-600">
-                        {comisionNeta > 0 ? `${comisionNeta.toFixed(2)}€` : "0.00€"}
-                      </p>
-                      {venta._calc?.detalle && (
-                        <p className="text-xs text-slate-500">
-                          Neto después de IRPF ({(venta._calc.detalle.irpf_pct * 100).toFixed(1)}%)
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-500">Estado</label>
-                      <div className="mt-1">
-                        <Pill className={getEstadoStyle(venta.estado)}>
-                          {venta.estado}
-                        </Pill>
-                      </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    <InfoChip icon={Briefcase} label="Producto Master" value={getProductoNombre()} color="purple" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <InfoChip icon={MapPin} label="Región" value={getZonaNombre()} color="slate" />
+                      <InfoChip icon={User} label="Agente" value={getColaboradorNombre()} color="blue" />
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Observaciones */}
-              {venta.observaciones && (
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-slate-800 pb-2 border-b border-slate-200">
-                    Observaciones
-                  </h4>
-                  <p className="text-slate-700 bg-slate-50 p-3 rounded-lg">
-                    {venta.observaciones}
-                  </p>
-                </div>
-              )}
-
-              {/* Cálculos detallados */}
-              {venta._calc?.ok && (
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-slate-800 pb-2 border-b border-slate-200">
-                    Detalles de Comisión
-                  </h4>
-                  <div className="bg-slate-50 p-4 rounded-lg space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Comisión Base del Producto:</span>
-                      <span className="font-medium text-indigo-600">
-                        {comisionBase.toFixed(2)}€
-                      </span>
+                {venta.observaciones && (
+                  <div className="col-span-1 md:col-span-2 space-y-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-[4px] text-slate-400 flex items-center gap-2">
+                      <Info className="w-3.5 h-3.5" /> Observaciones del Sistema
+                    </h4>
+                    <div className="p-6 rounded-[2rem] bg-amber-500/5 border border-amber-500/10 text-slate-700 dark:text-amber-200/70 text-sm font-medium leading-relaxed italic">
+                      "{venta.observaciones}"
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Comisión Bruta Total:</span>
-                      <span className="font-medium">
-                        {comisionBruta.toFixed(2)}€
-                      </span>
-                    </div>
-                       <div className="flex justify-between">
-                         <span className="text-slate-600">{/* Eliminado Parte del Colaborador */}</span>
-                         <span className="font-medium">{/* Eliminado Parte del Colaborador */}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">IRPF ({(venta._calc.detalle.irpf_pct * 100).toFixed(1)}%):</span>
-                      <span className="font-medium text-red-600">
-                        -{irpf.toFixed(2)}€
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-t border-slate-200 pt-2">
-                      <span className="font-semibold text-slate-800">
-                        Neto Colaborador:
-                      </span>
-                      <span className="font-bold text-emerald-600">
-                        {comisionNeta.toFixed(2)}€
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Debug info si no hay cálculos */}
-              {!venta._calc?.ok && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-red-800 mb-2">Error en Cálculos</h4>
-                  <p className="text-red-700 text-sm">
-                    No se pudieron calcular las comisiones. 
-                    {venta._calc?.error && ` Error: ${venta._calc.error}`}
-                  </p>
-                  <div className="mt-2 text-xs text-red-600">
-                    <p>IDs: Producto={venta.producto_id}, Colaborador={venta.colaborador_id}, Zona={venta.zona_id}</p>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {activeTab === 'extras' && (
-            <div className="space-y-6">
-              <h4 className="font-semibold text-emerald-700 pb-2 border-b border-emerald-200">
-                Campos Extras Importados
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {venta.extras && Object.keys(venta.extras).length > 0 ? (
-                  Object.entries(venta.extras).map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="bg-pink-100 dark:bg-pink-300 rounded-lg p-3"
-                    >
-                      <span className="text-xs font-semibold text-pink-700 dark:text-pink-900">
-                        {key}
-                      </span>
-                      <div className="text-sm text-pink-900 dark:text-pink-700 break-all">
-                        {value}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-pink-700 dark:text-pink-900">
-                    No hay campos extras importados.
                   </div>
                 )}
-              </div>
-            </div>
-          )}
-
-          {/* Botones */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-            {!blocked && onEdit && (
-              <button
-                onClick={() => {
-                  onClose();
-                  onEdit(venta);
-                }}
-                className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors flex items-center gap-2"
-              >
-                <Edit3 className="w-4 h-4" />
-                Editar Venta
-              </button>
+              </motion.div>
             )}
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
-            >
-              Cerrar
-            </button>
-          </div>
+
+            {activeTab === 'comisiones' && (
+              <motion.div
+                key="comisiones"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-8"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="p-6 rounded-[2rem] bg-blue-500/5 border border-blue-500/10 flex flex-col items-center text-center">
+                    <p className="text-[10px] font-black uppercase tracking-[3px] text-blue-600 mb-2">Comisión Bruta</p>
+                    <p className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter">{euro(comisionBruta)}</p>
+                  </div>
+                  <div className="p-6 rounded-[2rem] bg-rose-500/5 border border-rose-500/10 flex flex-col items-center text-center">
+                    <p className="text-[10px] font-black uppercase tracking-[3px] text-rose-600 mb-2">Soporte IRPF</p>
+                    <p className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter">-{euro(irpf)}</p>
+                  </div>
+                  <div className="p-6 rounded-[2rem] bg-emerald-500/5 border border-emerald-500/10 flex flex-col items-center text-center shadow-xl shadow-emerald-500/10">
+                    <p className="text-[10px] font-black uppercase tracking-[3px] text-emerald-600 mb-2">Neto Agencia</p>
+                    <p className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter">{euro(comisionNeta)}</p>
+                  </div>
+                </div>
+
+                <div className="p-8 rounded-[2.5rem] bg-slate-100/30 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-6">
+                  <h4 className="text-[10px] font-black uppercase tracking-[4px] text-slate-400">Desglose de Facturación</h4>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center px-4 py-2 hover:bg-white dark:hover:bg-slate-900 rounded-2xl transition-all">
+                      <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">Base de Producto</span>
+                      <span className="text-sm font-black text-slate-800 dark:text-white tracking-[2px]">{euro(comisionBase)}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2 hover:bg-white dark:hover:bg-slate-900 rounded-2xl transition-all">
+                      <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">PVP Declarado</span>
+                      <span className="text-sm font-black text-blue-600 tracking-[2px]">{euro(pvpValue)}</span>
+                    </div>
+                    <div className="h-px bg-slate-200 dark:bg-white/5 my-2" />
+                    <div className="flex justify-between items-center px-4">
+                      <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-[3px]">Margen Neto Final</span>
+                      <span className="text-xl font-black text-emerald-600 tracking-[3px]">{euro(comisionNeta)}</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'extras' && (
+              <motion.div
+                key="extras"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-6"
+              >
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-[2.5rem] border border-dashed border-slate-300 dark:border-white/10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {venta.extras && Object.keys(venta.extras).length > 0 ? (
+                      Object.entries(venta.extras).map(([key, value]) => (
+                        <div key={key} className="p-5 rounded-3xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-white/5">
+                          <p className="text-[9px] font-black uppercase tracking-[3px] text-slate-400 mb-1">{key}</p>
+                          <p className="text-xs font-black text-slate-800 dark:text-white break-all">{String(value)}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full py-20 text-center opacity-40">
+                        <PieChart className="w-12 h-12 mx-auto mb-4" />
+                        <p className="text-[10px] font-black uppercase tracking-[4px]">No existen metadatos adicionales</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </Card>
-    </div>
+
+        {/* Footer Actions */}
+        <div className="mt-8 flex justify-end gap-4 pt-8 border-t border-slate-200/50 dark:border-white/5">
+          {!blocked && onEdit && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                onClose();
+                onEdit(venta);
+              }}
+              className="px-8 py-4 bg-blue-600 text-white rounded-[1.5rem] shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition-all text-[10px] font-black uppercase tracking-[3px] flex items-center gap-3"
+            >
+              <Edit3 className="w-4 h-4" />
+              Editar Expediente
+            </motion.button>
+          )}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onClose}
+            className="px-8 py-4 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-[1.5rem] hover:bg-slate-300 dark:hover:bg-slate-700 transition-all text-[10px] font-black uppercase tracking-[3px]"
+          >
+            Cerrar Terminal
+          </motion.button>
+        </div>
+      </div>
+    </Modal>
   );
 }

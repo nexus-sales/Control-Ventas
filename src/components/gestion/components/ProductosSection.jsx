@@ -223,7 +223,7 @@ const ProductosSection = React.memo(() => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg">
+                        <div className="p-2 bg-[var(--brand-primary)] rounded-xl shadow-lg">
                             <Package className="w-6 h-6 text-white" />
                         </div>
                         Gestión de Productos
@@ -235,7 +235,7 @@ const ProductosSection = React.memo(() => {
                 <div className="flex gap-2 flex-wrap">
                     <button
                         onClick={() => { setEditingProducto(null); setShowModal(true); }}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg hover:shadow-emerald-500/30 text-xs font-bold uppercase tracking-widest active:scale-95"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-[var(--brand-primary)] text-white rounded-xl hover:opacity-90 transition-all shadow-lg shadow-[var(--brand-primary)]/20 text-xs font-bold uppercase tracking-widest active:scale-95"
                     >
                         <Plus className="w-4 h-4" />
                         Nuevo Producto
@@ -265,8 +265,8 @@ const ProductosSection = React.memo(() => {
                     title="Total Productos"
                     value={productos.length}
                     icon={Package}
-                    gradientFrom="from-emerald-500"
-                    gradientTo="to-teal-600"
+                    gradientFrom="from-[var(--brand-primary)]"
+                    gradientTo="to-[var(--brand-primary)]"
                 />
                 <StatCard
                     title="Familias"
@@ -297,11 +297,11 @@ const ProductosSection = React.memo(() => {
                     {/* Búsqueda */}
                     <div className="relative flex-1 group">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                            <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[var(--brand-primary)] transition-colors" />
                         </div>
                         <input
                             type="text"
-                            className="block w-full pl-11 pr-4 py-3 rounded-2xl border-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-inner text-sm font-medium"
+                            className="block w-full pl-11 pr-4 py-3 rounded-2xl border-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-[var(--brand-primary)]/50 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-inner text-sm font-medium"
                             placeholder="Buscar por nombre, operador o familia..."
                             value={searchTerm}
                             onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -311,7 +311,7 @@ const ProductosSection = React.memo(() => {
                     {/* Filtros */}
                     <div className="flex gap-2 flex-wrap">
                         <select
-                            className="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border-none focus:ring-2 focus:ring-emerald-500/50 text-sm font-medium"
+                            className="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border-none focus:ring-2 focus:ring-[var(--brand-primary)]/50 text-sm font-medium"
                             value={selectedOperador}
                             onChange={e => { setSelectedOperador(e.target.value); setCurrentPage(1); }}
                         >
@@ -322,7 +322,7 @@ const ProductosSection = React.memo(() => {
                         </select>
 
                         <select
-                            className="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border-none focus:ring-2 focus:ring-emerald-500/50 text-sm font-medium"
+                            className="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border-none focus:ring-2 focus:ring-[var(--brand-primary)]/50 text-sm font-medium"
                             value={selectedFamilia}
                             onChange={e => { setSelectedFamilia(e.target.value); setCurrentPage(1); }}
                         >
@@ -362,7 +362,7 @@ const ProductosSection = React.memo(() => {
                                         type="checkbox"
                                         checked={productosPagina.length > 0 && productosPagina.every(p => selectedIds?.includes(p.id))}
                                         onChange={handleSelectAll}
-                                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                        className="rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
                                     />
                                 </th>
                                 <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Nombre</th>
@@ -381,7 +381,7 @@ const ProductosSection = React.memo(() => {
                                             type="checkbox"
                                             checked={selectedIds?.includes(p.id)}
                                             onChange={() => handleSelect(p.id)}
-                                            className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                            className="rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
                                         />
                                     </td>
                                     <td className="px-4 py-4">
@@ -394,7 +394,7 @@ const ProductosSection = React.memo(() => {
                                         <FamiliaBadge familia={p.familia} />
                                     </td>
                                     <td className="px-4 py-4">
-                                        <span className="font-black text-emerald-600 dark:text-emerald-400">{p.pvp} €</span>
+                                        <span className="font-black text-[var(--brand-primary)]">{p.pvp} €</span>
                                     </td>
                                     <td className="px-4 py-4">
                                         <span className="font-bold text-slate-800 dark:text-white">{p.comision_valor}</span>
@@ -404,7 +404,7 @@ const ProductosSection = React.memo(() => {
                                         <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => { setEditingProducto(p); setShowModal(true); }}
-                                                className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
+                                                className="p-2 rounded-xl text-slate-400 hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10 transition-all"
                                                 title="Editar"
                                             >
                                                 <Edit3 className="w-4 h-4" />

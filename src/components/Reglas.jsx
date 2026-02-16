@@ -139,7 +139,7 @@ export default function Reglas() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-xl shadow-lg">
+            <div className="p-2 bg-[var(--brand-primary)] rounded-xl shadow-lg">
               <BookOpen className="w-6 h-6 text-white" />
             </div>
             Configuración de Reglas
@@ -187,8 +187,8 @@ export default function Reglas() {
         <button
           onClick={() => setActiveTab("niveles")}
           className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === "niveles"
-              ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
-              : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            ? "bg-[var(--brand-primary)] text-white shadow-lg shadow-[var(--brand-primary)]/30"
+            : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             }`}
         >
           <Layers className="w-4 h-4" />
@@ -197,8 +197,8 @@ export default function Reglas() {
         <button
           onClick={() => setActiveTab("reglas")}
           className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === "reglas"
-              ? "bg-sky-500 text-white shadow-lg shadow-sky-500/30"
-              : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            ? "bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white"
+            : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             }`}
         >
           <Settings className="w-4 h-4" />
@@ -238,7 +238,7 @@ export default function Reglas() {
               </div>
               <button
                 onClick={() => setModalNivel({})}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg hover:shadow-emerald-500/30 text-xs font-bold uppercase tracking-widest active:scale-95"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[var(--brand-primary)] text-white rounded-xl hover:opacity-90 transition-all shadow-lg shadow-[var(--brand-primary)]/30 text-xs font-bold uppercase tracking-widest active:scale-95"
               >
                 <Plus className="w-4 h-4" />
                 Nuevo Nivel
@@ -274,10 +274,10 @@ export default function Reglas() {
                       </td>
                       <td className="px-4 py-4">
                         <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase ${n.tipo === "MANAGER"
-                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                            : n.tipo === "SUPERVISOR"
-                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                          : n.tipo === "SUPERVISOR"
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                           }`}>
                           {n.tipo}
                         </span>
@@ -336,7 +336,7 @@ export default function Reglas() {
                   <p className="text-xs text-slate-400 mt-1 mb-4">Añade niveles para asignarlos a colaboradores</p>
                   <button
                     onClick={() => setModalNivel({})}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--brand-primary)] text-white rounded-xl text-xs font-bold uppercase tracking-widest"
                   >
                     <Plus className="w-4 h-4" />
                     Crear Primer Nivel
@@ -370,7 +370,7 @@ export default function Reglas() {
               <button
                 onClick={() => setModalRegla({})}
                 disabled={operadores.length === 0}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-indigo-600 text-white rounded-xl hover:from-sky-600 hover:to-indigo-700 transition-all shadow-lg hover:shadow-sky-500/30 text-xs font-bold uppercase tracking-widest active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[var(--brand-primary)] text-white rounded-xl hover:opacity-90 transition-all shadow-lg shadow-[var(--brand-primary)]/30 text-xs font-bold uppercase tracking-widest active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="w-4 h-4" />
                 Nueva Regla
@@ -435,8 +435,8 @@ export default function Reglas() {
                         </td>
                         <td className="px-4 py-4">
                           <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase ${r.tipo === "%"
-                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                             }`}>
                             {r.tipo === "%" ? "Porcentaje" : "Fijo"}
                           </span>
@@ -486,7 +486,7 @@ export default function Reglas() {
                   <button
                     onClick={() => setModalRegla({})}
                     disabled={operadores.length === 0}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--brand-primary)] text-white rounded-xl text-xs font-bold uppercase tracking-widest disabled:opacity-50"
                   >
                     <Plus className="w-4 h-4" />
                     Crear Primera Regla

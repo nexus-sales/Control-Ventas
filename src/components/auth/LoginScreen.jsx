@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AppContexts';
 import Card from '../ui/Card';
@@ -9,391 +9,382 @@ import ForgotPasswordScreen from './ForgotPasswordScreen';
 import AccessDeniedScreen from './AccessDeniedScreen';
 import { LoginRateLimit, formatTime } from '../../utils/authValidation';
 import '../../styles/login-animations.css';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LogIn, UserPlus, ShieldAlert, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { MagicBackground } from '../ui/MagicBackground';
+import { cn } from '../../lib/utils';
 
 export default function LoginScreen() {
-      // ...existing code...
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
+
+  // Estados del Formulario
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nombre, setNombre] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Estados de UI
   const [isEmailValid, setIsEmailValid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  // Estados de Error y Mensajes
+  const [error, setError] = useState('');
+  const [registerError, setRegisterError] = useState('');
+  const [registerSuccess, setRegisterSuccess] = useState(false);
+
+  // Rate Limiting
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockTimeRemaining, setBlockTimeRemaining] = useState(0);
   const [remainingAttempts, setRemainingAttempts] = useState(5);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [loginSuccess, setLoginSuccess] = useState(false);
-  const [showAccessDenied, setShowAccessDenied] = useState(false);
-  const [accessDeniedInfo, setAccessDeniedInfo] = useState(null);
-  const [showRegister, setShowRegister] = useState(false);
-  const [registerError, setRegisterError] = useState('');
-  const [registerSuccess, setRegisterSuccess] = useState(false);
-  const [nombre, setNombre] = useState('');
-  // ...existing code...
-  const { login, registerUser } = useAuth();
 
-  // Verificar rate limiting y cargar email recordado al cargar el componente
+  // Inicialización y Carga de Preferencias
   useEffect(() => {
-    checkRateLimit();
-    
-    // Si está bloqueado, iniciar countdown
-    if (LoginRateLimit.isBlocked()) {
-      startBlockCountdown();
+    const blocked = LoginRateLimit.isBlocked();
+    if (blocked) {
+      setIsBlocked(true);
+      setBlockTimeRemaining(LoginRateLimit.getBlockedTimeRemaining());
+
+      const interval = setInterval(() => {
+        const remaining = LoginRateLimit.getBlockedTimeRemaining();
+        setBlockTimeRemaining(remaining);
+        if (remaining <= 0) {
+          setIsBlocked(false);
+          setRemainingAttempts(5);
+          clearInterval(interval);
+        }
+      }, 1000);
+      return () => clearInterval(interval);
     }
 
-    // Cargar email recordado del localStorage
     const rememberedEmail = localStorage.getItem('rememberedEmail');
-    const wasRemembered = localStorage.getItem('rememberMe') === 'true';
-    
-    if (rememberedEmail && wasRemembered) {
+    if (rememberedEmail) {
       setEmail(rememberedEmail);
       setRememberMe(true);
-      // Simular validación del email cargado
-      if (rememberedEmail.includes('@') && rememberedEmail.includes('.')) {
-        setIsEmailValid(true);
-      }
+      setIsEmailValid(true);
     }
   }, []);
 
-  const checkRateLimit = () => {
-    const blocked = LoginRateLimit.isBlocked();
-    const timeRemaining = LoginRateLimit.getBlockedTimeRemaining();
-    const attempts = LoginRateLimit.getRemainingAttempts();
-    
-    setIsBlocked(blocked);
-    setBlockTimeRemaining(timeRemaining);
-    setRemainingAttempts(attempts);
-  };
-
-  const startBlockCountdown = () => {
-    const interval = setInterval(() => {
-      const timeRemaining = LoginRateLimit.getBlockedTimeRemaining();
-      setBlockTimeRemaining(timeRemaining);
-      
-      if (timeRemaining <= 0) {
-        setIsBlocked(false);
-        setRemainingAttempts(5);
-        clearInterval(interval);
-      }
-    }, 1000);
-  };
-
-  const handleRegister = async (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    setRegisterError('');
-    setRegisterSuccess(false);
+    if (isBlocked || !isEmailValid || !password) return;
+
+    setIsSubmitting(true);
+    setError('');
+
+    const { user, error: signInError } = await signIn(email, password);
+
+    if (signInError) {
+      setIsSubmitting(false);
+      const attempts = LoginRateLimit.recordAttempt();
+      setRemainingAttempts(LoginRateLimit.getRemainingAttempts());
+
+      if (LoginRateLimit.isBlocked()) {
+        setIsBlocked(true);
+        setBlockTimeRemaining(LoginRateLimit.getBlockedTimeRemaining());
+        window.location.reload(); // Recargar para iniciar el timer limpiamente
+      }
+
+      setError(signInError.message === 'Invalid login credentials'
+        ? 'Email o contraseña incorrectos.'
+        : signInError.message);
+    } else {
+      setIsSubmitting(false);
+      setLoginSuccess(true);
+      LoginRateLimit.resetAttempts();
+
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email);
+      } else {
+        localStorage.removeItem('rememberedEmail');
+      }
+
+      setTimeout(() => {
+        navigate('/');
+      }, 800);
+    }
+  };
+
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
     if (!email || !password || !nombre) {
       setRegisterError('Todos los campos son obligatorios.');
       return;
     }
-    const res = registerUser(email, password, nombre);
-    if (res.success) {
-      setRegisterSuccess(true);
-      setShowRegister(false);
-      setError('Usuario registrado correctamente. Ahora puedes iniciar sesión.');
+
+    setIsSubmitting(true);
+    setRegisterError('');
+
+    const { error: signUpError } = await signUp(email, password, nombre);
+
+    setIsSubmitting(false);
+
+    if (signUpError) {
+      setRegisterError(signUpError.message);
     } else {
-      setRegisterError(res.error || 'Error al registrar usuario.');
+      setRegisterSuccess(true);
+      setTimeout(() => {
+        setShowRegister(false);
+        setRegisterSuccess(false);
+        setError('Cuenta creada. Contacta al administrador para que active tu acceso.');
+      }, 3000);
     }
   };
 
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
-    setError(''); // Limpiar error al cambiar email
-  };
-
-  const handlePasswordChange = (e) => {
-    setPassword(e.target.value);
-    setError(''); // Limpiar error al cambiar contraseña
-  };
-
-  const handleForgotPassword = () => {
-    setShowForgotPassword(true);
-  };
-
-  const handleBackToLogin = () => {
-    setShowForgotPassword(false);
-    setShowAccessDenied(false);
-    setAccessDeniedInfo(null);
-  };
-
-  // Si está en modo "olvidé mi contraseña"
   if (showForgotPassword) {
-    return <ForgotPasswordScreen onBackToLogin={handleBackToLogin} />;
-  }
-
-  // Si el acceso fue denegado, mostrar pantalla especial
-  if (showAccessDenied && accessDeniedInfo) {
-    return (
-      <AccessDeniedScreen 
-        email={accessDeniedInfo.email}
-        accessInfo={accessDeniedInfo}
-        onRetry={handleBackToLogin}
-      />
-    );
+    return <ForgotPasswordScreen onBackToLogin={() => setShowForgotPassword(false)} />;
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 via-indigo-50 to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
-      {/* Elementos decorativos de fondo */}
-      <div className="absolute inset-0 opacity-10 dark:opacity-5">
-        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-500 rounded-full blur-3xl animate-pulse-slow"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-emerald-500 rounded-full blur-3xl animate-pulse-slow animate-delay-300"></div>
-        <div className="absolute top-3/4 left-3/4 w-24 h-24 bg-indigo-500 rounded-full blur-3xl animate-pulse-slow animate-delay-500"></div>
-      </div>
+    <MagicBackground className="px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="w-full max-w-md relative z-10"
+      >
+        {/* Logo/Title Area */}
+        <div className="text-center mb-10 overflow-visible">
+          <motion.div
+            whileHover={{ scale: 1.05, rotate: 5 }}
+            whileTap={{ scale: 0.95 }}
+            className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-3xl shadow-2xl shadow-blue-500/40 mb-6"
+          >
+            <LogIn className="w-10 h-10 text-white" />
+          </motion.div>
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
+            Control de <span className="text-blue-600">Ventas</span>
+          </h1>
+          <p className="text-slate-500 dark:text-gray-400 font-medium tracking-wide">
+            Gestión Profesional & Inteligente
+          </p>
+        </div>
 
-      <Card className="w-full max-w-md mx-auto p-6 animate-fadeIn relative z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-        <SectionTitle className="text-gray-900 dark:text-gray-100">Acceso</SectionTitle>
-        <form
-          className="space-y-4"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setIsSubmitting(true);
-            setError('');
-            setLoginSuccess(false);
-            const res = await login(email, password);
-            setIsSubmitting(false);
-            if (res.success) {
-              setLoginSuccess(true);
-              setTimeout(() => {
-                navigate('/');
-              }, 500);
-            } else {
-              setError(res.error?.message || 'Error de acceso');
-              if (res.error?.accessDenied) {
-                setShowAccessDenied(true);
-                setAccessDeniedInfo(res.error);
-              }
-              // Si el error es usuario no encontrado, mostrar registro
-              if (res.error?.message === 'Usuario o contraseña incorrectos.') {
-                setShowRegister(true);
-              }
-            }
-          }}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
         >
-          <div className="form-field-enter animate-delay-300">
-            <EmailInput
-              value={email}
-              onChange={handleEmailChange}
-              onValidationChange={setIsEmailValid}
-              placeholder="Email"
-              disabled={isBlocked}
-              required
-              className="smooth-transition focus-ring"
-            />
-          </div>
-          
-          <div className="form-field-enter animate-delay-400">
-            <PasswordInput
-              value={password}
-              onChange={handlePasswordChange}
-              placeholder="Contraseña"
-              disabled={isBlocked}
-              showStrengthMeter={false}
-              required
-              className="smooth-transition focus-ring"
-            />
-          </div>
+          <Card className="p-8 border-slate-200/50 dark:border-gray-800/50 shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] backdrop-blur-md bg-white/80 dark:bg-gray-900/80 overflow-hidden relative">
+            {/* Animación de brillo superior */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
+            <AnimatePresence mode="wait">
+              {showRegister ? (
+                <motion.form
+                  key="register"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  onSubmit={handleRegisterSubmit}
+                  className="space-y-4"
+                >
+                  <SectionTitle className="mb-6 flex items-center gap-2">
+                    <UserPlus className="w-5 h-5 text-blue-500" />
+                    Nueva Cuenta
+                  </SectionTitle>
 
-          {/* Checkbox para recordar usuario */}
-          <div className="flex items-center space-x-2 form-field-enter animate-delay-500">
-            <input
-              id="remember-me"
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-2 cursor-pointer"
-            />
-            <label 
-              htmlFor="remember-me" 
-              className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none transition-colors duration-200 hover:text-gray-800 dark:hover:text-gray-200"
-            >
-              Recordar mi email
-            </label>
-          </div>
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider ml-1">Nombre Completo</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Tu nombre y apellidos"
+                        className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-slate-900 dark:text-white"
+                        value={nombre}
+                        onChange={e => setNombre(e.target.value)}
+                      />
+                    </div>
 
-          {/* Información de intentos restantes */}
-          {remainingAttempts < 5 && remainingAttempts > 0 && !isBlocked && (
-            <div className="text-orange-600 dark:text-orange-400 text-sm bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg border border-orange-200 dark:border-orange-800 animate-slideUp animate-pulse-slow">
-              <div className="flex items-center">
-                <svg className="w-4 h-4 mr-2 text-orange-500 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                Te quedan {remainingAttempts} intentos
-              </div>
-            </div>
-          )}
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider ml-1">Email Corporativo</label>
+                      <EmailInput
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        onValidationChange={setIsEmailValid}
+                        className="w-full"
+                      />
+                    </div>
 
-          {/* Mensaje de cuenta bloqueada */}
-          {isBlocked && (
-            <div className="text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800 animate-slideUp animate-shake">
-              <div className="flex items-center mb-2">
-                <svg className="w-4 h-4 mr-2 text-red-500 dark:text-red-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                Cuenta temporalmente bloqueada
-              </div>
-              <p className="text-xs">
-                Tiempo restante: {formatTime(blockTimeRemaining)}
-              </p>
-            </div>
-          )}
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider ml-1">Contraseña</label>
+                      <div className="transform transition-all duration-300">
+                        <PasswordInput
+                          value={password}
+                          onChange={e => setPassword(e.target.value)}
+                          showStrengthMeter={true}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-          {/* Mensajes de error */}
-          {error && (
-            <div className="text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800 animate-shake animate-slideUp">
-              <div className="flex items-center">
-                <svg className="w-4 h-4 mr-2 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {error}
-              </div>
-              
-              {/* Botón de emergencia para problemas de conectividad */}
-              {error.includes('modo offline') && (
-                <div className="mt-3 pt-2 border-t border-red-200 dark:border-red-700">
+                  {registerError && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-start gap-2"
+                    >
+                      <ShieldAlert className="w-5 h-5 flex-shrink-0" />
+                      <span>{registerError}</span>
+                    </motion.div>
+                  )}
+
+                  {registerSuccess && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl text-green-600 dark:text-green-400 text-sm flex items-center gap-2"
+                    >
+                      <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                      <span>¡Registro exitoso! Redirigiendo...</span>
+                    </motion.div>
+                  )}
+
+                  <motion.button
+                    whileHover={{ scale: 1.02, backgroundColor: '#1d4ed8' }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-4 bg-blue-600 disabled:bg-slate-400 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Crear mi cuenta"}
+                    {!isSubmitting && <ArrowRight className="w-5 h-5" />}
+                  </motion.button>
+
                   <button
                     type="button"
-                    onClick={() => {
-                      try {
-                        // Limpiar flag de modo offline
-                        localStorage.removeItem('__app_offline_mode');
-                        
-                        // Recargar la página
-                        window.location.reload();
-                      } catch (error) {
-                        alert('Error al intentar restaurar conectividad. Intenta recargar la página manualmente.');
-                      }
-                    }}
-                    className="w-full px-3 py-2 text-xs bg-yellow-500 dark:bg-yellow-600 hover:bg-yellow-600 dark:hover:bg-yellow-700 text-white rounded-lg transition-colors duration-200 font-medium"
+                    onClick={() => setShowRegister(false)}
+                    className="w-full text-sm text-slate-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-semibold"
                   >
-                    🔧 Forzar Reconexión (Emergency Fix)
+                    ¿Ya tienes cuenta? Inicia Sesión
                   </button>
-                  <p className="text-xs text-red-500 dark:text-red-400 mt-1 text-center">
-                    Si el problema persiste, verifica tu conexión a internet
-                  </p>
-                </div>
+                </motion.form>
+              ) : (
+                <motion.form
+                  key="login"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  onSubmit={handleLoginSubmit}
+                  className="space-y-6"
+                >
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider ml-1">Email</label>
+                      <EmailInput
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        onValidationChange={setIsEmailValid}
+                        disabled={isBlocked || isSubmitting}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center px-1">
+                        <label className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Contraseña</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowForgotPassword(true)}
+                          className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                        >
+                          ¿Olvidaste la clave?
+                        </button>
+                      </div>
+                      <PasswordInput
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        disabled={isBlocked || isSubmitting}
+                        showStrengthMeter={false}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${rememberMe ? 'bg-blue-600 border-blue-600' : 'bg-slate-50 dark:bg-gray-800 border-slate-200 dark:border-gray-700 group-hover:border-blue-400'}`}>
+                        {rememberMe && <div className="w-2.5 h-1.5 border-l-2 border-b-2 border-white -rotate-45 mb-0.5"></div>}
+                      </div>
+                      <input type="checkbox" className="hidden" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} />
+                      <span className="text-sm font-semibold text-slate-600 dark:text-gray-400 group-hover:text-slate-800 dark:group-hover:text-gray-200 transition-colors">Recordarme</span>
+                    </label>
+
+                    {remainingAttempts < 5 && !isBlocked && (
+                      <span className="text-xs font-bold text-orange-500 uppercase tracking-tighter">Intentos: {remainingAttempts} / 5</span>
+                    )}
+                  </div>
+
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-start gap-2"
+                    >
+                      <ShieldAlert className="w-5 h-5 flex-shrink-0" />
+                      <span>{error}</span>
+                    </motion.div>
+                  )}
+
+                  {isBlocked && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="p-4 bg-red-50 dark:bg-red-900/30 border-2 border-red-200 dark:border-red-800 rounded-2xl text-red-600 dark:text-red-400 text-center"
+                    >
+                      <h4 className="font-black uppercase text-sm mb-1">Acceso Denegado</h4>
+                      <p className="text-xs font-bold">Bloqueado por {formatTime(blockTimeRemaining)}</p>
+                    </motion.div>
+                  )}
+
+                  <motion.button
+                    whileHover={{ scale: 1.02, backgroundColor: loginSuccess ? '#10b981' : '#1d4ed8' }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    disabled={isSubmitting || isBlocked || !isEmailValid || !password}
+                    className={cn(
+                      "w-full py-4 font-black rounded-xl shadow-xl transition-all flex items-center justify-center gap-2",
+                      loginSuccess
+                        ? 'bg-green-500 text-white'
+                        : 'bg-blue-600 disabled:bg-slate-300 dark:disabled:bg-gray-800 text-white shadow-blue-500/20'
+                    )}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : loginSuccess ? (
+                      "¡BIENVENIDO!"
+                    ) : (
+                      "INICIAR SESIÓN"
+                    )}
+                    {!isSubmitting && !loginSuccess && <ArrowRight className="w-5 h-5" />}
+                  </motion.button>
+
+                  <div className="text-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowRegister(true)}
+                      className="text-xs font-bold text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 tracking-widest transition-colors uppercase"
+                    >
+                      ¿No tienes acceso? <span className="text-blue-500">Solicitar Registro</span>
+                    </button>
+                  </div>
+                </motion.form>
               )}
-            </div>
-          )}
+            </AnimatePresence>
+          </Card>
+        </motion.div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting || isBlocked || !isEmailValid || !password.trim()}
-            className={`
-              w-full px-4 py-2 rounded-xl text-white font-medium transition-all duration-300 transform
-              ${loginSuccess 
-                ? 'bg-green-600 dark:bg-green-700 scale-105 shadow-lg' 
-                : (isSubmitting || isBlocked || !isEmailValid || !password.trim())
-                  ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
-                  : 'bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 hover:scale-105 hover:shadow-lg focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800'
-              }
-            `}
-            aria-label="Entrar al sistema"
-          >
-            {loginSuccess ? (
-              <div className="flex items-center justify-center">
-                <svg className="w-5 h-5 mr-2 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                ¡Bienvenido!
-              </div>
-            ) : isSubmitting ? (
-              <div className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Verificando...
-              </div>
-            ) : isBlocked ? (
-              `Bloqueado (${formatTime(blockTimeRemaining)})`
-            ) : (
-              'Entrar'
-            )}
-          </button>
-
-          {/* Enlace para recuperar contraseña */}
-          <div className="form-field-enter animate-delay-500">
-            <button
-              type="button"
-              onClick={handleForgotPassword}
-              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm smooth-transition hover:scale-105 focus-ring rounded px-2 py-1"
-              disabled={isSubmitting}
-            >
-              ¿Olvidaste tu contraseña?
-            </button>
-          </div>
-
-          {/* Botón para mostrar registro manual */}
-          {!showRegister && (
-            <button
-              type="button"
-              className="w-full mt-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline text-sm transition-colors duration-200"
-              onClick={() => setShowRegister(true)}
-            >
-              ¿No tienes cuenta? Regístrate aquí
-            </button>
-          )}
-
-          {/* Formulario de registro */}
-          {showRegister && (
-            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 animate-fadeIn">
-              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Registro de usuario</h3>
-              <div className="mb-2">
-                <input
-                  type="text"
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors duration-200"
-                  placeholder="Nombre completo"
-                  value={nombre}
-                  onChange={e => setNombre(e.target.value)}
-                />
-              </div>
-              <div className="mb-2">
-                <input
-                  type="email"
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors duration-200"
-                  placeholder="Email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="mb-2">
-                <input
-                  type="password"
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors duration-200"
-                  placeholder="Contraseña"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                />
-              </div>
-              <button
-                type="button"
-                className="w-full bg-blue-600 dark:bg-blue-700 text-white py-2 rounded-lg mt-2 hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-200"
-                onClick={handleRegister}
-              >
-                Registrar usuario
-              </button>
-              {registerError && (
-                <div className="text-red-600 dark:text-red-400 text-sm mt-2 bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800">
-                  {registerError}
-                </div>
-              )}
-              {registerSuccess && (
-                <div className="text-green-600 dark:text-green-400 text-sm mt-2 bg-green-50 dark:bg-green-900/20 p-2 rounded border border-green-200 dark:border-green-800">
-                  Usuario registrado correctamente.
-                </div>
-              )}
-              <button
-                type="button"
-                className="w-full mt-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:underline text-xs transition-colors duration-200"
-                onClick={() => setShowRegister(false)}
-              >
-                Cancelar
-              </button>
-            </div>
-          )}
-        </form>
-      </Card>
-    </div>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="text-center mt-12 text-[10px] font-bold text-slate-400 dark:text-gray-600 uppercase tracking-[4px]"
+        >
+          &copy; {new Date().getFullYear()} Salva1962 AI Systems
+        </motion.p>
+      </motion.div>
+    </MagicBackground>
   );
 }

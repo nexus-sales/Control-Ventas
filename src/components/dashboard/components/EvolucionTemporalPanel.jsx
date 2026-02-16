@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, TrendingUp } from 'lucide-react';
 import { euro, glassStyles } from '../../../utils/designUtils';
+import { cn } from '../../../lib/utils';
 
 export const EvolucionTemporalPanel = ({ evolucionTemporal, periodoEvolucion, hayDatos }) => {
     const maxFacturacion = evolucionTemporal.length
@@ -8,7 +9,7 @@ export const EvolucionTemporalPanel = ({ evolucionTemporal, periodoEvolucion, ha
         : 0;
 
     return (
-        <div className={`${glassStyles} rounded-3xl p-8 space-y-8`}>
+        <div className={cn(glassStyles(), "rounded-3xl p-8 space-y-8")}>
             {evolucionTemporal.length > 0 ? (
                 <div className="space-y-8">
                     <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">

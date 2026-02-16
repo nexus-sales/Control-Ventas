@@ -38,12 +38,13 @@ export const sectionTitleStyles = () => {
 
 // Estilos para inputs premium
 export const inputStyles = () => {
-    return "block w-full px-4 py-3 rounded-2xl border-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-inner text-sm font-medium";
+    return "block w-full px-4 py-3 rounded-2xl border-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-[var(--brand-primary)]/50 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-inner text-sm font-medium";
 };
 
 // Estilos para botones primarios
-export const primaryButtonStyles = (color = 'blue') => {
+export const primaryButtonStyles = (color = 'brand') => {
     const colors = {
+        brand: "from-[var(--brand-primary)] to-[var(--brand-primary)] hover:opacity-90 shadow-[var(--brand-primary)]/30",
         blue: "from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-blue-500/30",
         emerald: "from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-500/30",
         purple: "from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 shadow-purple-500/30",
@@ -55,8 +56,9 @@ export const primaryButtonStyles = (color = 'blue') => {
 };
 
 // Estilos para badges/etiquetas
-export const badgeStyles = (color = 'slate') => {
+export const badgeStyles = (color = 'brand') => {
     const colors = {
+        brand: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] border-[var(--brand-primary)]/20",
         slate: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400",
         blue: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
         emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
@@ -65,5 +67,5 @@ export const badgeStyles = (color = 'slate') => {
         amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
     };
 
-    return `px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider ${colors[color] || colors.slate}`;
+    return `px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider border ${colors[color] || colors.slate}`;
 };

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, TrendingUp, Target, Users, BarChart3, PieChart, Award } from 'lucide-react';
 import { euro, glassStyles } from '../../../utils/designUtils';
+import { cn } from '../../../lib/utils';
 
 const TrendTile = ({ label, value, sublabel, icon: Icon, variant = 'cyan' }) => {
     const themes = {
@@ -14,7 +15,7 @@ const TrendTile = ({ label, value, sublabel, icon: Icon, variant = 'cyan' }) => 
     };
 
     return (
-        <div className={`${glassStyles} p-5 rounded-3xl relative overflow-hidden group hover:scale-[1.03] transition-all`}>
+        <div className={cn(glassStyles(), "p-5 rounded-3xl relative overflow-hidden group hover:scale-[1.03] transition-all")}>
             <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full bg-gradient-to-br ${themes[variant]} opacity-10 group-hover:opacity-20 transition-opacity`} />
             <div className="flex items-center justify-between relative z-10">
                 <div className="space-y-1">

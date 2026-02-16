@@ -1,22 +1,34 @@
 import React, { useMemo } from 'react';
-import { Building, Zap, Wrench, Package } from 'lucide-react';
+import { Building, Zap, Shield, Package, Crown, TrendingUp } from 'lucide-react';
 import { glassStyles, cardHoverStyles } from '../../../utils/designUtils';
+import { cn } from '../../../lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BorderBeam } from '../../ui/BorderBeam';
 
-const SectorCard = ({ label, count, products, icon: Icon, gradientFrom, gradientTo, bgLight, textDark }) => (
-    <div className={`${glassStyles} ${cardHoverStyles} p-5 rounded-3xl relative overflow-hidden group`}>
-        <div className={`absolute -right-2 -top-2 w-16 h-16 rounded-full bg-gradient-to-br ${gradientFrom} ${gradientTo} opacity-10 group-hover:opacity-20 transition-opacity`} />
+const SectorCard = ({ label, count, products, icon: Icon, gradientFrom, gradientTo, textDark, delay = 0 }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay }}
+        whileHover={{ y: -5 }}
+        className={cn(glassStyles(), cardHoverStyles(), "p-6 rounded-[2rem] relative overflow-hidden group border border-white/20 dark:border-slate-800/50 shadow-xl")}
+    >
+        <div className={cn("absolute -right-4 -top-4 w-28 h-28 rounded-full bg-gradient-to-br opacity-[0.05] group-hover:opacity-10 transition-opacity duration-500", gradientFrom, gradientTo)} />
 
         <div className="flex items-center justify-between relative z-10">
-            <div>
-                <p className={`text-sm font-bold uppercase tracking-wider ${textDark}`}>{label}</p>
-                <div className="text-2xl font-black text-slate-800 dark:text-white leading-none mt-1">{count}</div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">{products} productos</p>
+            <div className="space-y-2">
+                <p className={cn("text-[10px] font-black uppercase tracking-[2px] opacity-70", textDark)}>{label}</p>
+                <div className="text-3xl font-black text-slate-800 dark:text-white leading-none tracking-tighter">{count}</div>
+                <div className="flex items-center gap-1.5">
+                    <div className={cn("w-1.5 h-1.5 rounded-full", gradientTo.replace('to-', 'bg-'))} />
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{products} SKUs</p>
+                </div>
             </div>
-            <div className={`p-3 rounded-2xl bg-gradient-to-br ${gradientFrom} ${gradientTo} shadow-md`}>
-                <Icon className="w-5 h-5 text-white" />
+            <div className={cn("p-4 rounded-2xl bg-gradient-to-br shadow-lg shadow-inner group-hover:scale-110 transition-transform duration-500", gradientFrom, gradientTo)}>
+                <Icon className="w-6 h-6 text-white" />
             </div>
         </div>
-    </div>
+    </motion.div>
 );
 
 const ProductosOperadorWidget = ({ operadores = [], productos = [] }) => {
@@ -59,96 +71,120 @@ const ProductosOperadorWidget = ({ operadores = [], productos = [] }) => {
     }, [operadoresLimpios, productosConteo]);
 
     return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="space-y-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <SectorCard
-                    label="Telefonía"
+                    label="Telecomunicaciones"
                     count={sectorStats.telefonia.operadores}
                     products={sectorStats.telefonia.productos}
                     icon={Building}
-                    gradientFrom="from-blue-400"
+                    gradientFrom="from-blue-500"
                     gradientTo="to-indigo-600"
                     textDark="text-blue-600 dark:text-blue-400"
+                    delay={0.1}
                 />
 
                 <SectorCard
-                    label="Energía"
+                    label="Energía & Utilities"
                     count={sectorStats.energia.operadores}
                     products={sectorStats.energia.productos}
                     icon={Zap}
-                    gradientFrom="from-emerald-400"
-                    gradientTo="to-teal-600"
-                    textDark="text-emerald-600 dark:text-emerald-400"
+                    gradientFrom="from-amber-400"
+                    gradientTo="to-orange-500"
+                    textDark="text-amber-600 dark:text-amber-400"
+                    delay={0.2}
                 />
 
                 <SectorCard
-                    label="Seguridad"
+                    label="Seguridad & Dom"
                     count={sectorStats.seguridad.operadores}
                     products={sectorStats.seguridad.productos}
-                    icon={Wrench}
-                    gradientFrom="from-amber-400"
-                    gradientTo="to-orange-600"
-                    textDark="text-amber-600 dark:text-amber-400"
+                    icon={Shield}
+                    gradientFrom="from-emerald-500"
+                    gradientTo="to-teal-600"
+                    textDark="text-emerald-600 dark:text-emerald-400"
+                    delay={0.3}
                 />
 
                 <SectorCard
-                    label="Total Global"
+                    label="Crecimiento Global"
                     count={operadoresLimpios.length}
                     products={productosLimpios.length}
                     icon={Package}
-                    gradientFrom="from-purple-400"
+                    gradientFrom="from-purple-500"
                     gradientTo="to-fuchsia-600"
                     textDark="text-purple-600 dark:text-purple-400"
+                    delay={0.4}
                 />
             </div>
 
-            <div className={`${glassStyles} p-6 rounded-3xl border-purple-200/50 dark:border-purple-900/30`}>
-                <h4 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-3">
-                    <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400">
-                        🏆
-                    </span>
-                    Top Operadores por Portafolio
-                </h4>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                className={cn(glassStyles(), "p-8 rounded-[2.5rem] relative overflow-hidden border border-purple-500/10 shadow-2xl")}
+            >
+                <BorderBeam size={150} duration={10} colorFrom="#a855f7" colorTo="#3b82f6" />
 
-                {topOperadores.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-                        {topOperadores.map((op, index) => (
-                            <div
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+                    <div>
+                        <h4 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-3">
+                            <Crown className="w-6 h-6 text-amber-500" />
+                            Elite de Operadores
+                        </h4>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Líderes por profundidad de catálogo</p>
+                    </div>
+                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                        <TrendingUp className="w-4 h-4 text-emerald-500" />
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">Análisis en Tiempo Real</span>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
+                    {topOperadores.length > 0 ? (
+                        topOperadores.map((op, index) => (
+                            <motion.div
                                 key={op.id}
-                                className={`
-                  p-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/30
-                  ${cardHoverStyles} flex flex-col items-center text-center
-                `}
+                                whileHover={{ y: -5, scale: 1.02 }}
+                                className={cn(
+                                    "p-6 rounded-3xl bg-white/50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 shadow-lg",
+                                    cardHoverStyles(),
+                                    "flex flex-col items-center text-center relative group"
+                                )}
                             >
-                                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-3 font-black text-slate-500 dark:text-slate-400">
+                                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 font-black text-xl text-slate-400 dark:text-slate-600 shadow-inner group-hover:text-blue-500 group-hover:scale-110 transition-all duration-500">
                                     {index + 1}
                                 </div>
-                                <div className="text-sm font-bold text-slate-800 dark:text-white truncate w-full mb-1" title={op.nombre}>
+                                <div className="text-xs font-black text-slate-800 dark:text-white truncate w-full mb-1 uppercase tracking-tight" title={op.nombre}>
                                     {op.nombre}
                                 </div>
-                                <div className="text-2xl font-black text-purple-600 dark:text-purple-400">{op.totalProductos}</div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">{op.sector || 'General'}</p>
+                                <div className="text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tighter">{op.totalProductos}</div>
+                                <p className="text-[9px] font-black uppercase tracking-[2px] text-slate-400 mb-6">{op.sector || 'General'}</p>
 
-                                <div className={`w-full py-1 rounded-full text-[10px] font-black uppercase ${op.totalProductos === 0
-                                    ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'
-                                    : op.totalProductos <= 3
-                                        ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                                        : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                    }`}>
-                                    {op.totalProductos === 0 ? 'Sin Oferta' :
-                                        op.totalProductos <= 3 ? 'Catálogo Reducido' :
-                                            'Sólido Catálogo'}
+                                <div className={cn(
+                                    "w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm",
+                                    op.totalProductos === 0
+                                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                        : op.totalProductos <= 3
+                                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                )}>
+                                    {op.totalProductos === 0 ? 'Vacío' :
+                                        op.totalProductos <= 3 ? 'Básico' :
+                                            'Premium'}
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                        <Building className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700 mb-4" />
-                        <p className="text-slate-500 dark:text-slate-500 font-medium">No hay operadores registrados para analizar</p>
-                    </div>
-                )}
-            </div>
+                            </motion.div>
+                        ))
+                    ) : (
+                        <div className="col-span-full text-center py-16 bg-slate-50/50 dark:bg-slate-900/40 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+                            <Building className="w-16 h-16 mx-auto text-slate-200 dark:text-slate-700 mb-4" />
+                            <p className="text-slate-400 dark:text-slate-500 font-black uppercase tracking-[3px] text-xs">Sin datos operativos</p>
+                        </div>
+                    )}
+                </div>
+            </motion.div>
         </div>
     );
 };
