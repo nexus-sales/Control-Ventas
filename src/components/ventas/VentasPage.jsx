@@ -179,6 +179,26 @@ export default function VentasPage() {
     if (exportarDatos) exportarDatos(ventasCalc, datosSafe.colaboradores, datosSafe.zonas);
   }, [exportarDatos, ventasCalc, datosSafe.colaboradores, datosSafe.zonas]);
 
+  const handleSaveVenta = useCallback((ventaData) => {
+    addVenta(ventaData);
+    closeModal();
+  }, [addVenta, closeModal]);
+
+  const handleUpdateVenta = useCallback((ventaData) => {
+    if (selectedVenta?.id) {
+      updateVenta(selectedVenta.id, ventaData);
+      closeModal();
+    }
+  }, [updateVenta, selectedVenta, closeModal]);
+
+  const handleUpdatePvp = useCallback((id, pvp) => {
+    const targetId = id || pvpEdit.producto_id;
+    if (targetId) {
+      updateProductPvp(targetId, pvp);
+      closeModal();
+    }
+  }, [updateProductPvp, pvpEdit.producto_id, closeModal]);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const filtrosUrl = {};
