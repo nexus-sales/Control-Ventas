@@ -19,6 +19,22 @@ export function LayoutShell() {
   const [collapsed, setCollapsed] = useState(() => getFromStorage(LS_KEYS.ui, { collapsed: false }).collapsed);
   const { user, profile, signOut } = useAuth();
   const { isOnline } = useApp();
+  const [empresaLocal, setEmpresaLocal] = useState(null);
+
+  // Cargar datos de empresa
+  React.useEffect(() => {
+    const loadEmpresa = () => {
+      try {
+        const raw = localStorage.getItem("empresaData");
+        if (raw) setEmpresaLocal(JSON.parse(raw));
+      } catch (e) {
+        console.error("Error cargando empresa:", e);
+      }
+    };
+    loadEmpresa();
+    window.addEventListener("empresaDataUpdated", (e) => setEmpresaLocal(e.detail));
+    return () => window.removeEventListener("empresaDataUpdated", loadEmpresa);
+  }, []);
 
   const toggle = () => {
     setCollapsed((c) => {
@@ -60,13 +76,21 @@ export function LayoutShell() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
-                  className="flex items-center gap-3 px-1"
+                  className="flex items-center gap-3 px-1 overflow-hidden"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[var(--brand-primary)] to-[var(--brand-primary)] opacity-90 flex items-center justify-center shadow-lg shadow-[var(--brand-primary)]/20">
-                    <Database className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="font-black text-xl text-slate-800 dark:text-white tracking-tighter uppercase whitespace-nowrap">
-                    NEXT<span className="text-[var(--brand-primary)] text-opacity-80">SALES</span>
+                  {empresaLocal?.logoUrl ? (
+                    <img
+                      src={empresaLocal.logoUrl}
+                      alt="Logo"
+                      className="w-10 h-10 object-contain rounded-lg bg-white shadow-sm"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[var(--brand-primary)] to-[var(--brand-primary)] opacity-90 flex items-center justify-center shadow-lg shadow-[var(--brand-primary)]/20">
+                      <Database className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+                  <span className="font-black text-lg text-slate-800 dark:text-white tracking-tighter uppercase whitespace-nowrap truncate">
+                    {empresaLocal?.nombre || <>NEXT<span className="text-[var(--brand-primary)] text-opacity-80">SALES</span></>}
                   </span>
                 </motion.div>
               )}
@@ -136,10 +160,10 @@ export function LayoutShell() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">
-                      {profile?.nombre || profile?.name || "Usuario Premium"}
+                      {profile?.nombre || profile?.name || user.email?.split('@')[0]}
                     </p>
                     <p className="text-[9px] text-slate-500 dark:text-gray-500 truncate font-bold uppercase tracking-widest mt-0.5">
-                      {user.email.split('@')[0]}
+                      {profile?.rol || "Usuario"}
                     </p>
                   </div>
                 </div>
