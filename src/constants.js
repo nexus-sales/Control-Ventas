@@ -2,7 +2,7 @@
 
 // =================== AUTH CONFIGURATION ===================
 // Modo de desarrollo: bypass de autenticación
-export const AUTH_BYPASS = true; // Cambiar a false en producción
+export const AUTH_BYPASS = false; // Cambiar a false en producción
 
 // Usuario simulado para desarrollo
 export const MOCK_USER = {

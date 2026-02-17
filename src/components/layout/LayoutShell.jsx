@@ -89,7 +89,7 @@ export function LayoutShell() {
                       <Database className="w-5 h-5 text-white" />
                     </div>
                   )}
-                  <span className="font-black text-lg text-slate-800 dark:text-white tracking-tighter uppercase whitespace-nowrap truncate">
+                  <span className="font-black text-sm text-slate-800 dark:text-white tracking-tight uppercase leading-tight" style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>
                     {empresaLocal?.nombre || <>NEXT<span className="text-[var(--brand-primary)] text-opacity-80">SALES</span></>}
                   </span>
                 </motion.div>
@@ -156,11 +156,11 @@ export function LayoutShell() {
               {!collapsed && (
                 <div className="flex items-center gap-4 mb-4 relative z-10">
                   <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary)] flex items-center justify-center text-white font-black shadow-xl shadow-[var(--brand-primary)]/20 group-hover:rotate-6 transition-transform">
-                    {(profile?.nombre || profile?.name || user.email || "?")[0].toUpperCase()}
+                    {(profile?.nombre_completo || profile?.nombre || user.email || "?")[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">
-                      {profile?.nombre || profile?.name || user.email?.split('@')[0]}
+                      {profile?.nombre_completo || profile?.nombre || user.email?.split('@')[0]}
                     </p>
                     <p className="text-[9px] text-slate-500 dark:text-gray-500 truncate font-bold uppercase tracking-widest mt-0.5">
                       {profile?.rol || "Usuario"}
