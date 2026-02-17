@@ -79,7 +79,7 @@ export default function UserManagement() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Shield className="w-6 h-6 text-blue-600" />
+                        <Shield className="w-6 h-6 text-[var(--brand-primary)]" />
                         Gestión de Usuarios
                     </h2>
                     <p className="text-slate-500 dark:text-gray-400">Administra quién tiene acceso a la aplicación y sus roles.</p>
@@ -91,7 +91,7 @@ export default function UserManagement() {
                         <input
                             type="text"
                             placeholder="Buscar por email o nombre..."
-                            className="pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all w-64"
+                            className="pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-[var(--brand-primary)] outline-none transition-all w-64"
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
                         />
@@ -148,7 +148,7 @@ export default function UserManagement() {
                                             <select
                                                 value={u.rol}
                                                 onChange={(e) => changeUserRole(u.id, e.target.value)}
-                                                className="bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg px-2 py-1 text-xs font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+                                                className="bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg px-2 py-1 text-xs font-medium focus:ring-2 focus:ring-[var(--brand-primary)] outline-none"
                                             >
                                                 <option value="user">USER</option>
                                                 <option value="viewer">VIEWER</option>
@@ -158,7 +158,7 @@ export default function UserManagement() {
                                         <td className="px-6 py-4">
                                             <div className="flex flex-wrap gap-1">
                                                 {u.app_access?.map(app => (
-                                                    <span key={app} className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded text-[10px] font-bold">
+                                                    <span key={app} className="px-2 py-0.5 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] rounded text-[10px] font-bold">
                                                         {app}
                                                     </span>
                                                 ))}
@@ -166,8 +166,8 @@ export default function UserManagement() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${u.activo
-                                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                                 }`}>
                                                 <div className={`w-1.5 h-1.5 rounded-full ${u.activo ? 'bg-green-500' : 'bg-red-500'}`}></div>
                                                 {u.activo ? 'ACTIVO' : 'INACTIVO'}
@@ -177,8 +177,8 @@ export default function UserManagement() {
                                             <button
                                                 onClick={() => toggleUserActive(u.id, u.activo)}
                                                 className={`p-2 rounded-xl transition-all ${u.activo
-                                                        ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
-                                                        : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
+                                                    ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                                                    : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
                                                     }`}
                                                 title={u.activo ? 'Desactivar usuario' : 'Activar usuario'}
                                             >

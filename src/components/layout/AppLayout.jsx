@@ -32,10 +32,10 @@ const AppLayout = () => {
   const toggleSidebar = () => setCollapsed((prev) => !prev);
 
   return (
-    <div className="min-h-screen bg-pink-50 dark:bg-pink-200 flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-gray-900 flex flex-col">
       <Header />
       <div className="flex flex-1 w-full">
-        <div className={`${collapsed ? 'w-16' : 'w-64'} min-w-[56px] max-w-[280px] bg-pink-50 dark:bg-pink-200 border-r border-pink-200 dark:border-pink-400`}>
+        <div className={`${collapsed ? 'w-16' : 'w-64'} min-w-[56px] max-w-[280px] bg-[var(--brand-primary)]/5 border-r border-[var(--brand-primary)]/20`}>
           <Sidebar
             collapsed={collapsed}
             toggle={toggleSidebar}
@@ -45,7 +45,7 @@ const AppLayout = () => {
             logout={logout}
           />
         </div>
-        <main className="flex-1 px-6 py-8 overflow-y-auto bg-pink-50 dark:bg-pink-200">
+        <main className="flex-1 px-6 py-8 overflow-y-auto bg-slate-50 dark:bg-gray-900">
           <Outlet />
         </main>
       </div>

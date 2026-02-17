@@ -247,7 +247,7 @@ const AdministracionSection = React.memo(() => {
                         ) : (
                             <div className="grid gap-4">
                                 {acuerdos.map(acuerdo => (
-                                    <Card key={acuerdo.id} className="p-4 border-slate-200 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-900 transition-colors shadow-sm">
+                                    <Card key={acuerdo.id} className="p-4 border-slate-200 dark:border-gray-800 hover:border-[var(--brand-primary)]/50 dark:hover:border-[var(--brand-primary)]/50 transition-colors shadow-sm">
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 bg-slate-100 dark:bg-gray-800 rounded-xl flex items-center justify-center font-bold text-slate-400">
@@ -255,7 +255,7 @@ const AdministracionSection = React.memo(() => {
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded uppercase">{acuerdo.sector}</span>
+                                                        <span className="text-xs font-bold bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] px-2 py-0.5 rounded uppercase">{acuerdo.sector}</span>
                                                         <h4 className="font-bold text-slate-900 dark:text-white">{acuerdo.nombre}</h4>
                                                     </div>
                                                     <p className="text-sm text-slate-500 dark:text-gray-400">{acuerdo.operador}</p>
@@ -270,11 +270,11 @@ const AdministracionSection = React.memo(() => {
                                                 {acuerdo.rapel && (
                                                     <div className="text-center md:text-right">
                                                         <div className="text-xs font-bold text-slate-400 uppercase">Rapel</div>
-                                                        <div className="text-sm font-bold text-blue-600 dark:text-blue-400">{acuerdo.rapel}</div>
+                                                        <div className="text-sm font-bold text-[var(--brand-primary)]">{acuerdo.rapel}</div>
                                                     </div>
                                                 )}
                                                 <div className="flex gap-2 ml-4">
-                                                    <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="Descargar PDF">
+                                                    <button className="p-2 text-slate-400 hover:text-[var(--brand-primary)] transition-colors" title="Descargar PDF">
                                                         <Download className="w-5 h-5" />
                                                     </button>
                                                     <button

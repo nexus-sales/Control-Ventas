@@ -14,7 +14,7 @@ export default function AccessRequestsManager({ userEmail }) {
   useEffect(() => {
     const adminStatus = isAdminEmail(userEmail);
     setIsAdmin(adminStatus);
-    
+
     if (adminStatus) {
       loadRequests();
     }
@@ -95,7 +95,7 @@ export default function AccessRequestsManager({ userEmail }) {
       approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
       rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
     };
-    
+
     const labels = {
       pending: 'Pendiente',
       approved: 'Aprobada',
@@ -129,13 +129,13 @@ export default function AccessRequestsManager({ userEmail }) {
             Administra las solicitudes de acceso al sistema
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-500 dark:text-gray-400">Filtrar:</span>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+            className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-[var(--brand-primary)] dark:bg-gray-800 dark:text-white"
           >
             <option value="pending">Pendientes</option>
             <option value="approved">Aprobadas</option>
@@ -188,15 +188,15 @@ export default function AccessRequestsManager({ userEmail }) {
                       </h3>
                       {getStatusBadge(request.status)}
                     </div>
-                    
+
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                       <strong>Email:</strong> {request.email}
                     </p>
-                    
+
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                       <strong>Fecha:</strong> {formatDate(request.requestedAt)}
                     </p>
-                    
+
                     <p className="text-sm text-gray-700 dark:text-gray-300">
                       <strong>Motivo:</strong> {request.reason}
                     </p>
@@ -227,7 +227,7 @@ export default function AccessRequestsManager({ userEmail }) {
                         </button>
                       </>
                     )}
-                    
+
                     <button
                       onClick={() => handleDelete(request.id)}
                       className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors duration-200"
@@ -265,7 +265,7 @@ export default function AccessRequestsManager({ userEmail }) {
                 <textarea
                   name="reason"
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)] dark:bg-gray-800 dark:text-white resize-none"
                   placeholder="Explica por qué se rechaza esta solicitud..."
                 />
               </div>
@@ -314,9 +314,9 @@ export default function AccessRequestsManager({ userEmail }) {
 
           <a
             href={`mailto:?subject=Notificación de Estado - ${ACCESS_REQUEST_CONFIG.appName}&body=Estimado usuario, tu solicitud de acceso ha sido procesada.`}
-            className="p-4 border border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200 text-left block"
+            className="p-4 border border-[var(--brand-primary)]/30 dark:border-[var(--brand-primary)]/30 rounded-lg hover:bg-[var(--brand-primary)]/5 dark:hover:bg-[var(--brand-primary)]/10 transition-colors duration-200 text-left block"
           >
-            <div className="font-medium text-blue-700 dark:text-blue-300">
+            <div className="font-medium text-[var(--brand-primary)]">
               Enviar Notificaciones
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">

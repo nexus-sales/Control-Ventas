@@ -130,19 +130,19 @@ export function Header() {
             {isOnline ? (
               // Icono WiFi online
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.5 8.5C7.5 4.5 16.5 4.5 21.5 8.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M5.5 12C9 9 15 9 18.5 12" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M8.5 15.5C10 14.5 14 14.5 15.5 15.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-                <circle cx="12" cy="18" r="1.5" fill="#fff"/>
+                <path d="M2.5 8.5C7.5 4.5 16.5 4.5 21.5 8.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                <path d="M5.5 12C9 9 15 9 18.5 12" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                <path d="M8.5 15.5C10 14.5 14 14.5 15.5 15.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                <circle cx="12" cy="18" r="1.5" fill="#fff" />
               </svg>
             ) : (
               // Icono WiFi offline (tachado)
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.5 8.5C7.5 4.5 16.5 4.5 21.5 8.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M5.5 12C9 9 15 9 18.5 12" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M8.5 15.5C10 14.5 14 14.5 15.5 15.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-                <circle cx="12" cy="18" r="1.5" fill="#fff"/>
-                <line x1="6" y1="22" x2="22" y2="6" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M2.5 8.5C7.5 4.5 16.5 4.5 21.5 8.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                <path d="M5.5 12C9 9 15 9 18.5 12" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                <path d="M8.5 15.5C10 14.5 14 14.5 15.5 15.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                <circle cx="12" cy="18" r="1.5" fill="#fff" />
+                <line x1="6" y1="22" x2="22" y2="6" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
               </svg>
             )}
           </div>
@@ -166,7 +166,7 @@ export function Header() {
         {installable && (
           <button
             onClick={promptInstall}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium transition-colors duration-200"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--brand-primary)] hover:opacity-90 text-white text-sm font-medium transition-colors duration-200"
             title="Instalar aplicación"
           >
             <Download className="w-4 h-4" />
