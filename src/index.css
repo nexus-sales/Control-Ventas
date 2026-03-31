@@ -3,52 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --brand-primary: #6D28D9;
-  --brand-primary-rgb: 109, 40, 217;
+  --brand-primary: #4F46E5;
+  --brand-primary-rgb: 79, 70, 229;
 }
 
-/* Asegurar que las transiciones sean suaves */
-* {
-  transition-property: color, background-color, border-color;
-  transition-duration: 300ms;
-  transition-timing-function: ease-in-out;
-}
-
-/* Animaciones personalizadas */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.2s ease-out;
-}
-
-/* Scroll personalizado para dark mode */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  @apply bg-pink-50 dark:bg-pink-200;
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-emerald-200 dark:bg-emerald-400 rounded;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-pink-300 dark:bg-pink-500;
-}
-
-/* Estilos base para elementos del DOM */
 html {
   scroll-behavior: smooth;
 }
@@ -58,56 +16,46 @@ body {
   line-height: 1.6;
 }
 
-/* Asegurar que todos los elementos tengan las transiciones */
-input, select, textarea, button {
-  transition: all 300ms ease-in-out;
+/* Scrollbar neutral */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 dark:bg-slate-600 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400 dark:bg-slate-500;
 }
 
-/* Tooltips - asegurar que se vean bien en dark mode */
-[role="tooltip"] {
-  z-index: 9999;
+/* Focus */
+input:focus, select:focus, textarea:focus {
+  outline: none;
 }
 
-
-/* Mejoras para componentes específicos */
-.card-gradient {
-  @apply bg-gradient-to-br from-pink-50 via-emerald-50 to-blue-50 dark:from-pink-900 dark:via-emerald-900 dark:to-blue-900;
-}
-
-.card-base {
-  @apply bg-white dark:bg-gray-900 border border-pink-100 dark:border-gray-800 shadow-sm rounded-2xl;
-}
-
-.card-pastel {
-  @apply bg-pink-50 dark:bg-slate-900/70 text-pink-900 dark:text-slate-100 border border-pink-200 dark:border-slate-700;
-}
-.card-green {
-  @apply bg-emerald-50 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-100 border border-emerald-200 dark:border-emerald-800;
-}
-.card-blue {
-  @apply bg-blue-50 dark:bg-blue-900 text-blue-900 dark:text-blue-100 border border-blue-200 dark:border-blue-800;
-}
-.card-purple {
-  @apply bg-purple-50 dark:bg-purple-900 text-purple-900 dark:text-purple-100 border border-purple-200 dark:border-purple-800;
-}
-.card-yellow {
-  @apply bg-amber-50 dark:bg-amber-900 text-amber-900 dark:text-amber-100 border border-amber-200 dark:border-amber-800;
-}
-.card-red {
-  @apply bg-red-50 dark:bg-red-900 text-red-900 dark:text-red-100 border border-red-200 dark:border-red-800;
-}
-
-/* Focus states mejorados */
-input:focus, select:focus, textarea:focus, button:focus {
-  @apply outline-2 outline-offset-2 outline-pink-400 dark:outline-pink-700;
-}
-
-/* Placeholder styles */
+/* Placeholder */
 ::placeholder {
-  @apply text-gray-500 dark:text-gray-400;
+  @apply text-slate-400 dark:text-slate-500;
 }
 
-/* Selection styles */
+/* Selection */
 ::selection {
-  @apply bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100;
+  @apply bg-indigo-100 dark:bg-indigo-900 text-indigo-900 dark:text-indigo-100;
+}
+
+/* Animación de entrada sutil */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* Card base */
+.card {
+  @apply bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm;
 }

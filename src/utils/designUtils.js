@@ -1,71 +1,56 @@
 /**
- * DashboardUtils.js
- * Funciones de utilidad y estilos comunes para el Dashboard Premium
+ * designUtils.js — Sistema de diseño profesional
+ * Paleta neutral: slate + indigo como único acento.
  */
 
-export const euro = (n) => {
-    return new Intl.NumberFormat('es-ES', {
-        style: 'currency',
-        currency: 'EUR',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    }).format(n ?? 0);
-};
+export const euro = (n) =>
+  new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n ?? 0);
 
-// Estilos glassmorphism - ahora como función para permitir uso con ()
-export const glassStyles = (variant = 'default') => {
-    const base = "bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-white/20 dark:border-slate-700/30 shadow-xl";
+// Tarjeta base: blanca con borde sutil
+export const glassStyles = () =>
+  "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm";
 
-    switch (variant) {
-        case 'subtle':
-            return "bg-white/50 dark:bg-slate-900/30 backdrop-blur-sm border border-white/10 dark:border-slate-700/20";
-        case 'strong':
-            return "bg-white/90 dark:bg-slate-900/70 backdrop-blur-xl border border-white/30 dark:border-slate-700/40 shadow-2xl";
-        default:
-            return base;
-    }
-};
+// Hover de tarjeta: sombra, sin escala
+export const cardHoverStyles = () =>
+  "transition-shadow duration-200 hover:shadow-md";
 
-// Estilos de hover para tarjetas - ahora como función
-export const cardHoverStyles = () => {
-    return "transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:bg-white/80 dark:hover:bg-slate-900/60";
-};
+// Título de sección
+export const sectionTitleStyles = () =>
+  "text-lg font-semibold text-slate-800 dark:text-white mb-4";
 
-// Estilos de título de sección
-export const sectionTitleStyles = () => {
-    return "text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-500 dark:from-white dark:to-slate-400 mb-6";
-};
+// Input limpio
+export const inputStyles = () =>
+  "block w-full px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors";
 
-// Estilos para inputs premium
-export const inputStyles = () => {
-    return "block w-full px-4 py-3 rounded-2xl border-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-[var(--brand-primary)]/50 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-inner text-sm font-medium";
-};
-
-// Estilos para botones primarios
+// Botón primario — sólido, sin gradiente
 export const primaryButtonStyles = (color = 'brand') => {
-    const colors = {
-        brand: "from-[var(--brand-primary)] to-[var(--brand-primary)] hover:opacity-90 shadow-[var(--brand-primary)]/30",
-        blue: "from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-blue-500/30",
-        emerald: "from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-500/30",
-        purple: "from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 shadow-purple-500/30",
-        rose: "from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 shadow-rose-500/30",
-        amber: "from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-amber-500/30"
-    };
-
-    return `flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r ${colors[color] || colors.blue} text-white rounded-xl transition-all shadow-lg hover:shadow-xl text-xs font-bold uppercase tracking-widest active:scale-95`;
+  const colors = {
+    brand:   "bg-indigo-600 hover:bg-indigo-700 text-white",
+    blue:    "bg-blue-600 hover:bg-blue-700 text-white",
+    emerald: "bg-emerald-600 hover:bg-emerald-700 text-white",
+    purple:  "bg-violet-600 hover:bg-violet-700 text-white",
+    rose:    "bg-rose-600 hover:bg-rose-700 text-white",
+    amber:   "bg-amber-500 hover:bg-amber-600 text-white",
+    slate:   "bg-slate-700 hover:bg-slate-800 text-white",
+  };
+  return `inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${colors[color] || colors.brand}`;
 };
 
-// Estilos para badges/etiquetas
-export const badgeStyles = (color = 'brand') => {
-    const colors = {
-        brand: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] border-[var(--brand-primary)]/20",
-        slate: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400",
-        blue: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-        emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-        purple: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-        rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
-        amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-    };
-
-    return `px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider border ${colors[color] || colors.slate}`;
+// Badge — un solo color por estado semántico
+export const badgeStyles = (color = 'slate') => {
+  const colors = {
+    brand:   "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
+    slate:   "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+    blue:    "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+    emerald: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+    rose:    "bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+    amber:   "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+    purple:  "bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
+  };
+  return `inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${colors[color] || colors.slate}`;
 };

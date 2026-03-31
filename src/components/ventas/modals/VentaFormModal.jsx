@@ -287,28 +287,21 @@ export const VentaFormModal = ({
   const formStats = useMemo(() => {
     const pvpValue = Number(formData.pvp) || 0;
     const comisionBase = Number(formData.comision_base) || 0;
-    const pctColaborador = Number(formData.comision_colaborador) || 0;
     const tipoComision = formData.comision_tipo || 'porcentaje';
 
-    const colaborador = colaboradoresDisponibles.find(c => c.id === formData.colaborador_id);
-    const producto = productosDisponibles.find(p => p.id === formData.producto_id);
-
+    // La comisión estimada es lo que cobra el comercial directamente:
+    // - porcentaje: PVP × base% (ej: 50€ × 80% = 40€)
+    // - fijo: el importe fijo indicado
+    // - mixto: fijo + porcentaje sobre PVP
     let comisionEstimada = 0;
-
-    if (comisionBase > 0 && colaborador && producto && nivelesData.length > 0) {
-      const parte = getColaboradorComision(colaborador, nivelesData, comisionBase, producto);
-      if (Number.isFinite(parte)) {
-        comisionEstimada = parte;
-      }
-    }
-
-    if (comisionEstimada === 0 && comisionBase > 0 && pctColaborador > 0) {
-      if (tipoComision === 'porcentaje') {
-        const comisionProducto = (pvpValue * comisionBase) / 100;
-        comisionEstimada = comisionProducto * pctColaborador;
-      } else if (tipoComision === 'fijo') {
-        comisionEstimada = comisionBase * pctColaborador;
-      }
+    if (tipoComision === 'porcentaje') {
+      comisionEstimada = pvpValue * (comisionBase / 100);
+    } else if (tipoComision === 'fijo') {
+      comisionEstimada = comisionBase;
+    } else if (tipoComision === 'mixto') {
+      const fija = Number(formData.comision_fija) || 0;
+      const pct = Number(formData.comision_porcentaje) || 0;
+      comisionEstimada = fija + (pvpValue * pct / 100);
     }
 
     return {
@@ -318,7 +311,7 @@ export const VentaFormModal = ({
       isComplete: !!(formData.cliente && formData.fecha && formData.colaborador_id && formData.zona_id),
       hasMissingData: colaboradoresDisponibles.length === 0 || zonasDisponibles.length === 0,
     };
-  }, [formData, colaboradoresDisponibles, productosDisponibles, nivelesData, zonasDisponibles.length, validationErrors]);
+  }, [formData, colaboradoresDisponibles.length, zonasDisponibles.length, validationErrors]);
 
   // Producto, colaborador, operador y zona seleccionados
   const productoSeleccionado = useMemo(() =>
@@ -951,66 +944,66 @@ export const VentaFormModal = ({
                 <h4 className="text-[10px] font-black uppercase tracking-[4px] text-slate-800 dark:text-white">Motor Económico</h4>
               </div>
 
-              <div className="p-8 rounded-[2.5rem] bg-slate-950 text-white shadow-2xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-transparent opacity-50 transition-opacity group-hover:opacity-70" />
-                <div className="relative z-10 space-y-8">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-black uppercase tracking-[3px] text-blue-400">PVP Declarado</p>
-                    <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xl font-black">
-                      {formStats.pvp || 0}€
-                    </div>
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+                {/* Fila PVP */}
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">PVP declarado</span>
+                  <span className="text-sm font-semibold text-slate-800 dark:text-white">{(formStats.pvp || 0).toFixed(2)} €</span>
+                </div>
+
+                {/* Base comisión */}
+                <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 space-y-2">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tasa de comisión</span>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formData.comision_base || 0}
+                      onChange={(e) => updateField('comision_base', parseFloat(e.target.value) || 0)}
+                    />
+                    <Select
+                      value={formData.comision_tipo || 'porcentaje'}
+                      onChange={(e) => updateField('comision_tipo', e.target.value)}
+                      className="w-28"
+                    >
+                      <option value="porcentaje">% PVP</option>
+                      <option value="fijo">€ Fijo</option>
+                    </Select>
                   </div>
+                  {formData.comision_tipo === 'porcentaje' && formStats.pvp > 0 && (
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      = {((formStats.pvp * (Number(formData.comision_base) || 0)) / 100).toFixed(2)} € sobre PVP
+                    </p>
+                  )}
+                </div>
 
-                  <div className="space-y-4">
-                    <Label className="text-white/50">Base Liquidación (Agencia)</Label>
-                    <div className="flex gap-3">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formData.comision_base || 0}
-                        onChange={(e) => updateField('comision_base', parseFloat(e.target.value) || 0)}
-                        className="bg-white/5 border-white/10 text-white focus:bg-white/10"
-                      />
-                      <Select
-                        value={formData.comision_tipo || 'porcentaje'}
-                        onChange={(e) => updateField('comision_tipo', e.target.value)}
-                        className="w-28 bg-white/5 border-white/10 text-white"
-                      >
-                        <option value="porcentaje" className="text-slate-900">% Var</option>
-                        <option value="fijo" className="text-slate-900">€ Fijo</option>
-                      </Select>
-                    </div>
+                {/* Factor agente — informativo, no afecta la estimación */}
+                <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 space-y-2">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Factor distribución agente</span>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="number"
+                      step="0.001"
+                      max="1"
+                      value={formData.comision_colaborador || 0}
+                      onChange={(e) => updateField('comision_colaborador', parseFloat(e.target.value) || 0)}
+                    />
+                    <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 w-12 text-right">
+                      {((formData.comision_colaborador || 0) * 100).toFixed(0)}%
+                    </span>
                   </div>
+                </div>
 
-                  <div className="space-y-4">
-                    <Label className="text-white/50">Factor Distribución Agente</Label>
-                    <div className="flex gap-3">
-                      <Input
-                        type="number"
-                        step="0.001"
-                        max="1"
-                        value={formData.comision_colaborador || 0}
-                        onChange={(e) => updateField('comision_colaborador', parseFloat(e.target.value) || 0)}
-                        className="bg-blue-500/10 border-blue-500/20 text-blue-400 focus:bg-blue-500/20"
-                      />
-                      <div className="flex items-center justify-center px-4 bg-white/5 rounded-2xl font-black text-blue-400">
-                        {((formData.comision_colaborador || 0) * 100).toFixed(0)}%
-                      </div>
-                    </div>
+                {/* Estimación neta */}
+                <div className="flex items-center justify-between px-5 py-4 bg-slate-50 dark:bg-slate-800/50">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-0.5">Estimación comisión</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                      {formStats.comisionEstimada.toFixed(2)} €
+                    </p>
                   </div>
-
-                  <div className="h-px bg-white/10 my-6" />
-
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[3px] text-emerald-500 mb-1">Liquidación Neta</p>
-                      <p className="text-4xl font-black tracking-tighter text-emerald-400">
-                        {formStats.comisionEstimada.toFixed(2)}€
-                      </p>
-                    </div>
-                    <div className="p-3 bg-emerald-500/20 rounded-2xl">
-                      <Euro className="w-8 h-8 text-emerald-400" />
-                    </div>
+                  <div className="p-2.5 bg-white dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
+                    <Euro className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                   </div>
                 </div>
               </div>
