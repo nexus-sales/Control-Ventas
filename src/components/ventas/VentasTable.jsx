@@ -129,8 +129,9 @@ export function VentasTable({
               return (
                 <tr
                   key={venta.id || idx}
+                  onClick={() => onSelect && onSelect(venta.id)}
                   className={cn(
-                    "group transition-colors",
+                    "group transition-colors cursor-pointer select-none",
                     isSelected
                       ? "bg-indigo-50 dark:bg-indigo-900/20"
                       : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
@@ -141,7 +142,8 @@ export function VentasTable({
                     <input
                       type="checkbox"
                       checked={isSelected}
-                      onChange={() => onSelect && onSelect(venta.id)}
+                      onChange={() => {}}
+                      onClick={(e) => e.stopPropagation()}
                       className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                   </td>
@@ -203,7 +205,7 @@ export function VentasTable({
                   </td>
 
                   {/* Acciones */}
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => onView && onView(venta)}
