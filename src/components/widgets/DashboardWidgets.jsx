@@ -181,7 +181,7 @@ export function QuickStats({ stats = [] }) {
 // SMART ALERTS COMPONENT
 // ============================
 
-function Alert({ type, title, message, action, priority = 'normal', icon: Icon }) {
+function Alert({ type, title, message, action, priority: _priority = 'normal', icon: Icon }) {
   const styles = {
     error: 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400',
     warning: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400',

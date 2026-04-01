@@ -48,6 +48,7 @@ export const CorporateThemeProvider = ({ children }) => {
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useCorporateTheme = () => useContext(CorporateThemeContext);
 
 // Utility to convert hex to rgb for opacity support

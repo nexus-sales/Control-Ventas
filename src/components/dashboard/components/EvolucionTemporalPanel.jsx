@@ -37,7 +37,7 @@ export const EvolucionTemporalPanel = ({ evolucionTemporal, periodoEvolucion, ha
                                     const date = new Date(periodo + '-01');
                                     displayName = date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
                                 }
-                            } catch (e) {
+                            } catch (_e) {
                                 displayName = periodo;
                             }
 

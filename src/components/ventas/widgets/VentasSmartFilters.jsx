@@ -3,7 +3,7 @@ import {
     Search, Filter, X, Calendar, User, Truck,
     MapPin, Clock, Tag, Plus, Check, ChevronDown, Download, Sparkles, AlertTriangle
 } from 'lucide-react';
-import { glassStyles, cardHoverStyles } from '../../../utils/designUtils';
+import { glassStyles } from '../../../utils/designUtils';
 import { cn } from '../../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -64,7 +64,7 @@ export function VentasSmartFilters({
     colaboradores = [],
     operadores = [],
     zonas = [],
-    activeCount = 0,
+    activeCount: _activeCount = 0,
     onExport
 }) {
     const [isExpanded, setIsExpanded] = useState(false);

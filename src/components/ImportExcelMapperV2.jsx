@@ -11,7 +11,7 @@ import { useImportGestion } from "../hooks/useImportGestion";
 import { MAPEO_CAMPOS, parseDate } from "../utils/importValidation";
 import { useAuthGestion } from "../hooks/useAuthGestion";
 import { BorderBeam } from "./ui/BorderBeam";
-import { glassStyles, cardHoverStyles, primaryButtonStyles } from "../utils/designUtils";
+import { glassStyles } from "../utils/designUtils";
 import { cn } from "../lib/utils";
 
 // Modal simple para mostrar errores

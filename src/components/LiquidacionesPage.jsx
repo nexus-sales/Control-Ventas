@@ -17,7 +17,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../lib/utils";
 import { PiggyBank, Receipt, AlertCircle, FileCheck } from "lucide-react";
-import { glassStyles, sectionTitleStyles } from "../utils/designUtils";
+import { glassStyles } from "../utils/designUtils";
 
 // Estados que consideramos válidos para incluir una venta en la liquidación mensual
 const ESTADOS_LIQUIDABLES = new Set([

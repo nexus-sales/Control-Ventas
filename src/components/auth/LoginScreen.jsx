@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AppContexts';
 import Card from '../ui/Card';
@@ -75,11 +75,11 @@ export default function LoginScreen() {
     setIsSubmitting(true);
     setError('');
 
-    const { user, error: signInError } = await signIn(email, password);
+    const { user: _user, error: signInError } = await signIn(email, password);
 
     if (signInError) {
       setIsSubmitting(false);
-      const attempts = LoginRateLimit.recordAttempt();
+      const _attempts = LoginRateLimit.recordAttempt();
       setRemainingAttempts(LoginRateLimit.getRemainingAttempts());
 
       if (LoginRateLimit.isBlocked()) {

@@ -46,12 +46,12 @@ export function VentasTable({
   onEdit,
   onView,
   onDelete,
-  onActivate,
+  onActivate: _onActivate,
   isAdmin = true,
-  resolveProductoName,
-  resolveColaboradorName,
-  resolveZonaName,
-  resolveOperadorName,
+  resolveProductoName: _resolveProductoName,
+  resolveColaboradorName: _resolveColaboradorName,
+  resolveZonaName: _resolveZonaName,
+  resolveOperadorName: _resolveOperadorName,
 }) {
   const indexers = useMemo(() => ({
     productos:    Object.fromEntries(productos.map(p => [p.id, p])),

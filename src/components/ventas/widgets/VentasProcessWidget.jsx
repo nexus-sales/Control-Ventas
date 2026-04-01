@@ -103,7 +103,7 @@ export function VentasProcessWidget({ ventas, onFilterChange }) {
         };
 
         ventas.forEach(v => {
-            if (counts.hasOwnProperty(v.estado)) {
+            if (Object.prototype.hasOwnProperty.call(counts, v.estado)) {
                 counts[v.estado]++;
             }
         });

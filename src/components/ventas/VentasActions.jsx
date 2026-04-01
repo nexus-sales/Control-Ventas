@@ -1,11 +1,11 @@
 import React from 'react';
 import { Plus, Trash2, AlertCircle, ShoppingBag, Sparkles } from 'lucide-react';
-import { glassStyles, cardHoverStyles, primaryButtonStyles } from '../../utils/designUtils';
+import { glassStyles } from '../../utils/designUtils';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function VentasActions({
-  ventasCount,
+  ventasCount: _ventasCount,
   selectedIds,
   onNewVenta,
   onDeleteSelected,

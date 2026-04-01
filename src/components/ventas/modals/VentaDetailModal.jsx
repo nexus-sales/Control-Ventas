@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, X, Edit3, User, Briefcase, MapPin, Calendar, CreditCard, PieChart, Info, Sparkles, ShieldCheck, Clock, AlertCircle, Phone, ShoppingBag } from 'lucide-react';
-import { glassStyles, cardHoverStyles, euro } from '../../../utils/designUtils';
+import { euro } from '../../../utils/designUtils';
 import { cn } from '../../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import Modal from '../../ui/Modal';

@@ -42,7 +42,7 @@ export const detectarZonaPorCP = (codigoPostal) => {
   return 'peninsula';
 };
 export const esZonaValida = (zonaId) => Object.keys(ZONAS_FISCALES).includes(zonaId);
-export const getEstadisticasZonas = (ventas = []) => {
+export const getEstadisticasZonas = (_ventas = []) => {
   // ...existing code...
 };
 // ...existing code...

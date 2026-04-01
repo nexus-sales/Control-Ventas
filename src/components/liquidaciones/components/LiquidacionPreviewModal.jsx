@@ -8,7 +8,7 @@ const LiquidacionPreviewModal = ({ liquidacion, colaborador, ventas, decomisione
     const totalImpuesto = Number(liquidacion.impuesto_zona || 0);
     const totalDecomisiones = Number(liquidacion.decomisiones || 0);
     const totalNeto = Number(liquidacion.neto || 0);
-    const totalConImpuesto = Number(
+    const _totalConImpuesto = Number(
         liquidacion.total_con_impuesto ?? (totalBruto - totalIrpf - totalDecomisiones + totalImpuesto)
     );
 

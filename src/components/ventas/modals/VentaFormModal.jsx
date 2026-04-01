@@ -5,7 +5,6 @@ import { cn } from '../../../lib/utils';
 import Modal from '../../ui/Modal';
 import { Input, Select, Label, Button, TextArea } from '../../ui/FormElements';
 import { SECTORES, FAMILIAS_POR_SECTOR } from '../../../utils/constants';
-import { getColaboradorComision } from '../../../utils/calculos';
 
 // Estados válidos para ventas
 const ESTADOS_VALIDOS = [
@@ -318,15 +317,15 @@ export const VentaFormModal = ({
     productosDisponibles.find(p => p.id === formData.producto_id),
     [productosDisponibles, formData.producto_id]
   );
-  const colaboradorSeleccionado = useMemo(() =>
+  const _colaboradorSeleccionado = useMemo(() =>
     colaboradoresDisponibles.find(c => c.id === formData.colaborador_id),
     [colaboradoresDisponibles, formData.colaborador_id]
   );
-  const operadorSeleccionado = useMemo(() =>
+  const _operadorSeleccionado = useMemo(() =>
     operadoresDisponibles.find(o => o.id === formData.operador_id),
     [operadoresDisponibles, formData.operador_id]
   );
-  const zonaSeleccionada = useMemo(() =>
+  const _zonaSeleccionada = useMemo(() =>
     zonasDisponibles.find(z => z.id === formData.zona_id),
     [zonasDisponibles, formData.zona_id]
   );
@@ -357,7 +356,7 @@ export const VentaFormModal = ({
   }, [productosDisponibles, formData.operador_id]);
 
   // Familias disponibles según sector
-  const familiasDisponibles = useMemo(() => {
+  const _familiasDisponibles = useMemo(() => {
     return formData.sector ? FAMILIAS_POR_SECTOR[formData.sector] || [] : [];
   }, [formData.sector]);
 

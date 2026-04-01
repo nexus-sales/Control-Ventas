@@ -16,7 +16,6 @@ import VentaFormModal from './modals/VentaFormModal';
 import { VentaDetailModal } from './modals/VentaDetailModal';
 import { PvpEditModal } from './modals/PvpEditModal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '../../lib/utils';
 import { LayoutDashboard, Filter, Zap, Table as TableIcon, Sparkles, TrendingUp, Search } from 'lucide-react';
 
 const LoadingVentas = () => (

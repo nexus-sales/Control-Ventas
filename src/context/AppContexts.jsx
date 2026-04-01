@@ -466,6 +466,7 @@ export function AppContextProvider({ children }) {
 
 // =================== RE-EXPORTAR HOOKS ===================
 // Re-exportar hooks desde hooks.js para mantener compatibilidad
+// eslint-disable-next-line react-refresh/only-export-components
 export { useAuth, useData, useTheme, useApp, useAppContexts } from './hooks';
 
 // =================== DEFAULT EXPORT ===================

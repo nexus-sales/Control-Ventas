@@ -6,7 +6,7 @@ import StatusWidgets from "./widgets/StatusWidgets";
 import { QuickActions } from "./widgets/DashboardWidgets";
 import { useNavigate } from "react-router-dom";
 import { computeVenta } from "../utils/calculos";
-import { glassStyles, cardHoverStyles, sectionTitleStyles } from "../utils/designUtils";
+import { glassStyles, cardHoverStyles } from "../utils/designUtils";
 import { cn } from "../lib/utils";
 import { motion } from "framer-motion";
 import {
@@ -309,7 +309,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 px-1">
         <SummaryBadge
           label="Volumen Total"
-          value={`${total} u.` || "0 u."}
+          value={total > 0 ? `${total} u.` : "0 u."}
           icon={TrendingUp}
           color="from-rose-500 to-pink-600"
           warning={total === 0}

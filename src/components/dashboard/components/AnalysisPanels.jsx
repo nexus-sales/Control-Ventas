@@ -1,6 +1,6 @@
 import React from 'react';
 import { PieChart, Target, MapPin, Sparkles } from 'lucide-react';
-import { euro, glassStyles, cardHoverStyles } from '../../../utils/designUtils';
+import { euro, glassStyles } from '../../../utils/designUtils';
 import { cn } from '../../../lib/utils';
 import { motion } from 'framer-motion';
 import { BorderBeam } from '../../ui/BorderBeam';

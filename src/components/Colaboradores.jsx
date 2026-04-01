@@ -11,7 +11,7 @@ import { procesarColaboradores, filtrarColaboradores, getZonaNombre, getNivelInf
 // ==========================================
 // COMPONENTE: Tarjeta de Estadística Premium
 // ==========================================
-const StatCard = ({ title, value, icon: Icon, gradientFrom, gradientTo }) => (
+const StatCard = ({ title, value, icon: _Icon, gradientFrom, gradientTo }) => (
   <div className={`${glassStyles()} ${cardHoverStyles()} rounded-3xl p-5 relative overflow-hidden group`}>
     <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full bg-gradient-to-br ${gradientFrom} ${gradientTo} opacity-10 group-hover:opacity-20 transition-opacity duration-500`} />
     <div className="flex items-center justify-between relative z-10">
@@ -20,7 +20,7 @@ const StatCard = ({ title, value, icon: Icon, gradientFrom, gradientTo }) => (
         <p className="text-2xl font-black text-slate-800 dark:text-white">{value}</p>
       </div>
       <div className={`p-3 rounded-2xl bg-gradient-to-br ${gradientFrom} ${gradientTo} shadow-lg`}>
-        <Icon className="w-5 h-5 text-white" />
+        <_Icon className="w-5 h-5 text-white" />
       </div>
     </div>
   </div>

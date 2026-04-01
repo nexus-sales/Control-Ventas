@@ -3,7 +3,6 @@ import { DollarSign, Save, Info, Sparkles } from 'lucide-react';
 import Modal from '../../ui/Modal';
 import { Input, Label, Button } from '../../ui/FormElements';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '../../../lib/utils';
 
 export function PvpEditModal({
   isOpen,

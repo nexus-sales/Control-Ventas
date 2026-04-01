@@ -4,7 +4,7 @@ import { euro, glassStyles, cardHoverStyles } from '../../../utils/designUtils';
 import { cn } from '../../../lib/utils';
 import { motion } from 'framer-motion';
 
-const MetricTile = ({ title, value, subtitle, icon: Icon, colorClass, gradientFrom, gradientTo, delay = 0 }) => (
+const MetricTile = ({ title, value, subtitle, icon: Icon, colorClass: _colorClass, gradientFrom, gradientTo, delay = 0 }) => (
     <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}

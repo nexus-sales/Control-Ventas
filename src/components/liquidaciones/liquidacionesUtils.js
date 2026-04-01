@@ -122,7 +122,7 @@ export function exportarCSV({ datos, nombreArchivo, setToast }) {
 export function generarInformePDF(liquidaciones, periodo, colaboradores) {
   const totalBruto = liquidaciones.reduce((sum, l) => sum + (l.bruto || 0), 0);
   const totalIRPF = liquidaciones.reduce((sum, l) => sum + (l.irpf || 0), 0);
-  const totalDecomisiones = liquidaciones.reduce((sum, l) => sum + (l.decomisiones || 0), 0);
+  const _totalDecomisiones = liquidaciones.reduce((sum, l) => sum + (l.decomisiones || 0), 0);
   const totalImpuestos = liquidaciones.reduce((sum, l) => sum + (l.impuesto_zona || 0), 0);
   const totalNeto = liquidaciones.reduce((sum, l) => sum + (l.neto || 0), 0);
 

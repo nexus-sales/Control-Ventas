@@ -5,7 +5,7 @@ import { cn } from '../../../lib/utils';
 import { motion } from 'framer-motion';
 import { BorderBeam } from '../../ui/BorderBeam';
 
-const KPICard = ({ title, value, subtitle, icon: Icon, colorClass, gradientFrom, gradientTo, delay = 0 }) => (
+const KPICard = ({ title, value, subtitle, icon: Icon, colorClass: _colorClass, gradientFrom, gradientTo, delay = 0 }) => (
     <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
