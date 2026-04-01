@@ -66,6 +66,7 @@ const PipelinePanel = ({ byEstado, total }) => {
                     .map((key) => [key, byEstado[key] || 0]),
             )
             .slice(0, 4);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [byEstado]);
 
     return (

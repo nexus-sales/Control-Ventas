@@ -527,6 +527,7 @@ export const VentaFormModal = ({
       comision_porcentaje: (tipo || producto.comision_tipo) === 'porcentaje' ? Number(base) || 0 : 0,
       comision_fuera_vigencia: !vigenciaOK,
     }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.fecha, formData.cliente_tipo, formData.tipo_activacion, formData.producto_id, productosDisponibles]);
 
   // Submit
