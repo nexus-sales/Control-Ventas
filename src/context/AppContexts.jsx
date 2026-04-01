@@ -63,7 +63,6 @@ export function AuthProvider({ children }) {
             return null;
           }
 
-          console.log('✅ Perfil creado automáticamente:', newProfile);
           return newProfile;
         }
         throw error;
