@@ -10,30 +10,32 @@ export function yearsBetween(aISO, bISO) {
   return (b - a) / (1000 * 60 * 60 * 24 * 365.25);
 }
 
-// IRPF 15% si antigüedad ≥ 2 años, si no 7%
-export function getIrpfPctByAntiguedad(colab, refDateISO) {
-  if (!colab?.fecha_alta || !refDateISO) return 0.15;
-  return yearsBetween(colab.fecha_alta, refDateISO) >= 2 ? 0.15 : 0.07;
-}
-
 /**
- * Calcula el porcentaje de IRPF aplicable a un colaborador.
- * Devuelve un valor entre 0 y 1 (ej: 0.07 para 7%).
- * @param {object} colaborador - El objeto colaborador.
- * @param {string} colaborador.tipo_fiscal - Ej: 'AUTONOMO', 'EMPRESA'.
+ * Calcula el porcentaje de IRPF aplicable a un colaborador, como factor 0-1.
+ * EMPRESA, AUTONOMO_ESPECIAL, EXENTO y cualquier CIF de empresa quedan exentos (0).
+ * AUTONOMO paga 7% con menos de 2 años de antigüedad, 15% en adelante.
+ *
+ * `fechaReferencia` es obligatorio y es quien fija el momento en que se evalúa la
+ * antigüedad: para una venta debe ser `venta.fecha`, no la fecha actual del sistema.
+ * Así el tramo de IRPF de una venta queda congelado a cuándo se hizo, igual que ya
+ * se congela `comision_base` — y no cambia si la liquidación se recalcula más tarde.
+ * Única función de IRPF del repo: unifica getIrpfPctByAntiguedad, getIrpfPercentage
+ * (calculos.js) y calcularIRPF (liquidacionesUtils.js, colaboradores).
+ *
+ * @param {object} colaborador
+ * @param {string} colaborador.tipo_fiscal - AUTONOMO | AUTONOMO_ESPECIAL | EMPRESA | EXENTO
  * @param {string} colaborador.fecha_alta - Fecha de alta en formato ISO.
  * @param {string} [colaborador.cif_dni] - CIF/DNI para distinguir personas de empresas.
- * @returns {number} El porcentaje de IRPF como un factor (0.07, 0.15, etc.).
+ * @param {string} fechaReferencia - Fecha ISO respecto a la que se mide la antigüedad.
+ * @returns {number} Factor de IRPF (0, 0.07 o 0.15).
  */
-export function getIrpfPercentage({ tipo_fiscal, fecha_alta, cif_dni }) {
-  const esCIF = cif_dni?.toUpperCase().match(/^[ABCDEFGHJNPQRSUVW]/);
-  if (esCIF || tipo_fiscal === "EMPRESA") return 0;
-  if (tipo_fiscal === "AUTONOMO_ESPECIAL") return 0;
-  if (tipo_fiscal === "AUTONOMO") {
-    const añosTranscurridos = yearsBetween(fecha_alta, new Date().toISOString());
-    return añosTranscurridos < 2 ? 0.07 : 0.15;
-  }
-  return 0;
+export function getIrpfPct(colaborador, fechaReferencia) {
+  if (!colaborador) return 0;
+  const tipo = (colaborador.tipo_fiscal || colaborador.tipo || "").toString().toUpperCase();
+  const esCIF = colaborador.cif_dni?.toUpperCase()?.match(/^[ABCDEFGHJNPQRSUVW]/);
+  if (esCIF || tipo === "EMPRESA" || tipo === "AUTONOMO_ESPECIAL" || tipo === "EXENTO") return 0;
+  if (tipo !== "AUTONOMO") return 0;
+  return yearsBetween(colaborador.fecha_alta, fechaReferencia) >= 2 ? 0.15 : 0.07;
 }
 
 // Obtener comisión del colaborador (fija o porcentaje)
@@ -217,7 +219,7 @@ export function computeVenta({
   const parteColab = getColaboradorComision(colab, niveles, comBase, producto);
 
   // Calcular IRPF y neto
-  const irpf_pct = getIrpfPctByAntiguedad(colab, venta.fecha);
+  const irpf_pct = getIrpfPct(colab, venta.fecha);
   const irpf = parteColab * irpf_pct;
   const netoColab = Math.max(0, parteColab - irpf);
 

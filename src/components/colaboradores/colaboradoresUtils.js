@@ -1,4 +1,5 @@
 // Funciones utilitarias y helpers para colaboradores
+import { getIrpfPct } from "../../utils/calculos";
 
 export const normalizarTipoFiscal = (tipo = "") => {
     return tipo
@@ -17,14 +18,9 @@ export const calcularEstadoColaborador = (colaborador) => {
     const esAutonomoEspecial = tipoFiscal === "AUTONOMO_ESPECIAL";
     const esAutonomo = tipoFiscal === "AUTONOMO";
 
-    let irpf = null;
-    if (esAutonomo) {
-        const fechaAlta = new Date(colaborador.fecha_alta);
-        const ahora = new Date();
-        // Aproximación de años transcurridos
-        const añosTranscurridos = (ahora - fechaAlta) / (1000 * 60 * 60 * 24 * 365.25);
-        irpf = añosTranscurridos < 2 ? 7 : 15;
-    }
+    // "Hoy" es la referencia correcta aquí: no hay venta/liquidación de la que colgar
+    // el tramo, es el IRPF que le tocaría a este colaborador si vendiera ahora mismo.
+    const irpf = esAutonomo ? getIrpfPct(colaborador, new Date().toISOString()) * 100 : null;
 
     const esta_activo = !colaborador.fecha_baja || new Date(colaborador.fecha_baja) > new Date();
 

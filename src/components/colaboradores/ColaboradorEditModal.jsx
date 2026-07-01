@@ -4,6 +4,7 @@ import Modal from "../ui/Modal";
 import { Input, Select, Label, Button, TextArea } from "../ui/FormElements";
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
+import { getIrpfPct } from '../../utils/calculos';
 
 export default function ColaboradorEditModal({ colaborador, onSave, onClose, niveles, zonas = [] }) {
   const [draft, setDraft] = useState(
@@ -60,21 +61,12 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       .toUpperCase()
       .replace(/\s+/g, '_');
 
-  const calcularIRPF = (tipo_fiscal, fecha_alta, cif_dni = "") => {
-    const esCIF = cif_dni.toUpperCase().match(/^[ABCDEFGHJNPQRSUVW]/);
-    const tipo = normalizarTipoFiscal(tipo_fiscal);
-    const esEmpresa = tipo === "EMPRESA" || esCIF;
-    const esAutonomoEspecial = tipo === "AUTONOMO_ESPECIAL";
-    const esAutonomo = tipo === "AUTONOMO";
-
-    if (esEmpresa || esAutonomoEspecial) return null;
-    if (esAutonomo) {
-      const fechaAlta = new Date(fecha_alta);
-      const ahora = new Date();
-      const añosTranscurridos = (ahora - fechaAlta) / (1000 * 60 * 60 * 24 * 365.25);
-      return añosTranscurridos < 2 ? 7 : 15;
-    }
-    return null;
+  // Tramo IRPF a mostrar en la ficha: null si no aplica (empresa/aut. especial/CIF),
+  // el % si es autónomo. "Hoy" es la referencia correcta: no hay venta de la que
+  // colgarlo, es el tramo que le tocaría si vendiera ahora mismo.
+  const calcularIrpfFicha = (tipo_fiscal, fecha_alta, cif_dni = "") => {
+    if (normalizarTipoFiscal(tipo_fiscal) !== "AUTONOMO") return null;
+    return getIrpfPct({ tipo_fiscal, fecha_alta, cif_dni }, new Date().toISOString()) * 100;
   };
 
   const handleSave = (e) => {
@@ -105,7 +97,7 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       direccion: draft.direccion?.trim() || "",
       observaciones: draft.observaciones?.trim() || "",
       pct_colaborador: draft.pct_colaborador === "" ? null : Number(draft.pct_colaborador),
-      irpf_calculado: calcularIRPF(draft.tipo_fiscal, draft.fecha_alta, draft.cif_dni),
+      irpf_calculado: calcularIrpfFicha(draft.tipo_fiscal, draft.fecha_alta, draft.cif_dni),
       exento_impuestos: (() => {
         const tipo = normalizarTipoFiscal(draft.tipo_fiscal);
         const esCIF = draft.cif_dni?.toUpperCase().match(/^[ABCDEFGHJNPQRSUVW]/);

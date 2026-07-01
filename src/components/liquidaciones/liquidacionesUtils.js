@@ -8,26 +8,6 @@ export function sum(arr, sel) {
   return arr.reduce((a, x) => a + (sel(x) || 0), 0);
 }
 
-export function calcularAntiguedad(fechaAlta) {
-  if (!fechaAlta) return 0;
-  const hoy = new Date();
-  const alta = new Date(fechaAlta);
-  const diffTime = Math.abs(hoy - alta);
-  const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
-  return diffYears;
-}
-
-export function calcularIRPF(colaborador, importeBruto, fechaRef) {
-  if (!colaborador) return 0;
-  const tipo = (colaborador.tipo_fiscal || colaborador.tipo || '').toUpperCase();
-  const esCIF = colaborador.cif_dni?.toUpperCase()?.match(/^[ABCDEFGHJNPQRSUVW]/);
-  if (esCIF || tipo === 'EMPRESA' || tipo === 'AUTONOMO_ESPECIAL' || tipo === 'EXENTO') return 0;
-  if (tipo !== 'AUTONOMO') return 0;
-  const antiguedad = calcularAntiguedad(colaborador.fecha_alta || fechaRef);
-  const porcentajeIRPF = antiguedad < 2 ? 7 : 15;
-  return (importeBruto * porcentajeIRPF) / 100;
-}
-
 export function obtenerDatosZona(colaborador, zonas) {
   if (!colaborador?.zona_id || !zonas) return { impuesto_tipo: null, impuesto_pct: 0 };
   const zona = zonas.find(z => z.id === colaborador.zona_id);
