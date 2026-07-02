@@ -3,7 +3,7 @@ import {
   AlertCircle, Plus, Phone, Zap, Shield, User, Edit3, Trash2,
   Users, UserCheck, UserX, Sparkles, Search
 } from "lucide-react";
-import { useData } from "../context/AppContexts";
+import { useAuth, useData } from "../context/AppContexts";
 import { ColaboradorEditModal } from "./colaboradores/index.js";
 import { glassStyles, cardHoverStyles } from "../utils/designUtils";
 import { procesarColaboradores, filtrarColaboradores, getZonaNombre, getNivelInfo } from "./colaboradores/colaboradoresUtils";
@@ -30,6 +30,7 @@ const StatCard = ({ title, value, icon: _Icon, gradientFrom, gradientTo }) => (
 // COMPONENTE PRINCIPAL
 // ==========================================
 export default function Colaboradores() {
+  const { isAdmin } = useAuth();
   const { data, setColaboradores, dataInitialized } = useData();
 
   const colaboradores = useMemo(
@@ -236,8 +237,8 @@ export default function Colaboradores() {
                           </div>
                           <div>
                             <p className="font-bold text-slate-900 dark:text-white">{c.nombre}</p>
-                            {c.cif_dni && <p className="text-xs text-slate-400">{c.cif_dni}</p>}
-                            {c.email && <p className="text-xs text-slate-400">{c.email}</p>}
+                            {isAdmin && c.cif_dni && <p className="text-xs text-slate-400">{c.cif_dni}</p>}
+                            {isAdmin && c.email && <p className="text-xs text-slate-400">{c.email}</p>}
                           </div>
                         </div>
                       </td>
@@ -277,20 +278,24 @@ export default function Colaboradores() {
                       <td className="px-4 py-4">
                         <div className="space-y-1">
                           {c.comision_personalizada_activa ? (
-                            <div className="text-xs space-y-1">
-                              <div className="flex items-center gap-1">
-                                <Phone className="w-3 h-3 text-blue-500" />
-                                <span className="text-slate-600 dark:text-slate-300">{c.telefonia_tipo === 'fijo' ? `€${c.telefonia_valor}` : `${(c.telefonia_valor * 100).toFixed(1)}%`}</span>
+                            isAdmin ? (
+                              <div className="text-xs space-y-1">
+                                <div className="flex items-center gap-1">
+                                  <Phone className="w-3 h-3 text-blue-500" />
+                                  <span className="text-slate-600 dark:text-slate-300">{c.telefonia_tipo === 'fijo' ? `€${c.telefonia_valor}` : `${(c.telefonia_valor * 100).toFixed(1)}%`}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Zap className="w-3 h-3 text-yellow-500" />
+                                  <span className="text-slate-600 dark:text-slate-300">{c.energia_tipo === 'fijo' ? `€${c.energia_valor}` : `${(c.energia_valor * 100).toFixed(1)}%`}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Shield className="w-3 h-3 text-green-500" />
+                                  <span className="text-slate-600 dark:text-slate-300">{c.seguridad_tipo === 'fijo' ? `€${c.seguridad_valor}` : `${(c.seguridad_valor * 100).toFixed(1)}%`}</span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Zap className="w-3 h-3 text-yellow-500" />
-                                <span className="text-slate-600 dark:text-slate-300">{c.energia_tipo === 'fijo' ? `€${c.energia_valor}` : `${(c.energia_valor * 100).toFixed(1)}%`}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Shield className="w-3 h-3 text-green-500" />
-                                <span className="text-slate-600 dark:text-slate-300">{c.seguridad_tipo === 'fijo' ? `€${c.seguridad_valor}` : `${(c.seguridad_valor * 100).toFixed(1)}%`}</span>
-                              </div>
-                            </div>
+                            ) : (
+                              <span className="text-xs text-slate-400 italic">Personalizado (solo admin)</span>
+                            )
                           ) : nivelInfo ? (
                             <div className="text-xs space-y-1">
                               <div className="flex items-center gap-1">

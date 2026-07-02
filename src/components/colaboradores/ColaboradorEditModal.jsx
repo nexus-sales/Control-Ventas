@@ -1,12 +1,25 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { X, User, Building2, Percent, Phone, MapPin, Shield, Save, Zap, Mail, Calendar, Briefcase, FileText, AlertCircle } from 'lucide-react';
 import Modal from "../ui/Modal";
 import { Input, Select, Label, Button, TextArea } from "../ui/FormElements";
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { getIrpfPct } from '../../utils/calculos';
+import { useAuth } from '../../context/AppContexts';
+import { supabase } from '../../lib/supabase';
 
 export default function ColaboradorEditModal({ colaborador, onSave, onClose, niveles, zonas = [] }) {
+  const { isAdmin } = useAuth();
+  // El fetch general de colaboradores ya no trae `direccion` (hallazgo MEDIO
+  // Auditor: over-fetching de PII). `direccion` NUNCA viaja por el guardado
+  // general (setColaboradores hace upsert de todo el array de golpe; si solo
+  // el registro editado incluyera esta columna y el resto no, arriesgamos
+  // corromper el upsert o vaciar la dirección de todo el equipo). Un admin
+  // editando un colaborador existente la guarda con una llamada aparte, de una
+  // sola fila — nunca se ofrece al crear un colaborador nuevo (para no tener
+  // que orquestar "crear, luego parchear" con un id que aún no existe).
+  const [direccionCargada, setDireccionCargada] = useState(false);
+
   const [draft, setDraft] = useState(
     colaborador ? {
       ...colaborador,
@@ -53,6 +66,22 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
 
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (!colaborador?.id || !isAdmin) return;
+    let cancelado = false;
+    supabase
+      .from('colaboradores_cv')
+      .select('direccion')
+      .eq('id', colaborador.id)
+      .single()
+      .then(({ data, error: fetchError }) => {
+        if (cancelado || fetchError) return;
+        setDraft((d) => ({ ...d, direccion: data?.direccion || '' }));
+        setDireccionCargada(true);
+      });
+    return () => { cancelado = true; };
+  }, [colaborador?.id, isAdmin]);
+
   const normalizarTipoFiscal = (tipo = "") =>
     tipo
       .toString()
@@ -94,7 +123,6 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       cif_dni: draft.cif_dni?.trim() || "",
       email: draft.email?.trim() || "",
       telefono: draft.telefono?.trim() || "",
-      direccion: draft.direccion?.trim() || "",
       observaciones: draft.observaciones?.trim() || "",
       pct_colaborador: draft.pct_colaborador === "" ? null : Number(draft.pct_colaborador),
       irpf_calculado: calcularIrpfFicha(draft.tipo_fiscal, draft.fecha_alta, draft.cif_dni),
@@ -105,6 +133,18 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       })(),
       fecha_baja: draft.fecha_baja || null,
     };
+    // direccion nunca viaja por aquí — ver comentario junto a direccionCargada.
+    delete cleanedData.direccion;
+
+    if (isAdmin && colaborador?.id && direccionCargada) {
+      supabase
+        .from('colaboradores_cv')
+        .update({ direccion: draft.direccion?.trim() || null })
+        .eq('id', colaborador.id)
+        .then(({ error: updateError }) => {
+          if (updateError) console.error('Error guardando dirección:', updateError);
+        });
+    }
 
     onSave(cleanedData, true);
   };
@@ -200,15 +240,18 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
               </div>
 
               <div className="p-6 rounded-[2rem] bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-4">
-                <div className="space-y-2">
-                  <Label>Localización y Envío</Label>
-                  <Input
-                    icon={MapPin}
-                    placeholder="Dirección fiscal completa"
-                    value={draft.direccion}
-                    onChange={(e) => setDraft((d) => ({ ...d, direccion: e.target.value }))}
-                  />
-                </div>
+                {colaborador?.id && isAdmin && (
+                  <div className="space-y-2">
+                    <Label>Localización y Envío</Label>
+                    <Input
+                      icon={MapPin}
+                      placeholder={direccionCargada ? "Dirección fiscal completa" : "Cargando..."}
+                      value={draft.direccion || ''}
+                      disabled={!direccionCargada}
+                      onChange={(e) => setDraft((d) => ({ ...d, direccion: e.target.value }))}
+                    />
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label className="text-[10px]">Teléfono Directo</Label>

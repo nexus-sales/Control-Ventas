@@ -24,6 +24,22 @@ const STORAGE_KEYS = {
   empresas: 'cv_empresas_v3'
 };
 
+// Columnas explícitas por colección para el fetch general (hallazgo MEDIO Auditor:
+// over-fetching de PII). Solo colaboradores tiene override — el resto sigue en '*'.
+// direccion se excluye porque no la usa ninguna pantalla ni cálculo fuera del modal
+// de edición (ColaboradorEditModal la pide aparte si hace falta). cif_dni y
+// comision_personalizada NO se pueden quitar aquí: computeVenta() los necesita en
+// el cliente para calcular comisiones de cualquier usuario, no solo admins.
+const COLUMNAS_SELECT = {
+  colaboradores: [
+    'id', 'nombre', 'apellidos', 'email', 'telefono', 'cif_dni', 'tipo_fiscal',
+    'irpf', 'exento_impuestos', 'nivel_id', 'zona_id', 'comision_personalizada',
+    'comision_tipo_personalizada', 'pct_colaborador', 'pct_telefonia', 'pct_energia',
+    'fijo_seguridad', 'estado', 'activo', 'fecha_alta', 'fecha_baja', 'observaciones',
+    'rol', 'metadata', 'created_at', 'updated_at',
+  ].join(', '),
+};
+
 // =================== 🔐 AUTH PROVIDER ===================
 
 export function AuthProvider({ children }) {
@@ -216,7 +232,7 @@ export function DataProvider({ children }) {
           const tableName = `${collection}_cv`;
           const { data: remoteData, error: remoteError } = await supabase
             .from(tableName)
-            .select('*');
+            .select(COLUMNAS_SELECT[collection] || '*');
 
           if (!remoteError && remoteData) {
             collectionData = remoteData;

@@ -2,7 +2,7 @@ import React from 'react';
 import { User, Phone, Zap, Shield, Edit3, Trash2 } from 'lucide-react';
 import Card from '../ui/Card';
 
-export default function ColaboradoresTable({ colaboradores, niveles, zonas, onEdit, onDelete }) {
+export default function ColaboradoresTable({ colaboradores, niveles, zonas, onEdit, onDelete, isAdmin = false }) {
   const getZonaNombre = (zona_id) => zonas.find((z) => z.id === zona_id)?.nombre || "Sin asignar";
   const getNivelInfo = (nivelId) => niveles.find((n) => n.id === nivelId) || null;
   return (
@@ -32,7 +32,7 @@ export default function ColaboradoresTable({ colaboradores, niveles, zonas, onEd
                   <td className="py-3 px-3">
                     <div>
                       <div className="font-medium text-slate-800">{c.nombre}</div>
-                      {c.cif_dni && (
+                      {isAdmin && c.cif_dni && (
                         <div className="text-xs text-slate-500">{c.cif_dni}</div>
                       )}
                     </div>
@@ -88,20 +88,24 @@ export default function ColaboradoresTable({ colaboradores, niveles, zonas, onEd
                   <td className="py-3 px-3">
                     <div className="space-y-1">
                       {c.comision_personalizada_activa ? (
-                        <div className="text-xs space-y-1">
-                          <div className="flex items-center gap-1">
-                            <Phone className="w-3 h-3 text-blue-500" />
-                            <span>{c.telefonia_tipo === 'fijo' ? `€${c.telefonia_valor}` : `${(c.telefonia_valor * 100).toFixed(1)}%`}</span>
+                        isAdmin ? (
+                          <div className="text-xs space-y-1">
+                            <div className="flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-blue-500" />
+                              <span>{c.telefonia_tipo === 'fijo' ? `€${c.telefonia_valor}` : `${(c.telefonia_valor * 100).toFixed(1)}%`}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Zap className="w-3 h-3 text-yellow-500" />
+                              <span>{c.energia_tipo === 'fijo' ? `€${c.energia_valor}` : `${(c.energia_valor * 100).toFixed(1)}%`}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Shield className="w-3 h-3 text-green-500" />
+                              <span>{c.seguridad_tipo === 'fijo' ? `€${c.seguridad_valor}` : `${(c.seguridad_valor * 100).toFixed(1)}%`}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Zap className="w-3 h-3 text-yellow-500" />
-                            <span>{c.energia_tipo === 'fijo' ? `€${c.energia_valor}` : `${(c.energia_valor * 100).toFixed(1)}%`}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Shield className="w-3 h-3 text-green-500" />
-                            <span>{c.seguridad_tipo === 'fijo' ? `€${c.seguridad_valor}` : `${(c.seguridad_valor * 100).toFixed(1)}%`}</span>
-                          </div>
-                        </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">Personalizado (solo admin)</span>
+                        )
                       ) : nivelInfo ? (
                         <div className="text-xs space-y-1">
                           <div className="flex items-center gap-1">
@@ -125,8 +129,14 @@ export default function ColaboradoresTable({ colaboradores, niveles, zonas, onEd
                   </td>
                   <td className="py-3 px-3">
                     <div>
-                      <div className="text-xs text-slate-700">{c.telefono}</div>
-                      <div className="text-xs text-slate-500">{c.email}</div>
+                      {isAdmin ? (
+                        <>
+                          <div className="text-xs text-slate-700">{c.telefono}</div>
+                          <div className="text-xs text-slate-500">{c.email}</div>
+                        </>
+                      ) : (
+                        <span className="text-xs text-slate-300 italic">Restringido</span>
+                      )}
                     </div>
                   </td>
                   <td className="py-3 px-3">
