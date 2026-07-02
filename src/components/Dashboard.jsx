@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { computeVenta } from "../utils/calculos";
 import { glassStyles, cardHoverStyles } from "../utils/designUtils";
 import { cn } from "../lib/utils";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
   Calendar,
@@ -18,7 +18,8 @@ import {
   Package,
   MapPin,
   TrendingUp,
-  LayoutDashboard
+  LayoutDashboard,
+  ChevronDown
 } from "lucide-react";
 
 const getImporteVenta = (venta) => {
@@ -90,6 +91,7 @@ export default function Dashboard() {
   const hayDatos = ventasConCalc.length > 0;
 
   const [periodoEvolucion, setPeriodoEvolucion] = useState('semestral');
+  const [showCatalogo, setShowCatalogo] = useState(false);
 
   // Lógica de métricas avanzada (mantenida del original)
   const facturacionTotal = ventas.reduce((acum, venta) => acum + getImporteVenta(venta), 0);
@@ -305,59 +307,12 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Grid de Estado del Sistema - Bento Style */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 px-1">
-        <SummaryBadge
-          label="Volumen Total"
-          value={total > 0 ? `${total} u.` : "0 u."}
-          icon={TrendingUp}
-          color="from-rose-500 to-pink-600"
-          warning={total === 0}
-          className="lg:col-span-2 lg:row-span-1"
-          delay={0.1}
-        />
-        <SummaryBadge
-          label="Colaboradores"
-          value={colaboradores.length}
-          icon={Users}
-          color="from-blue-500 to-indigo-600"
-          warning={colaboradores.length === 0}
-          delay={0.2}
-        />
-        <SummaryBadge
-          label="Operadores"
-          value={operadores.length}
-          icon={Briefcase}
-          color="from-purple-500 to-fuchsia-600"
-          warning={operadores.length === 0}
-          delay={0.3}
-        />
-        <SummaryBadge
-          label="Productos"
-          value={productos.length}
-          icon={Package}
-          color="from-amber-500 to-orange-600"
-          warning={productos.length === 0}
-          delay={0.4}
-        />
-        <SummaryBadge
-          label="Cobertura Territorial"
-          value={`${byZona.length} Sedes`}
-          icon={MapPin}
-          color="from-emerald-500 to-teal-600"
-          warning={byZona.length === 0}
-          delay={0.5}
-          className="md:col-span-2 lg:col-span-1"
-        />
-      </div>
-
       {/* Acciones Rápidas Consolidadas */}
       <section>
         <QuickActions
           onNewVenta={() => navigate('/ventas?modal=newVenta')}
           onImportExcel={() => navigate('/config?tab=import')}
           onExportData={() => navigate('/liquidaciones')}
-          onViewAnalytics={() => navigate('/dashboard')}
           onManageUsers={() => navigate('/gestion?tab=colaboradores')}
           onOpenSettings={() => navigate('/config')}
         />
@@ -392,6 +347,77 @@ export default function Dashboard() {
           productos={productos}
         />
       </div>
+
+      {/* Resumen de Catálogo — conteos de inventario/equipo, no KPIs de uso diario.
+          Colapsado por defecto para no competir con las métricas de negocio de arriba. */}
+      <section>
+        <button
+          type="button"
+          onClick={() => setShowCatalogo((v) => !v)}
+          className={cn(glassStyles(), "w-full flex items-center justify-between p-4 rounded-2xl group")}
+          aria-expanded={showCatalogo}
+        >
+          <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+            Resumen de Catálogo
+          </span>
+          <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-transform", showCatalogo && "rotate-180")} />
+        </button>
+        <AnimatePresence>
+          {showCatalogo && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 px-1 pt-6">
+                <SummaryBadge
+                  label="Volumen Total"
+                  value={total > 0 ? `${total} u.` : "0 u."}
+                  icon={TrendingUp}
+                  color="from-rose-500 to-pink-600"
+                  warning={total === 0}
+                  className="lg:col-span-2 lg:row-span-1"
+                  delay={0.1}
+                />
+                <SummaryBadge
+                  label="Colaboradores"
+                  value={colaboradores.length}
+                  icon={Users}
+                  color="from-blue-500 to-indigo-600"
+                  warning={colaboradores.length === 0}
+                  delay={0.2}
+                />
+                <SummaryBadge
+                  label="Operadores"
+                  value={operadores.length}
+                  icon={Briefcase}
+                  color="from-purple-500 to-fuchsia-600"
+                  warning={operadores.length === 0}
+                  delay={0.3}
+                />
+                <SummaryBadge
+                  label="Productos"
+                  value={productos.length}
+                  icon={Package}
+                  color="from-amber-500 to-orange-600"
+                  warning={productos.length === 0}
+                  delay={0.4}
+                />
+                <SummaryBadge
+                  label="Cobertura Territorial"
+                  value={`${byZona.length} Sedes`}
+                  icon={MapPin}
+                  color="from-emerald-500 to-teal-600"
+                  warning={byZona.length === 0}
+                  delay={0.5}
+                  className="md:col-span-2 lg:col-span-1"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </section>
     </motion.div>
   );
 }

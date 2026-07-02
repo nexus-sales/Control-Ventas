@@ -2,7 +2,7 @@ import React from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { motion } from 'framer-motion';
 import {
-  Plus, Upload, Download, BarChart3, Users, Settings,
+  Plus, Upload, Download, Users, Settings,
   TrendingUp, TrendingDown, Euro, Target, Calendar, Award,
   AlertCircle, CheckCircle, Zap
 } from 'lucide-react';
@@ -72,12 +72,14 @@ function QuickActionButton({ label, onClick, color = "from-sky-500 to-blue-600",
   );
 }
 
-export function QuickActions({ onNewVenta, onImportExcel, onExportData, onViewAnalytics, onManageUsers, onOpenSettings }) {
+export function QuickActions({ onNewVenta, onImportExcel, onExportData, onManageUsers, onOpenSettings }) {
+  // "Reportes" (antes aquí) navegaba a /dashboard estando ya en /dashboard —
+  // no existe una vista de analíticas distinta a este propio panel, así que se elimina
+  // en vez de arreglar el destino.
   const actions = [
     { icon: Plus, label: "Nueva Venta", onClick: onNewVenta, color: "brand", description: "Expediente de venta inmediata" },
     { icon: Upload, label: "Importar", onClick: onImportExcel, color: "from-blue-400 to-indigo-600", description: "Carga masiva desde Excel/CSV" },
     { icon: Download, label: "Exportar", onClick: onExportData, color: "from-purple-400 to-fuchsia-600", description: "Descarga de registros consolidados" },
-    { icon: BarChart3, label: "Reportes", onClick: onViewAnalytics, color: "brand", description: "Panel de inteligencia de negocio" },
     { icon: Users, label: "Equipos", onClick: onManageUsers, color: "from-cyan-400 to-blue-500", description: "Gestión de red de colaboradores" },
     { icon: Settings, label: "Ajustes", onClick: onOpenSettings, color: "from-slate-400 to-slate-600", description: "Configuración global del sistema" }
   ];
@@ -93,7 +95,7 @@ export function QuickActions({ onNewVenta, onImportExcel, onExportData, onViewAn
           <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">Operaciones de alta velocidad</p>
         </div>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
         {actions.map((action, index) => (
           <QuickActionButton key={index} {...action} delay={0.1 * index} />
         ))}

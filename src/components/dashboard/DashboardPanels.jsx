@@ -1,6 +1,8 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronDown } from 'lucide-react';
 import { sectionTitleStyles } from '../../utils/designUtils';
+import { cn } from '../../lib/utils';
 
 // Importación de componentes modulares
 import KPIsPanel from './components/KPIsPanel';
@@ -39,6 +41,8 @@ export default function DashboardPanels(props) {
     operadores = [],
     productos = []
   } = props;
+
+  const [mostrarDetalle, setMostrarDetalle] = useState(false);
 
   return (
     <div className="space-y-12">
@@ -94,84 +98,108 @@ export default function DashboardPanels(props) {
         </motion.section>
       </div>
 
-      {/* 🏆 BLOQUE 3: RANKINGS ELITE */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <motion.section
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="lg:col-span-6"
-        >
-          <h3 className={sectionTitleStyles()}>Líderes de Ventas</h3>
-          <TopColaboradoresPanel {...{ topColaboradores, hayDatos }} />
-        </motion.section>
+      {/* Acordeón: Rankings, Segmentación y Tendencias (Bloques 3-5) — colapsados por
+          defecto para no saturar el primer vistazo. Siguen accesibles con un clic;
+          no se elimina ningún panel ni dato. */}
+      <button
+        type="button"
+        onClick={() => setMostrarDetalle((v) => !v)}
+        className="w-full flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-700/50 group"
+        aria-expanded={mostrarDetalle}
+      >
+        <span className={cn(sectionTitleStyles(), "mb-0")}>Ver análisis detallado</span>
+        <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-transform", mostrarDetalle && "rotate-180")} />
+      </button>
 
-        <motion.section
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          className="lg:col-span-6"
-        >
-          <h3 className={sectionTitleStyles()}>Productos Estrella</h3>
-          <TopProductosPanel {...{ topProductos, hayDatos }} />
-        </motion.section>
-      </div>
+      <AnimatePresence>
+        {mostrarDetalle && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden space-y-12"
+          >
+            {/* 🏆 BLOQUE 3: RANKINGS ELITE */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
+              <motion.section
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="lg:col-span-6"
+              >
+                <h3 className={sectionTitleStyles()}>Líderes de Ventas</h3>
+                <TopColaboradoresPanel {...{ topColaboradores, hayDatos }} />
+              </motion.section>
 
-      {/* 📍 BLOQUE 4: SEGMENTACIÓN & TERRITORIO */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <motion.section
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.7 }}
-          className="lg:col-span-4"
-        >
-          <h3 className={sectionTitleStyles()}>Sector</h3>
-          <SectorAnalysis {...{ bySector, hayDatos }} />
-        </motion.section>
+              <motion.section
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="lg:col-span-6"
+              >
+                <h3 className={sectionTitleStyles()}>Productos Estrella</h3>
+                <TopProductosPanel {...{ topProductos, hayDatos }} />
+              </motion.section>
+            </div>
 
-        <motion.section
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
-          className="lg:col-span-4"
-        >
-          <h3 className={sectionTitleStyles()}>Distribución Zonal</h3>
-          <GeoDistributionPanel {...{ byZona }} />
-        </motion.section>
+            {/* 📍 BLOQUE 4: SEGMENTACIÓN & TERRITORIO */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              <motion.section
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                className="lg:col-span-4"
+              >
+                <h3 className={sectionTitleStyles()}>Sector</h3>
+                <SectorAnalysis {...{ bySector, hayDatos }} />
+              </motion.section>
 
-        <motion.section
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.9 }}
-          className="lg:col-span-4"
-        >
-          <h3 className={sectionTitleStyles()}>Familias</h3>
-          <FamiliaAnalysis {...{ byFamilia, hayDatos }} />
-        </motion.section>
-      </div>
+              <motion.section
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="lg:col-span-4"
+              >
+                <h3 className={sectionTitleStyles()}>Distribución Zonal</h3>
+                <GeoDistributionPanel {...{ byZona }} />
+              </motion.section>
 
-      {/* 📈 BLOQUE 5: TENDENCIAS & CRONOLOGÍA */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-20">
-        <motion.section
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 1 }}
-          className="lg:col-span-7"
-        >
-          <h3 className={sectionTitleStyles()}>Evolución Temporal</h3>
-          <EvolucionTemporalPanel {...{ evolucionTemporal, periodoEvolucion, hayDatos }} />
-        </motion.section>
+              <motion.section
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.5 }}
+                className="lg:col-span-4"
+              >
+                <h3 className={sectionTitleStyles()}>Familias</h3>
+                <FamiliaAnalysis {...{ byFamilia, hayDatos }} />
+              </motion.section>
+            </div>
 
-        <motion.section
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 1.1 }}
-          className="lg:col-span-5"
-        >
-          <h3 className={sectionTitleStyles()}>Productividad</h3>
-          <ProductividadPanel {...{ colaboradores, total, topColaboradores, topProductos, facturacionTotal, margen, comBruta, hayDatos }} />
-        </motion.section>
-      </div>
+            {/* 📈 BLOQUE 5: TENDENCIAS & CRONOLOGÍA */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-20">
+              <motion.section
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, delay: 0.6 }}
+                className="lg:col-span-7"
+              >
+                <h3 className={sectionTitleStyles()}>Evolución Temporal</h3>
+                <EvolucionTemporalPanel {...{ evolucionTemporal, periodoEvolucion, hayDatos }} />
+              </motion.section>
+
+              <motion.section
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, delay: 0.7 }}
+                className="lg:col-span-5"
+              >
+                <h3 className={sectionTitleStyles()}>Productividad</h3>
+                <ProductividadPanel {...{ colaboradores, total, topColaboradores, topProductos, facturacionTotal, margen, comBruta, hayDatos }} />
+              </motion.section>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
