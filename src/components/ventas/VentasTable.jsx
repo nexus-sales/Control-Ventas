@@ -23,6 +23,29 @@ const formatCurrency = (value) => {
   });
 };
 
+// Estado de permanencia: solo se muestra cuando hay algo que decir (baja
+// registrada, o compromiso todavía vigente). Sin dato o compromiso ya cumplido
+// sin baja, no se pinta nada — es el caso más común y no debe generar ruido.
+const getCompromisoBadge = (venta) => {
+  if (venta.fecha_baja) {
+    return {
+      label: `⚠️ Baja: ${formatDate(venta.fecha_baja)}`,
+      className: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800",
+    };
+  }
+  if (venta.periodo_compromiso && venta.fecha) {
+    const fechaFinCompromiso = new Date(venta.fecha);
+    fechaFinCompromiso.setMonth(fechaFinCompromiso.getMonth() + Number(venta.periodo_compromiso));
+    if (new Date() < fechaFinCompromiso) {
+      return {
+        label: `🔒 Compromiso activo (${venta.periodo_compromiso}m)`,
+        className: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800",
+      };
+    }
+  }
+  return null;
+};
+
 const ESTADO_STYLES = {
   ACTIVO:      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
   PENDIENTE:   "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
@@ -125,6 +148,7 @@ export function VentasTable({
               const neto = venta._calc?.detalle?.netoColab || 0;
               const isSelected = Boolean(selectedIds?.includes(venta.id));
               const estadoStyle = ESTADO_STYLES[venta.estado] || ESTADO_STYLES.CANCELADA;
+              const compromisoBadge = getCompromisoBadge(venta);
 
               return (
                 <tr
@@ -162,6 +186,14 @@ export function VentasTable({
                         <span className="text-xs text-slate-400 dark:text-slate-500">· {venta.cif}</span>
                       )}
                     </div>
+                    {compromisoBadge && (
+                      <span className={cn(
+                        "inline-flex items-center mt-1.5 px-2 py-0.5 rounded text-[10px] font-medium border",
+                        compromisoBadge.className
+                      )}>
+                        {compromisoBadge.label}
+                      </span>
+                    )}
                   </td>
 
                   {/* Servicio */}

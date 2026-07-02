@@ -166,6 +166,28 @@ export function VentaDetailModal({
                   </div>
                 </div>
 
+                {(venta.periodo_compromiso || venta.fecha_baja) && (
+                  <div className="col-span-1 md:col-span-2 space-y-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-[4px] text-slate-400 flex items-center gap-2">
+                      <ShieldCheck className="w-3.5 h-3.5" /> Permanencia y Baja
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InfoChip
+                        icon={ShieldCheck}
+                        label="Permanencia Pactada"
+                        value={venta.periodo_compromiso ? `${venta.periodo_compromiso} meses` : null}
+                        color="blue"
+                      />
+                      <InfoChip
+                        icon={AlertCircle}
+                        label="Fecha de Baja"
+                        value={venta.fecha_baja ? formatDate(venta.fecha_baja) : null}
+                        color={venta.fecha_baja ? "amber" : "slate"}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-6">
                   <h4 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[4px] text-slate-400">
                     <ShoppingBag className="w-3.5 h-3.5" /> Servicio Contratado
