@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { useData } from "../context/AppContexts";
 import Card from "./ui/Card";
 import DashboardPanels from "./dashboard/DashboardPanels";
-import StatusWidgets from "./widgets/StatusWidgets";
 import { QuickActions } from "./widgets/DashboardWidgets";
 import { useNavigate } from "react-router-dom";
 import { computeVenta } from "../utils/calculos";
@@ -258,8 +257,6 @@ export default function Dashboard() {
       transition={{ duration: 0.5 }}
       className="max-w-[1600px] mx-auto space-y-12 pb-20 px-2"
     >
-      <StatusWidgets />
-
       {/* Header Principal Premium */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
         <div className="space-y-1">
