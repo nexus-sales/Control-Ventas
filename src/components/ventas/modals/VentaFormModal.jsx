@@ -273,6 +273,12 @@ export const VentaFormModal = ({
     if (!formData.fecha) errors.fecha = 'La fecha es obligatoria';
     if (!formData.colaborador_id) errors.colaborador_id = 'El colaborador es obligatorio';
     if (!formData.zona_id) errors.zona_id = 'La zona es obligatoria';
+    if (formData.fecha_baja && formData.fecha && formData.fecha_baja < formData.fecha) {
+      errors.fecha_baja = 'La fecha de baja no puede ser anterior a la fecha de venta';
+    }
+    if (formData.periodo_compromiso !== undefined && formData.periodo_compromiso !== '' && Number(formData.periodo_compromiso) <= 0) {
+      errors.periodo_compromiso = 'La permanencia debe ser un número de meses mayor que 0';
+    }
     customFieldsConfig?.forEach(field => {
       const key = `cf_${field.id}`;
       if (field.requerido && !formData[key]) {
@@ -557,6 +563,10 @@ export const VentaFormModal = ({
       dataToSave.comision_fuera_vigencia = !!formData.comision_fuera_vigencia;
       dataToSave.comision_vigencia_aplicada_desde = productoSeleccionado?.comision_vigencia_desde || null;
       dataToSave.comision_vigencia_aplicada_hasta = productoSeleccionado?.comision_vigencia_hasta || null;
+      dataToSave.periodo_compromiso = dataToSave.periodo_compromiso === '' || dataToSave.periodo_compromiso == null
+        ? null
+        : Number(dataToSave.periodo_compromiso);
+      dataToSave.fecha_baja = dataToSave.fecha_baja || null;
       const customFieldsData = {};
       Object.keys(dataToSave).forEach(key => {
         if (key.startsWith('cf_')) {
@@ -770,6 +780,35 @@ export const VentaFormModal = ({
                       onChange={(e) => updateField('telefono_movil', e.target.value)}
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5">
+                  <div className="space-y-2">
+                    <Label>Permanencia Pactada (meses)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Ej: 12"
+                      value={formData.periodo_compromiso ?? ''}
+                      onChange={(e) => updateField('periodo_compromiso', e.target.value === '' ? '' : parseInt(e.target.value, 10) || '')}
+                      className={cn(errors.periodo_compromiso && "border-rose-500 bg-rose-500/5 shadow-none")}
+                    />
+                    {errors.periodo_compromiso && <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mt-2 ml-2">{errors.periodo_compromiso}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Fecha de Baja (si canceló)</Label>
+                    <Input
+                      type="date"
+                      icon={Calendar}
+                      value={formData.fecha_baja || ''}
+                      onChange={(e) => updateField('fecha_baja', e.target.value)}
+                      className={cn(errors.fecha_baja && "border-rose-500 bg-rose-500/5 shadow-none")}
+                    />
+                    {errors.fecha_baja && <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mt-2 ml-2">{errors.fecha_baja}</p>}
+                  </div>
+                  <p className="col-span-2 text-[10px] text-slate-400 dark:text-slate-500 -mt-2">
+                    Rellena la fecha de baja solo cuando el cliente cancele antes de cumplir la permanencia — activa el descuento de decomisión en la liquidación del colaborador.
+                  </p>
                 </div>
               </div>
             </motion.div>

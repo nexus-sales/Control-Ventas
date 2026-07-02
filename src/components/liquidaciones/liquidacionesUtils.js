@@ -32,15 +32,19 @@ export function obtenerDatosZona(colaborador, zonas) {
   };
 }
 
-export function calcularDecomisiones(ventas, clientes, operadores) {
+// Decomisión por baja anticipada: lee fecha_baja/periodo_compromiso directamente de
+// la venta (no de una entidad Cliente separada — no existe tabla para ella, ver
+// Decisión 1 del Council). fecha_baja y periodo_compromiso son opcionales; mientras
+// no se rellenen en el alta/edición de la venta, esa venta simplemente no genera
+// decomisión, no es un error.
+export function calcularDecomisiones(ventas, operadores) {
   const decomisiones = [];
   ventas.forEach(venta => {
-    const cliente = clientes.find(c => c.id === venta.cliente_id);
     const operador = operadores.find(o => o.id === venta.operador_id);
-    if (!cliente || !operador) return;
-    if (cliente.fecha_baja && venta.fecha_inicio && venta.periodo_compromiso) {
-      const fechaInicio = new Date(venta.fecha_inicio);
-      const fechaBaja = new Date(cliente.fecha_baja);
+    if (!operador) return;
+    if (venta.fecha_baja && venta.fecha && venta.periodo_compromiso) {
+      const fechaInicio = new Date(venta.fecha);
+      const fechaBaja = new Date(venta.fecha_baja);
       const mesesComprometidos = parseInt(venta.periodo_compromiso) || 12;
       const fechaFinCompromiso = new Date(fechaInicio);
       fechaFinCompromiso.setMonth(fechaFinCompromiso.getMonth() + mesesComprometidos);
@@ -63,13 +67,12 @@ export function calcularDecomisiones(ventas, clientes, operadores) {
         if (importeDecomision > 0) {
           decomisiones.push({
             venta_id: venta.id,
-            cliente_id: cliente.id,
-            cliente_nombre: cliente.nombre,
+            cliente_nombre: venta.cliente,
             operador_id: operador.id,
             operador_nombre: operador.nombre,
             colaborador_id: venta.colaborador_id,
-            fecha_venta: venta.fecha_inicio,
-            fecha_baja_cliente: cliente.fecha_baja,
+            fecha_venta: venta.fecha,
+            fecha_baja: venta.fecha_baja,
             meses_comprometidos: mesesComprometidos,
             meses_transcurridos: Math.round(mesesTranscurridos * 10) / 10,
             porcentaje_cumplido: Math.round((mesesTranscurridos / mesesComprometidos) * 100),

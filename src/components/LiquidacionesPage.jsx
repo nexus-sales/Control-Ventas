@@ -19,13 +19,6 @@ import { cn } from "../lib/utils";
 import { PiggyBank, Receipt, AlertCircle, FileCheck } from "lucide-react";
 import { glassStyles } from "../utils/designUtils";
 
-// Decomisiones desactivadas: calcularDecomisiones() depende de venta.cliente_id,
-// pero ningún formulario de venta asigna ese campo ni existe gestión de clientes
-// (hallazgo Fontanero/Auditor, confirmado por Council). El resultado siempre es 0,
-// no por un bug puntual sino porque falta el vínculo cliente-venta en el modelo de
-// datos. Se reactiva cuando exista esa relación real (ver Decisión 1 del Council).
-const DECOMISIONES_HABILITADO = false;
-
 // Estados que consideramos válidos para incluir una venta en la liquidación mensual
 const ESTADOS_LIQUIDABLES = new Set([
   "CERRADA",
@@ -100,7 +93,6 @@ export default function LiquidacionesPage() {
 
   const ventas = useMemo(() => data?.ventas || [], [data?.ventas]);
   const colaboradores = useMemo(() => data?.colaboradores || [], [data?.colaboradores]);
-  const clientes = useMemo(() => data?.clientes || [], [data?.clientes]);
   const operadores = useMemo(() => data?.operadores || [], [data?.operadores]);
   const zonas = useMemo(() => data?.zonas || [], [data?.zonas]);
   const productos = useMemo(() => data?.productos || [], [data?.productos]);
@@ -165,11 +157,9 @@ export default function LiquidacionesPage() {
     });
   }, [ventasConCalc, periodo]);
 
-  // Con DECOMISIONES_HABILITADO=false devolvemos [] explícitamente: el 0 resultante
-  // en `neto`/`totalConImpuesto` más abajo es intencional, no un cálculo que falló.
   const decomisionesPeriodo = useMemo(
-    () => (DECOMISIONES_HABILITADO ? calcularDecomisiones(ventasPeriodo, clientes, operadores) : []),
-    [ventasPeriodo, clientes, operadores]
+    () => calcularDecomisiones(ventasPeriodo, operadores),
+    [ventasPeriodo, operadores]
   );
 
   const porColab = useMemo(() => {
@@ -290,7 +280,7 @@ export default function LiquidacionesPage() {
             </motion.div>
           )}
 
-          {DECOMISIONES_HABILITADO && decomisionesPeriodo.length > 0 && (
+          {decomisionesPeriodo.length > 0 && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
               <Card className="bg-rose-500/10 border-rose-500/20 p-4 border-l-4">
                 <div className="flex items-center justify-between">
@@ -319,7 +309,7 @@ export default function LiquidacionesPage() {
             showInactivos={showInactivos} setShowInactivos={setShowInactivos} />
         </Card>
 
-        {DECOMISIONES_HABILITADO && showDecomisiones && decomisionesPeriodo.length > 0 && (
+        {showDecomisiones && decomisionesPeriodo.length > 0 && (
           <LiquidacionesDecomisiones decomisionesPeriodo={decomisionesPeriodo} colaboradores={colaboradores} periodo={periodo} setToast={setToast} />
         )}
 
