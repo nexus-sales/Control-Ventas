@@ -161,37 +161,6 @@ jobs:
   #     - name: Run E2E tests
   #       run: npm run test:e2e
 
-  # Job 6: Deploy (solo en main branch)
-  deploy:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: [lint, test, security, build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Deploy to Netlify
-        uses: nwtgck/actions-netlify@v3
-        with:
-          publish-dir: './dist'
-          production-branch: main
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          deploy-message: "Deploy from GitHub Actions"
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-
-      - name: Notify deployment success
-        if: success()
-        run: echo "✅ Deployment successful!"
-
-      - name: Notify deployment failure
-        if: failure()
-        run: echo "❌ Deployment failed!"
+  # El despliegue a producción lo gestiona la integración nativa de Vercel con
+  # GitHub (auto-deploy en push a main), no este pipeline. Antes había aquí un
+  # job de despliegue a Netlify que ya no se usa — todas las apps apuntan a Vercel.
