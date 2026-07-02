@@ -8,6 +8,21 @@ export function sum(arr, sel) {
   return arr.reduce((a, x) => a + (sel(x) || 0), 0);
 }
 
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeCsvCell(value = "") {
+  const text = String(value ?? "");
+  const neutralized = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${neutralized.replace(/"/g, '""')}"`;
+}
+
 export function obtenerDatosZona(colaborador, zonas) {
   if (!colaborador?.zona_id || !zonas) return { impuesto_tipo: null, impuesto_pct: 0 };
   const zona = zonas.find(z => z.id === colaborador.zona_id);
@@ -79,7 +94,7 @@ export function exportarCSV({ datos, nombreArchivo, setToast }) {
   const headers = Object.keys(datos[0]);
   const csvContent = [
     headers.join(','),
-    ...datos.map(row => headers.map(header => `"${row[header]}"`).join(','))
+    ...datos.map(row => headers.map(header => escapeCsvCell(row[header])).join(','))
   ].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
@@ -111,7 +126,7 @@ export function generarInformePDF(liquidaciones, periodo, colaboradores) {
     <html lang="es">
     <head>
       <meta charset="utf-8">
-      <title>Informe de Liquidaciones - ${periodo}</title>
+      <title>Informe de Liquidaciones - ${escapeHtml(periodo)}</title>
       <style>
         @page { margin: 1.5cm; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #334155; line-height: 1.5; }
@@ -141,7 +156,7 @@ export function generarInformePDF(liquidaciones, periodo, colaboradores) {
       <div class="header">
         <div class="header-title">
           <h1>LIQUIDACIONES</h1>
-          <p style="margin: 0; font-weight: bold; color: #64748b;">Período: ${periodo}</p>
+          <p style="margin: 0; font-weight: bold; color: #64748b;">Período: ${escapeHtml(periodo)}</p>
         </div>
         <div class="header-info">
           <p>Generado: ${new Date().toLocaleDateString('es-ES')}</p>
@@ -187,8 +202,8 @@ export function generarInformePDF(liquidaciones, periodo, colaboradores) {
     const colab = colaboradores.find(c => c.id === liq.colaborador_id);
     return `
                 <tr>
-                  <td class="font-bold">${colab?.nombre || liq.colaborador_id}</td>
-                  <td style="text-transform: capitalize;">${liq.colaborador_tipo || '-'}</td>
+                  <td class="font-bold">${escapeHtml(colab?.nombre || liq.colaborador_id)}</td>
+                  <td style="text-transform: capitalize;">${escapeHtml(liq.colaborador_tipo || '-')}</td>
                   <td class="text-right">${(liq.bruto || 0).toFixed(2)}€</td>
                   <td class="text-right">${(liq.irpf || 0).toFixed(2)}€</td>
                   <td class="text-right">${(liq.impuesto_zona || 0).toFixed(2)}€</td>
@@ -214,6 +229,7 @@ export function generarInformePDF(liquidaciones, periodo, colaboradores) {
   `;
 
   const dynamicWindow = window.open('', '_blank');
+  if (!dynamicWindow) return;
   dynamicWindow.document.write(contenidoHTML);
   dynamicWindow.document.close();
 
