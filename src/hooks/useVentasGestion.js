@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useData } from '../context/AppContexts';
+import { getColaboradorNivelId } from '../utils/calculos';
 
 // Filtros iniciales para gestión de ventas
 const INITIAL_FILTERS = {
@@ -228,7 +229,7 @@ export function useVentasGestion(customFields = []) {
       pvpResuelto: producto?.pvp || venta.pvp || 0,
 
       // 🎯 MEJORA: Datos adicionales útiles
-      colaboradorNivel: indexers.colaboradores[venta.colaborador_id]?.nivelId || '',
+      colaboradorNivel: getColaboradorNivelId(indexers.colaboradores[venta.colaborador_id]) || '',
       zonaActiva: indexers.zonas[venta.zona_id]?.activo ?? true,
       productoActivo: producto?.activo ?? true,
       operadorActivo: indexers.operadores[operador_id]?.activo ?? true,

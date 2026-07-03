@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getIrpfPct } from './calculos';
+import { getIrpfPct, getColaboradorNivelId, getProductoComisionBase } from './calculos';
 
 describe('getIrpfPct', () => {
   // Fecha fija: la antigüedad se mide contra esta referencia, no contra "hoy".
@@ -46,5 +46,51 @@ describe('getIrpfPct', () => {
     const colaborador = { tipo_fiscal: 'AUTONOMO', fecha_alta: '2024-01-01' };
     expect(getIrpfPct(colaborador, '2024-07-01')).toBe(0.07); // 6 meses de antigüedad en esa venta
     expect(getIrpfPct(colaborador, '2027-07-01')).toBe(0.15); // misma alta, evaluada 3 años después
+  });
+});
+
+describe('getColaboradorNivelId', () => {
+  it('prioriza nivel_id (el nombre real de la columna en colaboradores_cv)', () => {
+    const colab = { nivel_id: 'GOLD', nivel: 'SILVER', nivelId: 'BRONZE' };
+    expect(getColaboradorNivelId(colab)).toBe('GOLD');
+  });
+
+  it('cae a "nivel" (nombre antiguo de ColaboradorEditModal.jsx) si no hay nivel_id', () => {
+    const colab = { nivel: 'SILVER', nivelId: 'BRONZE' };
+    expect(getColaboradorNivelId(colab)).toBe('SILVER');
+  });
+
+  it('cae a "nivelId" (nombre antiguo de useImportGestion.js) si no hay nivel_id ni nivel', () => {
+    const colab = { nivelId: 'BRONZE' };
+    expect(getColaboradorNivelId(colab)).toBe('BRONZE');
+  });
+
+  it('devuelve null si el colaborador no tiene ninguno de los 3 campos', () => {
+    expect(getColaboradorNivelId({})).toBeNull();
+    expect(getColaboradorNivelId(null)).toBeNull();
+  });
+});
+
+describe('getProductoComisionBase — bridging comision_valor (Supabase) vs comision_fija/comision_porcentaje (local, soporta mixto)', () => {
+  it('un producto de Supabase (solo comision_tipo/comision_valor) calcula bien tipo porcentaje', () => {
+    const producto = { comision_tipo: 'porcentaje', comision_valor: 15 };
+    // 15% de una base de 100 = 15
+    expect(getProductoComisionBase(producto, 100, {})).toBe(15);
+  });
+
+  it('un producto de Supabase (solo comision_tipo/comision_valor) calcula bien tipo fijo', () => {
+    const producto = { comision_tipo: 'fijo', comision_valor: 20 };
+    expect(getProductoComisionBase(producto, 100, {})).toBe(20);
+  });
+
+  it('un producto local con comision_fija/comision_porcentaje separados (tipo mixto) sigue funcionando', () => {
+    const producto = { comision_tipo: 'mixto', comision_fija: 5, comision_porcentaje: 10 };
+    // 5 fijo + 10% de 100 = 5 + 10 = 15
+    expect(getProductoComisionBase(producto, 100, {})).toBe(15);
+  });
+
+  it('un producto sin ninguna comisión definida (null) da 0, no NaN', () => {
+    const producto = { comision_tipo: 'porcentaje', comision_valor: null };
+    expect(getProductoComisionBase(producto, 100, {})).toBe(0);
   });
 });

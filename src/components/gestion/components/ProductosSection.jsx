@@ -385,7 +385,17 @@ const ProductosSection = React.memo(() => {
                                         />
                                     </td>
                                     <td className="px-4 py-4">
-                                        <span className="font-bold text-slate-900 dark:text-white">{p.nombre}</span>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-bold text-slate-900 dark:text-white">{p.nombre}</span>
+                                            {(!p.operador_id || p.comision_valor === null || p.comision_valor === undefined) && (
+                                                <span
+                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                                    title="El Excel de origen no traía operador y/o comisión para este producto — complétalo manualmente"
+                                                >
+                                                    ⚠️ Incompleto
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-4 py-4">
                                         <span className="text-slate-600 dark:text-slate-300 font-medium">{getOperadorNombre(p.operador_id)}</span>
@@ -397,8 +407,14 @@ const ProductosSection = React.memo(() => {
                                         <span className="font-black text-[var(--brand-primary)]">{p.pvp} €</span>
                                     </td>
                                     <td className="px-4 py-4">
-                                        <span className="font-bold text-slate-800 dark:text-white">{p.comision_valor}</span>
-                                        <span className="ml-1 text-slate-500 text-xs font-medium">{p.comision_tipo === 'porcentaje' ? '%' : '€'}</span>
+                                        {p.comision_valor === null || p.comision_valor === undefined ? (
+                                            <span className="text-slate-400 dark:text-slate-500 text-xs font-medium italic">Sin definir</span>
+                                        ) : (
+                                            <>
+                                                <span className="font-bold text-slate-800 dark:text-white">{p.comision_valor}</span>
+                                                <span className="ml-1 text-slate-500 text-xs font-medium">{p.comision_tipo === 'porcentaje' ? '%' : '€'}</span>
+                                            </>
+                                        )}
                                     </td>
                                     <td className="px-4 py-4">
                                         <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

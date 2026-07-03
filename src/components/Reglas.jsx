@@ -7,6 +7,7 @@ import {
 import { useData } from "../context/AppContexts";
 import { NivelEditModal, ReglaEditModal } from "./reglas/index.js";
 import { glassStyles, cardHoverStyles } from "../utils/designUtils";
+import { normalizeFactor } from "../utils/calculos";
 
 // ==========================================
 // COMPONENTE: Tarjeta de Estadística Compacta
@@ -286,7 +287,7 @@ export default function Reglas() {
                         <div className="flex items-center gap-2">
                           <Phone className="w-4 h-4 text-blue-500" />
                           <span className="font-bold text-blue-600 dark:text-blue-400">
-                            {((n.pct_telefonia || 0) * 100).toFixed(0)}%
+                            {((normalizeFactor(n.pct_telefonia) ?? 0) * 100).toFixed(0)}%
                           </span>
                         </div>
                       </td>
@@ -294,7 +295,7 @@ export default function Reglas() {
                         <div className="flex items-center gap-2">
                           <Zap className="w-4 h-4 text-yellow-500" />
                           <span className="font-bold text-yellow-600 dark:text-yellow-400">
-                            {((n.pct_energia || 0) * 100).toFixed(0)}%
+                            {((normalizeFactor(n.pct_energia) ?? 0) * 100).toFixed(0)}%
                           </span>
                         </div>
                       </td>

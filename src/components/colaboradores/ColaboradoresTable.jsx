@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, Phone, Zap, Shield, Edit3, Trash2 } from 'lucide-react';
 import Card from '../ui/Card';
+import { normalizeFactor, getColaboradorNivelId } from '../../utils/calculos';
 
 export default function ColaboradoresTable({ colaboradores, niveles, zonas, onEdit, onDelete, isAdmin = false }) {
   const getZonaNombre = (zona_id) => zonas.find((z) => z.id === zona_id)?.nombre || "Sin asignar";
@@ -24,7 +25,7 @@ export default function ColaboradoresTable({ colaboradores, niveles, zonas, onEd
           </thead>
           <tbody>
             {colaboradores.map((c) => {
-              const nivelInfo = getNivelInfo(c.nivel);
+              const nivelInfo = getNivelInfo(getColaboradorNivelId(c));
               const antiguedad = new Date() - new Date(c.fecha_alta);
               const diasAntiguedad = Math.floor(antiguedad / (1000 * 60 * 60 * 24));
               return (
@@ -72,7 +73,7 @@ export default function ColaboradoresTable({ colaboradores, niveles, zonas, onEd
                             ? "bg-blue-100 text-blue-700"
                             : "bg-green-100 text-green-700"
                       }`}>
-                        {nivelInfo?.nombre || c.nivel}
+                        {nivelInfo?.nombre || getColaboradorNivelId(c)}
                       </div>
                       <div className="text-xs text-slate-500 mt-1">
                         {c.comision_personalizada_activa ? (
@@ -110,11 +111,11 @@ export default function ColaboradoresTable({ colaboradores, niveles, zonas, onEd
                         <div className="text-xs space-y-1">
                           <div className="flex items-center gap-1">
                             <Phone className="w-3 h-3 text-blue-500" />
-                            <span>{((nivelInfo.pct_telefonia || 0) * 100).toFixed(0)}%</span>
+                            <span>{((normalizeFactor(nivelInfo.pct_telefonia) ?? 0) * 100).toFixed(0)}%</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Zap className="w-3 h-3 text-yellow-500" />
-                            <span>{((nivelInfo.pct_energia || 0) * 100).toFixed(0)}%</span>
+                            <span>{((normalizeFactor(nivelInfo.pct_energia) ?? 0) * 100).toFixed(0)}%</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Shield className="w-3 h-3 text-green-500" />

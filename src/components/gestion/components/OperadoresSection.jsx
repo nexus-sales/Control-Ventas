@@ -381,7 +381,17 @@ const OperadoresSection = React.memo(() => {
                                                 <Building className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                                             </div>
                                             <div>
-                                                <p className="font-bold text-slate-900 dark:text-white">{op.nombre}</p>
+                                                <p className="font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                                                    {op.nombre}
+                                                    {!op.sector && (
+                                                        <span
+                                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                                            title="El Excel de origen no traía columna de sector para este operador — complétalo manualmente"
+                                                        >
+                                                            ⚠️ Incompleto
+                                                        </span>
+                                                    )}
+                                                </p>
                                                 {op.codigo && <p className="text-xs text-slate-400">{op.codigo}</p>}
                                             </div>
                                         </div>
@@ -390,7 +400,7 @@ const OperadoresSection = React.memo(() => {
                                         <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider ${op.sector === 'telefonia' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                                             op.sector === 'energia' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
                                                 op.sector === 'seguridad' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                                    'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                                                    'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
                                             }`}>
                                             {op.sector || 'Sin sector'}
                                         </span>

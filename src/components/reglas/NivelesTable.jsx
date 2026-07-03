@@ -1,4 +1,5 @@
 import { Edit2, Trash2 } from "lucide-react";
+import { normalizeFactor } from "../../utils/calculos";
 
 export default function NivelesTable({ niveles, onEdit, onDelete }) {
   return (
@@ -21,8 +22,8 @@ export default function NivelesTable({ niveles, onEdit, onDelete }) {
               <td className="py-2 px-4 text-sm">{nivel.id}</td>
               <td className="py-2 px-4 text-sm">{nivel.nombre}</td>
               <td className="py-2 px-4 text-sm">{nivel.tipo}</td>
-              <td className="py-2 px-4 text-sm">{(nivel.pct_telefonia * 100).toFixed(0)}%</td>
-              <td className="py-2 px-4 text-sm">{(nivel.pct_energia * 100).toFixed(0)}%</td>
+              <td className="py-2 px-4 text-sm">{((normalizeFactor(nivel.pct_telefonia) ?? 0) * 100).toFixed(0)}%</td>
+              <td className="py-2 px-4 text-sm">{((normalizeFactor(nivel.pct_energia) ?? 0) * 100).toFixed(0)}%</td>
               <td className="py-2 px-4 text-sm">€{nivel.fijo_seguridad}</td>
               <td className="py-2 px-4 flex gap-2">
                 <button

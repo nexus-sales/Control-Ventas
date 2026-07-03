@@ -7,6 +7,7 @@ import { useAuth, useData } from "../context/AppContexts";
 import { ColaboradorEditModal } from "./colaboradores/index.js";
 import { glassStyles, cardHoverStyles } from "../utils/designUtils";
 import { procesarColaboradores, filtrarColaboradores, getZonaNombre, getNivelInfo } from "./colaboradores/colaboradoresUtils";
+import { normalizeFactor, getColaboradorNivelId } from "../utils/calculos";
 
 // ==========================================
 // COMPONENTE: Tarjeta de Estadística Premium
@@ -226,7 +227,7 @@ export default function Colaboradores() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                 {colaboradoresFiltrados.map((c) => {
-                  const nivelInfo = getNivelInfo(niveles, c.nivel);
+                  const nivelInfo = getNivelInfo(niveles, getColaboradorNivelId(c));
 
                   return (
                     <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
@@ -266,7 +267,7 @@ export default function Colaboradores() {
                             ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                             : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                           }`}>
-                          {nivelInfo?.nombre || c.nivel}
+                          {nivelInfo?.nombre || getColaboradorNivelId(c)}
                         </span>
                         {c.comision_personalizada_activa && (
                           <p className="text-xs text-amber-600 dark:text-amber-400 font-bold mt-1 flex items-center gap-1">
@@ -300,11 +301,11 @@ export default function Colaboradores() {
                             <div className="text-xs space-y-1">
                               <div className="flex items-center gap-1">
                                 <Phone className="w-3 h-3 text-blue-500" />
-                                <span className="text-slate-600 dark:text-slate-300">{((nivelInfo.pct_telefonia || 0) * 100).toFixed(0)}%</span>
+                                <span className="text-slate-600 dark:text-slate-300">{((normalizeFactor(nivelInfo.pct_telefonia) ?? 0) * 100).toFixed(0)}%</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Zap className="w-3 h-3 text-yellow-500" />
-                                <span className="text-slate-600 dark:text-slate-300">{((nivelInfo.pct_energia || 0) * 100).toFixed(0)}%</span>
+                                <span className="text-slate-600 dark:text-slate-300">{((normalizeFactor(nivelInfo.pct_energia) ?? 0) * 100).toFixed(0)}%</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Shield className="w-3 h-3 text-green-500" />

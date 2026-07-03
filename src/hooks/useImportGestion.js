@@ -104,6 +104,74 @@ const generateReadableId = (prefix, name, existingIds = new Set()) => {
   return candidateId;
 };
 
+// Crea una entidad (colaborador/producto/zona/operador) autocreada durante la
+// importación, con un ID legible. A nivel de módulo (no closure de
+// importarDatos) para poder testearla sin renderizar el hook — recibe
+// existingIds como parámetro en vez de leerlo de un `indexers` externo.
+//
+// Deliberadamente NO inventa valores de negocio que el Excel no trae
+// (operador_id, comision_valor, sector, nivel_id): si el dato no se resolvió
+// en la fila de origen, se deja en null explícito en vez de un valor
+// plausible pero falso (antes: comision_valor 15.0 fijo, sector 'telefonia'
+// fijo, nivel_id apuntando a un nivel inexistente 'NIVEL_COLABORADOR') — un
+// producto/operador con estos campos en null se marca como "incompleto" en
+// ProductosSection.jsx/OperadoresSection.jsx para que el admin lo complete
+// a mano con el dato real de negocio, que no se puede derivar del código.
+export function createEntityWithReadableId(type, name, existingIds, additionalData = {}) {
+  const prefixMap = {
+    productos: 'prod',
+    colaboradores: 'colab',
+    zonas: 'zona',
+    operadores: 'oper'
+  };
+
+  const newId = generateReadableId(prefixMap[type], name, existingIds);
+
+  const baseData = {
+    id: newId,
+    nombre: name.trim(),
+    activo: true,
+  };
+
+  switch (type) {
+    case 'colaboradores':
+      return {
+        ...baseData,
+        nivel_id: null, // Sin dato de nivel en el Excel; lo asigna el admin.
+        pct_colaborador_default: 0.15,
+        tipo_fiscal: 'Autónomo',
+        irpf_retencion: 'Exento',
+        ...additionalData
+      };
+    case 'productos':
+      return {
+        ...baseData,
+        codigo: name.slice(0, 10).toUpperCase(),
+        pvp: Number(additionalData.pvp || 50.0),
+        comision_tipo: 'porcentaje',
+        comision_valor: null, // Sin comisión en el Excel; sin additionalData.comision_valor, queda explícito.
+        operador_id: null, // Sin operador resuelto en el Excel; sin additionalData.operador_id, queda explícito.
+        ...additionalData
+      };
+    case 'zonas':
+      return {
+        ...baseData,
+        descripcion: `Zona ${name}`,
+        ...resolveImpuestosZona(name),
+        ...additionalData
+      };
+    case 'operadores':
+      return {
+        ...baseData,
+        codigo: name.slice(0, 10).toUpperCase(),
+        sector: null, // El Excel no tiene columna de sector mapeada; queda explícito.
+        ...additionalData
+      };
+    default:
+      return { ...baseData, ...additionalData };
+  }
+}
+
 // Helper para formatear fecha
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
@@ -509,66 +577,6 @@ export function useImportGestion({
         const colaboradoresNuevos = new Set();
         const operadoresNuevos = new Set();
 
-        // 🎯 NUEVA: Helper para crear entidad con ID legible
-        const createEntityWithReadableId = (type, name, additionalData = {}) => {
-          const prefixMap = {
-            productos: 'prod',
-            colaboradores: 'colab',
-            zonas: 'zona',
-            operadores: 'oper'
-          };
-
-          const newId = generateReadableId(
-            prefixMap[type],
-            name,
-            indexers.existingIds
-          );
-
-          const baseData = {
-            id: newId,
-            nombre: name.trim(),
-            activo: true,
-          };
-
-          // Agregar datos específicos por tipo
-          switch (type) {
-            case 'colaboradores':
-              return {
-                ...baseData,
-                nivelId: 'NIVEL_COLABORADOR',
-                pct_colaborador_default: 0.15,
-                tipo_fiscal: 'Autónomo',
-                irpf_retencion: 'Exento',
-                ...additionalData
-              };
-            case 'productos':
-              return {
-                ...baseData,
-                codigo: name.slice(0, 10).toUpperCase(),
-                pvp: Number(additionalData.pvp || 50.0),
-                comision_tipo: 'porcentaje',
-                comision_valor: 15.0,
-                ...additionalData
-              };
-            case 'zonas':
-              return {
-                ...baseData,
-                descripcion: `Zona ${name}`,
-                ...resolveImpuestosZona(name),
-                ...additionalData
-              };
-            case 'operadores':
-              return {
-                ...baseData,
-                codigo: name.slice(0, 10).toUpperCase(),
-                sector: 'telefonia',
-                ...additionalData
-              };
-            default:
-              return { ...baseData, ...additionalData };
-          }
-        };
-
         for (let index = 0; index < state.rows.length; index++) {
           const row = state.rows[index];
 
@@ -601,7 +609,8 @@ export function useImportGestion({
             if (!colaboradoresToCreateByName[norm]) {
               colaboradoresToCreateByName[norm] = createEntityWithReadableId(
                 'colaboradores',
-                colaboradorNombre
+                colaboradorNombre,
+                indexers.existingIds
               );
               colaboradoresNuevos.add(colaboradorNombre);
             }
@@ -616,7 +625,8 @@ export function useImportGestion({
             if (!zonasToCreateByName[norm]) {
               zonasToCreateByName[norm] = createEntityWithReadableId(
                 'zonas',
-                zonaNombre
+                zonaNombre,
+                indexers.existingIds
               );
               zonasNuevas.add(zonaNombre);
             }
@@ -626,17 +636,45 @@ export function useImportGestion({
             zona_id = zonas[0].id;
           }
 
+          // -------- OPERADOR -------- (antes que PRODUCTO: un producto nuevo
+          // necesita poder heredar el operador ya resuelto en esta misma fila)
+          const operadorNombre = get("operador_id");
+          let operador_id = resolveId(operadorNombre, indexers.operadores);
+          if (!operador_id && state.crearAutomaticamente && operadorNombre) {
+            const norm = normalizeNameSearch(operadorNombre);
+            if (!operadoresToCreateByName[norm]) {
+              operadoresToCreateByName[norm] = createEntityWithReadableId(
+                'operadores',
+                operadorNombre,
+                indexers.existingIds
+              );
+              operadoresNuevos.add(operadorNombre);
+            }
+            operador_id = operadoresToCreateByName[norm].id;
+          }
+          if (!operador_id && operadores[0]?.id) {
+            operador_id = operadores[0].id;
+          }
+
           // -------- PRODUCTO --------
           const productoNombre = get("producto_id");
           let producto_id = resolveId(productoNombre, indexers.productos);
           if (!producto_id && state.crearAutomaticamente && productoNombre) {
             const norm = normalizeNameSearch(productoNombre);
             if (!productosToCreateByName[norm]) {
+              const comisionExcel = parseNumber(get("comision_base"));
               productosToCreateByName[norm] = createEntityWithReadableId(
                 'productos',
                 productoNombre,
+                indexers.existingIds,
                 {
                   pvp: Number(parseNumber(get("pvp")) || 50.0),
+                  // Ninguno de los dos se inventa si el Excel no lo trae: se
+                  // propaga el operador ya resuelto en esta fila (o null si
+                  // tampoco se resolvió), y la comisión solo si el Excel la
+                  // trae de verdad — sin fallback a un valor que parezca real.
+                  operador_id: operador_id || null,
+                  comision_valor: Number.isFinite(comisionExcel) ? comisionExcel : null,
                 }
               );
               productosNuevos.add(productoNombre);
@@ -645,24 +683,6 @@ export function useImportGestion({
           }
           if (!producto_id && productos[0]?.id) {
             producto_id = productos[0].id;
-          }
-
-          // -------- OPERADOR --------
-          const operadorNombre = get("operador_id");
-          let operador_id = resolveId(operadorNombre, indexers.operadores);
-          if (!operador_id && state.crearAutomaticamente && operadorNombre) {
-            const norm = normalizeNameSearch(operadorNombre);
-            if (!operadoresToCreateByName[norm]) {
-              operadoresToCreateByName[norm] = createEntityWithReadableId(
-                'operadores',
-                operadorNombre
-              );
-              operadoresNuevos.add(operadorNombre);
-            }
-            operador_id = operadoresToCreateByName[norm].id;
-          }
-          if (!operador_id && operadores[0]?.id) {
-            operador_id = operadores[0].id;
           }
 
           if (!colaborador_id || !zona_id) {
@@ -764,15 +784,13 @@ export function useImportGestion({
           }
         }
 
-        // Guardar ventas con delay para asegurar que las entidades se crearon
+        // Guardar ventas inmediatamente; los setters de contexto ya persisten cada coleccion.
         if (nuevasVentas.length > 0 && setVentas) {
-          setTimeout(() => {
-            setVentas((prev) => {
-              const idsNuevas = new Set(nuevasVentas.map((v) => v.id));
-              const prevFiltrado = prev.filter((v) => !idsNuevas.has(v.id));
-              return [...nuevasVentas, ...prevFiltrado];
-            });
-          }, 200);
+          setVentas((prev) => {
+            const idsNuevas = new Set(nuevasVentas.map((v) => v.id));
+            const prevFiltrado = prev.filter((v) => !idsNuevas.has(v.id));
+            return [...nuevasVentas, ...prevFiltrado];
+          });
         }
 
         const resumen = {

@@ -4,7 +4,7 @@ import Modal from "../ui/Modal";
 import { Input, Select, Label, Button, TextArea } from "../ui/FormElements";
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
-import { getIrpfPct } from '../../utils/calculos';
+import { getIrpfPct, normalizeFactor, getColaboradorNivelId } from '../../utils/calculos';
 import { useAuth } from '../../context/AppContexts';
 import { supabase } from '../../lib/supabase';
 
@@ -23,6 +23,10 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
   const [draft, setDraft] = useState(
     colaborador ? {
       ...colaborador,
+      // nivel_id es el nombre real de la columna en colaboradores_cv. Antes
+      // este formulario guardaba "nivel" — se lee con fallback para no perder
+      // la asignación de colaboradores ya guardados en local con ese nombre.
+      nivel_id: getColaboradorNivelId(colaborador),
       pct_colaborador: colaborador.pct_colaborador ?? "",
       tipo_fiscal: colaborador.tipo_fiscal || "AUTONOMO",
       zona_id: colaborador.zona_id || "",
@@ -42,7 +46,7 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       seguridad_valor: colaborador.seguridad_valor || 250,
     } : {
       nombre: "",
-      nivel: niveles.length > 0 ? niveles[0].id : "",
+      nivel_id: niveles.length > 0 ? niveles[0].id : "",
       pct_colaborador: "",
       fecha_alta: new Date().toISOString().slice(0, 10),
       tipo_fiscal: "AUTONOMO",
@@ -104,7 +108,7 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       setError("El nombre del colaborador es obligatorio");
       return;
     }
-    if (!draft.nivel) {
+    if (!draft.nivel_id) {
       setError("Debes seleccionar un nivel de comisión");
       return;
     }
@@ -135,6 +139,12 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
     };
     // direccion nunca viaja por aquí — ver comentario junto a direccionCargada.
     delete cleanedData.direccion;
+    // Si colaborador ya traía el campo antiguo "nivel"/"nivelId" (datos locales
+    // previos a este fix), el spread de ...draft los habría colado aquí — se
+    // quitan explícitamente para que solo viaje nivel_id, el nombre real de
+    // la columna en Supabase.
+    delete cleanedData.nivel;
+    delete cleanedData.nivelId;
 
     if (isAdmin && colaborador?.id && direccionCargada) {
       supabase
@@ -149,7 +159,7 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
     onSave(cleanedData, true);
   };
 
-  const nivelSeleccionado = niveles.find(n => n.id === draft.nivel);
+  const nivelSeleccionado = niveles.find(n => n.id === draft.nivel_id);
 
   const zonasDisponibles = useMemo(() => {
     if (!Array.isArray(zonas) || zonas.length === 0) return [];
@@ -267,8 +277,8 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
               <div className="space-y-2">
                 <Label>Nivel de Red Master *</Label>
                 <Select
-                  value={draft.nivel}
-                  onChange={(e) => setDraft((d) => ({ ...d, nivel: e.target.value }))}
+                  value={draft.nivel_id}
+                  onChange={(e) => setDraft((d) => ({ ...d, nivel_id: e.target.value }))}
                   required
                 >
                   <option value="">Selección de nivel...</option>
@@ -286,11 +296,11 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
                   >
                     <div className="text-center">
                       <p className="text-[8px] font-black uppercase tracking-tighter opacity-50">Telco</p>
-                      <p className="font-black">{(nivelSeleccionado.pct_telefonia * 100).toFixed(0)}%</p>
+                      <p className="font-black">{((normalizeFactor(nivelSeleccionado.pct_telefonia) ?? 0) * 100).toFixed(0)}%</p>
                     </div>
                     <div className="text-center">
                       <p className="text-[8px] font-black uppercase tracking-tighter opacity-50">Energía</p>
-                      <p className="font-black">{(nivelSeleccionado.pct_energia * 100).toFixed(0)}%</p>
+                      <p className="font-black">{((normalizeFactor(nivelSeleccionado.pct_energia) ?? 0) * 100).toFixed(0)}%</p>
                     </div>
                     <div className="text-center">
                       <p className="text-[8px] font-black uppercase tracking-tighter opacity-50">Segur.</p>

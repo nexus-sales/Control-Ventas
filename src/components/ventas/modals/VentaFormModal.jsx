@@ -5,6 +5,7 @@ import { cn } from '../../../lib/utils';
 import Modal from '../../ui/Modal';
 import { Input, Select, Label, Button, TextArea } from '../../ui/FormElements';
 import { SECTORES, FAMILIAS_POR_SECTOR } from '../../../utils/constants';
+import { getColaboradorNivelId } from '../../../utils/calculos';
 
 // Estados válidos para ventas
 const ESTADOS_VALIDOS = [
@@ -228,7 +229,7 @@ export const VentaFormModal = ({
     return colaboradoresData
       .filter(c => c?.id && (c.nombre || (resolveColaboradorName && resolveColaboradorName(c.id)) || c.id))
       .map(c => {
-        const nivelInfo = nivelesData.find(n => n.id === (c.nivel || c.nivelId));
+        const nivelInfo = nivelesData.find(n => n.id === getColaboradorNivelId(c));
         return {
           ...c,
           nombreDisplay: c.nombre || (resolveColaboradorName ? resolveColaboradorName(c.id) : c.id),

@@ -39,12 +39,30 @@ export function getIrpfPct(colaborador, fechaReferencia) {
 }
 
 // Obtener comisión del colaborador (fija o porcentaje)
-const normalizeFactor = (valor) => {
+// Exportada para que las pantallas que muestran pct_telefonia/pct_energia como "%"
+// (Reglas, NivelesTable, Colaboradores, ColaboradorEditModal) apliquen la misma
+// normalización que ya usa el cálculo de comisión: si el valor guardado es > 1
+// (p. ej. 100 en vez de 1 porque alguien escribió "100" pensando en "100%"), se
+// interpreta como puntos porcentuales en vez de mostrarse literalmente *100 (10000%).
+export const normalizeFactor = (valor) => {
   if (valor === null || valor === undefined) return null;
   const numeric = Number(valor);
   if (!isFinite(numeric) || numeric < 0) return null;
   return numeric > 1 ? numeric / 100 : numeric;
 };
+
+// La columna real en colaboradores_cv es nivel_id. Antes de este fix, el
+// alta manual (ColaboradorEditModal.jsx) guardaba el campo como "nivel", y la
+// autocreación por importación (useImportGestion.js) lo guardaba como
+// "nivelId" — ninguno de los dos coincidía con la columna real, así que todo
+// colaborador (manual o importado) fallaba al sincronizar con Supabase
+// (PGRST204 "columna no encontrada"). Se unifica a nivel_id en los sitios que
+// escriben el dato; esta función prioriza nivel_id pero conserva los dos
+// nombres antiguos como fallback de lectura, para no perder la asignación de
+// nivel de colaboradores ya guardados en local antes de este fix.
+export function getColaboradorNivelId(colab) {
+  return colab?.nivel_id ?? colab?.nivel ?? colab?.nivelId ?? null;
+}
 
 export function getColaboradorComision(colab, niveles, comisionBruta, producto) {
   if (!colab) return comisionBruta * 0.5;
@@ -64,7 +82,7 @@ export function getColaboradorComision(colab, niveles, comisionBruta, producto) 
     }
   }
 
-  const nivelId = colab.nivel || colab.nivelId;
+  const nivelId = getColaboradorNivelId(colab);
   const nivel = niveles.find((n) => n.id === nivelId);
   if (!nivel) return comisionBruta * 0.5; // Fallback 50%
 
@@ -99,6 +117,31 @@ export function getColaboradorComision(colab, niveles, comisionBruta, producto) 
   return comisionBruta * 0.5;
 }
 
+// Resuelve { fija, porcentaje } para un producto/venta, salvando el hueco
+// entre dos modelos de datos reales que coexisten hoy:
+// - Local (ProductoModal.jsx, soporta comision_tipo "mixto"): guarda
+//   comision_fija y comision_porcentaje por separado, para poder tener las
+//   dos a la vez.
+// - Supabase (productos_cv): solo tiene comision_valor, un único número — no
+//   hay columna comision_fija ni comision_porcentaje en el esquema real, así
+//   que un producto cargado desde Supabase nunca las tiene.
+// Se prioriza el modelo local (si existe, cubre "mixto"); si no, se deriva
+// fija/porcentaje a partir de comision_valor según comision_tipo.
+function resolveComisionFijaYPorcentaje(producto, venta) {
+  if (venta?.comision_fija !== undefined || venta?.comision_porcentaje !== undefined) {
+    return { fija: venta.comision_fija ?? 0, porcentaje: venta.comision_porcentaje ?? 0 };
+  }
+  if (producto.comision_fija !== undefined || producto.comision_porcentaje !== undefined) {
+    return { fija: producto.comision_fija ?? 0, porcentaje: producto.comision_porcentaje ?? 0 };
+  }
+
+  const tipo = venta?.comision_tipo || producto.comision_tipo;
+  const valor = Number(venta?.comision_valor ?? producto.comision_valor) || 0;
+  if (tipo === "fijo") return { fija: valor, porcentaje: 0 };
+  if (tipo === "porcentaje") return { fija: 0, porcentaje: valor };
+  return { fija: 0, porcentaje: 0 };
+}
+
 // Obtener comisión base del producto (fija o porcentaje)
 export function getProductoComisionBase(producto, pvp, venta) {
   if (!producto) return 0;
@@ -106,8 +149,6 @@ export function getProductoComisionBase(producto, pvp, venta) {
   const tipo = venta?.comision_tipo || producto.comision_tipo;
   // comision_base en venta ya viene “congelada” desde el alta/edición de la venta.
   const congelada = venta?.comision_base;
-  const fija = venta?.comision_fija ?? producto.comision_fija ?? 0;
-  const porcentaje = venta?.comision_porcentaje ?? producto.comision_porcentaje ?? 0;
 
   // Si hay valor congelado y el tipo es fijo, úsalo tal cual.
   if (tipo === "fijo" && congelada !== undefined && congelada !== null) {
@@ -120,6 +161,7 @@ export function getProductoComisionBase(producto, pvp, venta) {
   }
 
   // Fallback a los campos originales del producto o la venta (porcentaje/fijo/mixto)
+  const { fija, porcentaje } = resolveComisionFijaYPorcentaje(producto, venta);
   let total = 0;
   if (tipo === "fijo") {
     total = Number(fija) || 0;
@@ -199,7 +241,7 @@ export function computeVenta({
     reglas,
     operador_id: operador.id,
     producto_id: producto.id,
-    nivel: colab.nivel,
+    nivel: getColaboradorNivelId(colab),
     refBase: base,
     refComOper: comBase,
   });
@@ -249,7 +291,7 @@ export function computeVenta({
           colab.comision_personalizada !== null,
         comision_colaborador_tipo:
           colab.comision_tipo_personalizada ||
-          niveles.find((n) => n.id === colab.nivel)?.comision_tipo,
+          niveles.find((n) => n.id === getColaboradorNivelId(colab))?.comision_tipo,
       },
     },
   };
