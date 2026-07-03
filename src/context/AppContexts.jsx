@@ -247,8 +247,9 @@ export function DataProvider({ children }) {
       const { data: { session } } = await supabase.auth.getSession();
       const newData = {};
 
-      for (const collection of Object.keys(STORAGE_KEYS)) {
-        newData[collection] = await loadCollectionData({
+      // Cargar colecciones en paralelo
+      const promises = Object.keys(STORAGE_KEYS).map(async (collection) => {
+        const result = await loadCollectionData({
           supabase,
           session,
           collection,
@@ -258,7 +259,10 @@ export function DataProvider({ children }) {
           saveToStorage,
           notify: notifySync,
         });
-      }
+        newData[collection] = result;
+      });
+
+      await Promise.all(promises);
 
       setData(newData);
       setDataInitialized(true);
@@ -270,6 +274,31 @@ export function DataProvider({ children }) {
       setIsDataLoading(false);
     }
   }, [notifySync]);
+
+  // Sincronización manual: sube cambios pendientes y descarga datos frescos
+  const syncNow = useCallback(async () => {
+    setIsDataLoading(true);
+    try {
+      // 1. Intentar subir cambios pendientes primero si hay conexión
+      if (isOnline && pendingChanges.length > 0) {
+        await guardedRetryPendingSync({
+          isRetryingRef,
+          supabase,
+          pendingChanges,
+          resolvePendingChange,
+          notify: notifySync
+        });
+      }
+      // 2. Recargar datos
+      await loadAllData();
+      notifySync("Sincronización completada con éxito", "success");
+    } catch (err) {
+      console.error('Error en syncNow:', err);
+      notifySync("Error al sincronizar: " + (err.message || err), "error");
+    } finally {
+      setIsDataLoading(false);
+    }
+  }, [isOnline, pendingChanges, resolvePendingChange, loadAllData, notifySync]);
 
   // Función para guardar una colección (Híbrida: Local + Supabase).
   // El guardado local es incondicional e inmediato (offline-first intencional:
@@ -372,7 +401,7 @@ export function DataProvider({ children }) {
     setReglas,
     setLiquidaciones,
     setDecomisiones,
-    refreshData: loadAllData,
+    refreshData: syncNow,
     offlineSync,
   }), [
     data,
@@ -387,7 +416,7 @@ export function DataProvider({ children }) {
     setReglas,
     setLiquidaciones,
     setDecomisiones,
-    loadAllData,
+    syncNow,
     offlineSync,
   ]);
 
