@@ -53,7 +53,7 @@ export function useOfflineSync() {
     // LOG ELIMINADO
   }, []);
 
-  // Limpiar cambios sincronizados
+  // Limpiar TODOS los cambios pendientes (uso manual/ocasional)
   const clearPendingChanges = useCallback(() => {
     setPendingChanges([]);
     localStorage.removeItem('pendingChanges');
@@ -63,6 +63,21 @@ export function useOfflineSync() {
     localStorage.setItem('lastSyncTime', now);
     
     // LOG ELIMINADO
+  }, []);
+
+  // Resolver (quitar) los cambios pendientes que cumplan `predicate`, sin tocar
+  // el resto. Es lo que usa el guardado real: al reintentar con éxito solo se
+  // limpia esa entrada concreta, no toda la cola.
+  const resolvePendingChange = useCallback((predicate) => {
+    setPendingChanges(prev => {
+      const updated = prev.filter((change) => !predicate(change));
+      if (updated.length === 0) {
+        localStorage.removeItem('pendingChanges');
+      } else {
+        localStorage.setItem('pendingChanges', JSON.stringify(updated));
+      }
+      return updated;
+    });
   }, []);
 
   // Crear backup de emergencia
@@ -119,6 +134,7 @@ export function useOfflineSync() {
     lastSyncTime,
     addPendingChange,
     clearPendingChanges,
+    resolvePendingChange,
     createEmergencyBackup,
     getOfflineInfo
   };

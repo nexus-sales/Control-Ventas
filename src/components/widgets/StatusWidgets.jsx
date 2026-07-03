@@ -1,12 +1,15 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { Wifi, WifiOff, Download, Upload, Clock, HardDrive, ChevronDown, ChevronUp, RefreshCw, Zap } from 'lucide-react';
-import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { useAuthGestion } from '../../hooks/useAuthGestion';
+import { useData } from '../../context/AppContexts';
 import { glassStyles } from '../../utils/designUtils';
 
 function OfflineStatus() {
-  const { isOnline, pendingChanges, lastSyncTime, createEmergencyBackup, getOfflineInfo } = useOfflineSync();
+  // Lee del DataProvider en vez de llamar a useOfflineSync() por su cuenta: es la
+  // misma instancia que usa saveCollectionData para marcar cambios pendientes de
+  // verdad — una segunda instancia aquí tendría su propio estado, siempre en cero.
+  const { isOnline, pendingChanges, lastSyncTime, createEmergencyBackup, getOfflineInfo } = useData().offlineSync;
   const { offlineMode, offlineReason } = useAuthGestion();
   const [isExpanded, setIsExpanded] = useState(false);
   const offlineInfo = getOfflineInfo ? getOfflineInfo() : { storageSizeKB: 0 };
@@ -126,6 +129,7 @@ function PWAUpdatePrompt() {
 export default function StatusWidgets() {
   return (
     <>
+      <OfflineStatus />
       <PWAUpdatePrompt />
     </>
   );

@@ -8,6 +8,9 @@ import { AuthContext, DataContext, ThemeContext, AppContext } from './contexts';
 import { AUTH_BYPASS, MOCK_USER } from '../constants';
 import { getFromStorage, saveToStorage } from '../utils/storage';
 import { supabase } from '../lib/supabase';
+import { useOfflineSync } from '../hooks/useOfflineSync';
+import Toast from '../components/ui/Toast';
+import { syncCollectionToSupabase, guardedRetryPendingSync } from './offlineSyncHelpers';
 
 // =================== STORAGE KEYS (fuera del componente) ===================
 const STORAGE_KEYS = {
@@ -216,6 +219,26 @@ export function DataProvider({ children }) {
   const [isDataLoading, setIsDataLoading] = useState(false);
   const initRef = useRef(false);
 
+  const { isOnline, pendingChanges, addPendingChange, resolvePendingChange, lastSyncTime, createEmergencyBackup, getOfflineInfo } = useOfflineSync();
+  const [syncToast, setSyncToast] = useState(null);
+  // Evita reintentos en cascada: cada resolución exitosa dentro de retryPendingSync
+  // cambia la referencia de pendingChanges, lo que re-dispara el useEffect de abajo
+  // mientras el retry anterior sigue en curso — sin este guard, un registro que
+  // sigue fallando se reintenta una vez por cada éxito de la misma ráfaga (O(N²)
+  // en el peor caso) en vez de una sola vez.
+  const isRetryingRef = useRef(false);
+
+  const notifySync = useCallback((message, type = 'error') => {
+    setSyncToast({ message, type });
+  }, []);
+
+  // Autodescarte del toast de sincronización (igual que las notificaciones de AppProvider).
+  useEffect(() => {
+    if (!syncToast) return;
+    const timer = setTimeout(() => setSyncToast(null), 6000);
+    return () => clearTimeout(timer);
+  }, [syncToast]);
+
   // Función para cargar datos (Híbrida: Supabase -> Local)
   const loadAllData = useCallback(async () => {
     setIsDataLoading(true);
@@ -264,35 +287,41 @@ export function DataProvider({ children }) {
     }
   }, []);
 
-  // Función para guardar una colección (Híbrida: Local + Supabase)
+  // Función para guardar una colección (Híbrida: Local + Supabase).
+  // El guardado local es incondicional e inmediato (offline-first intencional:
+  // no se bloquea la UI esperando confirmación remota). La sincronización con
+  // Supabase es "mejor esfuerzo": si falla, syncCollectionToSupabase la marca
+  // como pendiente (addPendingChange) y avisa con un toast inmediato, en vez
+  // de fallar en silencio.
   const saveCollectionData = useCallback(async (collection, newData) => {
     const key = STORAGE_KEYS[collection];
     if (!key) return false;
 
-    // 1. Guardar en LocalStorage
     saveToStorage(key, newData);
 
-    // 2. Intentar guardar en Supabase si hay sesión y conexión
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Mapeo selectivo por tabla real en Supabase
-        const tableName = `${collection}_cv`;
-
-        // Upsert masivo (requiere que los registros tengan ID UUID o PK manejable)
-        // Nota: Esto es un ejemplo, dependiendo de la tabla puede ser diferente
-        const { error } = await supabase
-          .from(tableName)
-          .upsert(newData, { onConflict: 'id' });
-
-        if (error) console.error(`Error sync Supabase [${tableName}]:`, error);
-      }
-    } catch (err) {
-      console.warn('Sync Supabase failed (offline mode):', err);
-    }
+    await syncCollectionToSupabase({
+      supabase,
+      collection,
+      newData,
+      addPendingChange,
+      resolvePendingChange,
+      notify: notifySync,
+    });
 
     return true;
-  }, []);
+  }, [addPendingChange, resolvePendingChange, notifySync]);
+
+  // Reintento real al recuperar conexión: recorre pendingChanges y reintenta
+  // cada uno. También corre al montar, por si hay cambios pendientes de una
+  // sesión anterior y ya hay conexión. guardedRetryPendingSync usa isRetryingRef
+  // para no solapar retries: sin eso, cada éxito dentro de un retry cambia
+  // pendingChanges y re-dispara este mismo efecto mientras el anterior sigue
+  // en marcha, reintentando varias veces los que siguen fallando en la misma
+  // ráfaga de reconexión.
+  useEffect(() => {
+    if (!isOnline) return;
+    guardedRetryPendingSync({ isRetryingRef, supabase, pendingChanges, resolvePendingChange, notify: notifySync });
+  }, [isOnline, pendingChanges, resolvePendingChange, notifySync]);
 
   // Setters para cada colección
   const createSetter = useCallback((collection) => {
@@ -335,6 +364,19 @@ export function DataProvider({ children }) {
     loadAllData();
   }, [loadAllData]);
 
+  // offlineSync agrupa el estado de sincronización para quien lo necesite mostrar
+  // (StatusWidgets.jsx) — una sola instancia real de useOfflineSync, la de aquí;
+  // StatusWidgets ya no llama al hook por su cuenta, para no tener dos copias de
+  // pendingChanges desincronizadas entre sí (una que sí se actualiza al guardar,
+  // otra que se quedaría siempre en cero).
+  const offlineSync = useMemo(() => ({
+    isOnline,
+    pendingChanges,
+    lastSyncTime,
+    createEmergencyBackup,
+    getOfflineInfo,
+  }), [isOnline, pendingChanges, lastSyncTime, createEmergencyBackup, getOfflineInfo]);
+
   const value = useMemo(() => ({
     data,
     dataInitialized,
@@ -350,7 +392,8 @@ export function DataProvider({ children }) {
     setLiquidaciones,
     setDecomisiones,
     setEmpresas,
-    refreshData: loadAllData
+    refreshData: loadAllData,
+    offlineSync,
   }), [
     data,
     dataInitialized,
@@ -366,12 +409,18 @@ export function DataProvider({ children }) {
     setLiquidaciones,
     setDecomisiones,
     setEmpresas,
-    loadAllData
+    loadAllData,
+    offlineSync,
   ]);
 
   return (
     <DataContext.Provider value={value}>
       {children}
+      <Toast
+        message={syncToast?.message}
+        type={syncToast?.type}
+        onClose={() => setSyncToast(null)}
+      />
     </DataContext.Provider>
   );
 }
