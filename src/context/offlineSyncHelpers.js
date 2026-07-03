@@ -74,6 +74,62 @@ export async function retryPendingSync({ supabase: client, pendingChanges, resol
   }
 }
 
+// Decide qué datos usar para UNA colección al cargar la app (loadAllData en
+// AppContexts.jsx la llama una vez por colección). Mismo principio que
+// syncCollectionToSupabase pero en la dirección de lectura: local es la
+// verdad inmediata, Supabase es best-effort — así que un remoto que responde
+// sin error pero con 0 filas NO debe ganarle a un local que sí tiene datos.
+//
+// Antes de este fix, la condición era `!remoteError && remoteData` — un
+// array vacío es truthy en JS, así que un remoto vacío "ganaba" igual que
+// uno con datos reales, vaciando en silencio el estado en memoria (y de ahí
+// arrastrando a localStorage en cuanto cualquier guardado posterior partiera
+// de ese estado ya vacío). Aquí se exige explícitamente `remoteArray.length
+// > 0` para que el remoto gane.
+//
+// Si el remoto viene vacío pero el local tiene datos, avisa por toast — sin
+// esto, este fix sería tan silencioso como el bug que corrige, solo que
+// "arreglado en secreto" en vez de "roto en secreto".
+//
+// Caso límite considerado y aceptado a propósito: niveles_cv y zonas_cv se
+// vaciaron intencionadamente en una migración (se borraron las semillas con
+// id UUID). Si el local todavía guarda entradas viejas de esas dos
+// colecciones, este mismo fix las "resucitaría" en vez de dejarlas vacías.
+// No se distingue esta función por colección para evitar ese caso: el precio
+// (una revisión manual, una única vez, de Niveles/Zonas tras este fix — un
+// id con pinta de UUID en vez del formato propio de la app se detecta a
+// simple vista) es menor que el de tener una función con una excepción por
+// colección que alguien tendría que recordar y mantener indefinidamente.
+export async function loadCollectionData({ supabase: client, session, collection, storageKey, columnasSelect, getFromStorage, saveToStorage, notify }) {
+  const local = getFromStorage(storageKey, []);
+  const localArray = Array.isArray(local) ? local : [];
+
+  if (!session) {
+    return localArray;
+  }
+
+  const tableName = `${collection}_cv`;
+  const { data: remoteData, error: remoteError } = await client
+    .from(tableName)
+    .select(columnasSelect || '*');
+
+  const remoteArray = Array.isArray(remoteData) ? remoteData : [];
+
+  if (!remoteError && remoteArray.length > 0) {
+    saveToStorage(storageKey, remoteArray);
+    return remoteArray;
+  }
+
+  if (!remoteError && remoteArray.length === 0 && localArray.length > 0) {
+    notify?.(
+      `El servidor no tiene datos de "${collection}" pero tu dispositivo sí — usando los datos locales. Sincroniza cuando puedas.`,
+      'info'
+    );
+  }
+
+  return localArray;
+}
+
 // Envuelve retryPendingSync con protección contra ejecuciones solapadas.
 // Cada resolvePendingChange exitoso dentro de un retry cambia la referencia de
 // pendingChanges, lo que — en el useEffect que llama a esto — dispara otra

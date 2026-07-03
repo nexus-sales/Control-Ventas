@@ -1,5 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
-import { syncCollectionToSupabase, retryPendingSync, guardedRetryPendingSync } from './offlineSyncHelpers';
+import { syncCollectionToSupabase, retryPendingSync, guardedRetryPendingSync, loadCollectionData } from './offlineSyncHelpers';
+
+// Mock mínimo del cliente de Supabase para el lado de lectura: solo
+// auth.getSession y from().select(), configurable por test.
+function makeSupabaseSelectMock({ session = {}, selectData = [], selectError = null } = {}) {
+  return {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session } }),
+    },
+    from: vi.fn(() => ({
+      select: vi.fn().mockResolvedValue({ data: selectData, error: selectError }),
+    })),
+  };
+}
 
 // Mock mínimo del cliente de Supabase: solo lo que estas funciones tocan
 // (auth.getSession y from().upsert()), configurable por test.
@@ -168,5 +181,82 @@ describe('guardedRetryPendingSync — evita reintentos en cascada', () => {
     // c3 solo se intenta 1 vez en toda la ráfaga.
     expect(upsertCallsByTable['productos_cv']).toBe(1);
     expect(isRetryingRef.current).toBe(false);
+  });
+});
+
+describe('loadCollectionData — el remoto vacío no debe ganarle a un local con datos', () => {
+  it('remoto vacío + local con datos: conserva el local y avisa (no lo vacía en silencio)', async () => {
+    const supabase = makeSupabaseSelectMock({ selectData: [] });
+    const getFromStorage = vi.fn().mockReturnValue([{ id: 'v1' }, { id: 'v2' }]);
+    const saveToStorage = vi.fn();
+    const notify = vi.fn();
+
+    const resultado = await loadCollectionData({
+      supabase, session: {}, collection: 'ventas', storageKey: 'cv_ventas_v3',
+      columnasSelect: '*', getFromStorage, saveToStorage, notify,
+    });
+
+    expect(resultado).toEqual([{ id: 'v1' }, { id: 'v2' }]);
+    expect(saveToStorage).not.toHaveBeenCalled();
+    expect(notify).toHaveBeenCalledWith(expect.stringContaining('ventas'), 'info');
+  });
+
+  it('remoto con datos: usa el remoto y lo guarda en local, sin avisar', async () => {
+    const remoto = [{ id: 'v1' }, { id: 'v2' }, { id: 'v3' }];
+    const supabase = makeSupabaseSelectMock({ selectData: remoto });
+    const getFromStorage = vi.fn().mockReturnValue([{ id: 'viejo' }]);
+    const saveToStorage = vi.fn();
+    const notify = vi.fn();
+
+    const resultado = await loadCollectionData({
+      supabase, session: {}, collection: 'ventas', storageKey: 'cv_ventas_v3',
+      columnasSelect: '*', getFromStorage, saveToStorage, notify,
+    });
+
+    expect(resultado).toEqual(remoto);
+    expect(saveToStorage).toHaveBeenCalledWith('cv_ventas_v3', remoto);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('sin sesión: usa el local directamente, sin llamar a Supabase', async () => {
+    const supabase = makeSupabaseSelectMock();
+    const getFromStorage = vi.fn().mockReturnValue([{ id: 'v1' }]);
+    const saveToStorage = vi.fn();
+
+    const resultado = await loadCollectionData({
+      supabase, session: null, collection: 'ventas', storageKey: 'cv_ventas_v3',
+      columnasSelect: '*', getFromStorage, saveToStorage, notify: vi.fn(),
+    });
+
+    expect(resultado).toEqual([{ id: 'v1' }]);
+    expect(supabase.from).not.toHaveBeenCalled();
+  });
+
+  it('remoto con error + local con datos: conserva el local, sin avisar (comportamiento de fallback ya existente, no es el caso nuevo)', async () => {
+    const supabase = makeSupabaseSelectMock({ selectError: { message: 'RLS violation' } });
+    const getFromStorage = vi.fn().mockReturnValue([{ id: 'v1' }]);
+    const notify = vi.fn();
+
+    const resultado = await loadCollectionData({
+      supabase, session: {}, collection: 'ventas', storageKey: 'cv_ventas_v3',
+      columnasSelect: '*', getFromStorage, saveToStorage: vi.fn(), notify,
+    });
+
+    expect(resultado).toEqual([{ id: 'v1' }]);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('remoto vacío + local también vacío: no avisa (no hay nada que "perder")', async () => {
+    const supabase = makeSupabaseSelectMock({ selectData: [] });
+    const getFromStorage = vi.fn().mockReturnValue([]);
+    const notify = vi.fn();
+
+    const resultado = await loadCollectionData({
+      supabase, session: {}, collection: 'ventas', storageKey: 'cv_ventas_v3',
+      columnasSelect: '*', getFromStorage, saveToStorage: vi.fn(), notify,
+    });
+
+    expect(resultado).toEqual([]);
+    expect(notify).not.toHaveBeenCalled();
   });
 });

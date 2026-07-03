@@ -10,7 +10,7 @@ import { getFromStorage, saveToStorage } from '../utils/storage';
 import { supabase } from '../lib/supabase';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import Toast from '../components/ui/Toast';
-import { syncCollectionToSupabase, guardedRetryPendingSync } from './offlineSyncHelpers';
+import { syncCollectionToSupabase, guardedRetryPendingSync, loadCollectionData } from './offlineSyncHelpers';
 
 // =================== STORAGE KEYS (fuera del componente) ===================
 const STORAGE_KEYS = {
@@ -239,7 +239,11 @@ export function DataProvider({ children }) {
     return () => clearTimeout(timer);
   }, [syncToast]);
 
-  // Función para cargar datos (Híbrida: Supabase -> Local)
+  // Función para cargar datos (Híbrida: Supabase -> Local). Por colección:
+  // remoto solo gana si responde sin error Y con al menos una fila — un
+  // remoto vacío no debe vaciar datos locales que sí existen (mismo
+  // principio "local es la verdad inmediata" que ya aplica saveCollectionData
+  // al guardar). Ver loadCollectionData (offlineSyncHelpers.js) para el porqué.
   const loadAllData = useCallback(async () => {
     setIsDataLoading(true);
 
@@ -248,32 +252,16 @@ export function DataProvider({ children }) {
       const newData = {};
 
       for (const collection of Object.keys(STORAGE_KEYS)) {
-        let collectionData = [];
-
-        // 1. Intentar cargar desde Supabase si hay sesión
-        if (session) {
-          const tableName = `${collection}_cv`;
-          const { data: remoteData, error: remoteError } = await supabase
-            .from(tableName)
-            .select(COLUMNAS_SELECT[collection] || '*');
-
-          if (!remoteError && remoteData) {
-            collectionData = remoteData;
-          } else {
-            // Si hay error en Supabase, fallback a Local
-            collectionData = getFromStorage(STORAGE_KEYS[collection], []);
-          }
-        } else {
-          // 2. Si no hay sesión, cargar desde LocalStorage
-          collectionData = getFromStorage(STORAGE_KEYS[collection], []);
-        }
-
-        newData[collection] = Array.isArray(collectionData) ? collectionData : [];
-
-        // Sincronizar localmente lo que bajamos (opcional, pero útil para offline posterior)
-        if (session && collectionData.length > 0) {
-          saveToStorage(STORAGE_KEYS[collection], collectionData);
-        }
+        newData[collection] = await loadCollectionData({
+          supabase,
+          session,
+          collection,
+          storageKey: STORAGE_KEYS[collection],
+          columnasSelect: COLUMNAS_SELECT[collection],
+          getFromStorage,
+          saveToStorage,
+          notify: notifySync,
+        });
       }
 
       setData(newData);
@@ -285,7 +273,7 @@ export function DataProvider({ children }) {
     } finally {
       setIsDataLoading(false);
     }
-  }, []);
+  }, [notifySync]);
 
   // Función para guardar una colección (Híbrida: Local + Supabase).
   // El guardado local es incondicional e inmediato (offline-first intencional:
