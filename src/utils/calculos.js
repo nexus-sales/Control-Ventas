@@ -131,15 +131,6 @@ export function getProductoComisionBase(producto, pvp, venta) {
   return total;
 }
 
-// DEPRECATED: Mantener por compatibilidad pero marcar como obsoleta
-export function findNivelPct(colab, niveles) {
-  // LOG ELIMINADO
-  if (typeof colab?.pct_colaborador === "number") return colab.pct_colaborador;
-  return (
-    niveles.find((n) => n.id === colab?.nivel)?.pct_colaborador_default ?? 0.5
-  );
-}
-
 export function baseFromPVP(pvp, impuesto_pct) {
   const p = Number(pvp) || 0;
   const imp = Number(impuesto_pct) || 0;
