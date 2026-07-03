@@ -40,7 +40,7 @@ export default function VentasPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { data, dataInitialized } = useData();
-  const { user } = useAuth();
+  const { isAdmin } = useAuth();
 
   const {
     allData: { productos, colaboradores, zonas },
@@ -228,7 +228,6 @@ export default function VentasPage() {
     }
   }, [location.search, location.pathname, updateFilter, navigate]);
 
-  const isAdmin = useMemo(() => user?.role === 'admin' || user?.is_admin === true, [user]);
   const hasActiveFilters = useMemo(() =>
     filtros && Object.values(filtros).some(v => v !== "" && v !== false && (Array.isArray(v) ? v.length > 0 : true)),
     [filtros]

@@ -70,7 +70,7 @@ export function VentasTable({
   onView,
   onDelete,
   onActivate: _onActivate,
-  isAdmin = true,
+  isAdmin = false,
   resolveProductoName: _resolveProductoName,
   resolveColaboradorName: _resolveColaboradorName,
   resolveZonaName: _resolveZonaName,
@@ -174,7 +174,11 @@ export function VentasTable({
 
                   {/* Titular */}
                   <td className="px-4 py-3">
-                    <p className="font-medium text-slate-900 dark:text-white text-sm">
+                    <p
+                      className="font-medium text-slate-900 dark:text-white text-sm hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline cursor-pointer w-fit"
+                      onClick={(e) => { e.stopPropagation(); onView && onView(venta); }}
+                      title="Ver ficha"
+                    >
                       {venta.cliente || "Sin nombre"}
                     </p>
                     <div className="flex items-center gap-2 mt-0.5">
