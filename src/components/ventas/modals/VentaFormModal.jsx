@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, Edit3, Save, Euro, Percent, AlertCircle, CheckCircle, Smartphone, Phone, ShoppingBag, User, Calendar, CreditCard } from 'lucide-react';
+import { Plus, Edit3, Save, Euro, Percent, AlertCircle, CheckCircle, Smartphone, Phone, ShoppingBag, User, Calendar, CreditCard, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../../lib/utils';
 import Modal from '../../ui/Modal';
