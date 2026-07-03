@@ -31,6 +31,38 @@ const normalizeNameSearch = (name) => {
     .toUpperCase();
 };
 
+// Impuestos conocidos por nombre de zona, para que una zona autocreada durante
+// la importación (porque el Excel trae un nombre que no existía como zona
+// local todavía) no se quede sin impuesto_tipo/impuesto_pct. Sin esto, la zona
+// nueva no tenía estos campos en absoluto — baseFromPVP (calculos.js) trata
+// impuesto_pct ausente como 0 y usa el PVP íntegro como base de comisión, en
+// vez de PVP/(1+impuesto_pct); la comisión calculada sale más alta de lo que
+// debería.
+const IMPUESTOS_POR_ZONA = {
+  PENINSULA: { impuesto_tipo: 'IVA', impuesto_pct: 0.21 },
+  CANARIAS: { impuesto_tipo: 'IGIC', impuesto_pct: 0.07 },
+  CEUTA: { impuesto_tipo: 'IPSI', impuesto_pct: 0.10 },
+  MELILLA: { impuesto_tipo: 'IPSI', impuesto_pct: 0.10 },
+};
+
+// Resuelve el impuesto de una zona por nombre; si el nombre no coincide con
+// ninguna de las 4 zonas conocidas (p. ej. un typo o una zona real no
+// contemplada, tipo "Baleares"), aplica IVA 21% por defecto en vez de dejar
+// la zona sin ningún valor fiscal — y avisa por consola, porque un 21% por
+// defecto puede no ser correcto y quien importa debería poder verlo.
+// Exportada (igual que normalizeFactor en calculos.js) para poder testear la
+// resolución de impuestos sin renderizar el hook completo.
+export function resolveImpuestosZona(nombreZona) {
+  const clave = normalizeNameSearch(nombreZona);
+  const impuestos = IMPUESTOS_POR_ZONA[clave];
+  if (impuestos) return impuestos;
+
+  console.warn(
+    `Zona "${nombreZona}" no reconocida (esperaba Península/Canarias/Ceuta/Melilla) — se aplica IVA 21% por defecto. Verifica manualmente si es correcto.`
+  );
+  return { impuesto_tipo: 'IVA', impuesto_pct: 0.21 };
+}
+
 // 🎯 CORRECCIÓN CRÍTICA: Generador de IDs únicos sin duplicados
 let globalIdCounter = Date.now() % 10000; // Contador único basado en timestamp
 
@@ -522,6 +554,7 @@ export function useImportGestion({
               return {
                 ...baseData,
                 descripcion: `Zona ${name}`,
+                ...resolveImpuestosZona(name),
                 ...additionalData
               };
             case 'operadores':
