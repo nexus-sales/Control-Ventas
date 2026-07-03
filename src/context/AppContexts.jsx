@@ -16,15 +16,13 @@ import { syncCollectionToSupabase, guardedRetryPendingSync, loadCollectionData }
 const STORAGE_KEYS = {
   ventas: 'cv_ventas_v3',
   colaboradores: 'cv_colaboradores_v3',
-  clientes: 'cv_clientes_v3',
   productos: 'cv_productos_v3',
   operadores: 'cv_operadores_v3',
   zonas: 'cv_zonas_v3',
   niveles: 'cv_niveles_v3',
   reglas: 'cv_reglas_v3',
   liquidaciones: 'cv_liquidaciones_v3',
-  decomisiones: 'cv_decomisiones_v3',
-  empresas: 'cv_empresas_v3'
+  decomisiones: 'cv_decomisiones_v3'
 };
 
 // Columnas explícitas por colección para el fetch general (hallazgo MEDIO Auditor:
@@ -204,15 +202,13 @@ export function DataProvider({ children }) {
   const [data, setData] = useState({
     ventas: [],
     colaboradores: [],
-    clientes: [],
     productos: [],
     operadores: [],
     zonas: [],
     niveles: [],
     reglas: [],
     liquidaciones: [],
-    decomisiones: [],
-    empresas: []
+    decomisiones: []
   });
 
   const [dataInitialized, setDataInitialized] = useState(false);
@@ -333,7 +329,6 @@ export function DataProvider({ children }) {
   // Memoizar los setters
   const setVentas = useMemo(() => createSetter('ventas'), [createSetter]);
   const setColaboradores = useMemo(() => createSetter('colaboradores'), [createSetter]);
-  const setClientes = useMemo(() => createSetter('clientes'), [createSetter]);
   const setProductos = useMemo(() => createSetter('productos'), [createSetter]);
   const setOperadores = useMemo(() => createSetter('operadores'), [createSetter]);
   const setZonas = useMemo(() => createSetter('zonas'), [createSetter]);
@@ -341,7 +336,6 @@ export function DataProvider({ children }) {
   const setReglas = useMemo(() => createSetter('reglas'), [createSetter]);
   const setLiquidaciones = useMemo(() => createSetter('liquidaciones'), [createSetter]);
   const setDecomisiones = useMemo(() => createSetter('decomisiones'), [createSetter]);
-  const setEmpresas = useMemo(() => createSetter('empresas'), [createSetter]);
 
   // Inicialización
   useEffect(() => {
@@ -371,7 +365,6 @@ export function DataProvider({ children }) {
     isDataLoading,
     setVentas,
     setColaboradores,
-    setClientes,
     setProductos,
     setOperadores,
     setZonas,
@@ -379,7 +372,6 @@ export function DataProvider({ children }) {
     setReglas,
     setLiquidaciones,
     setDecomisiones,
-    setEmpresas,
     refreshData: loadAllData,
     offlineSync,
   }), [
@@ -388,7 +380,6 @@ export function DataProvider({ children }) {
     isDataLoading,
     setVentas,
     setColaboradores,
-    setClientes,
     setProductos,
     setOperadores,
     setZonas,
@@ -396,7 +387,6 @@ export function DataProvider({ children }) {
     setReglas,
     setLiquidaciones,
     setDecomisiones,
-    setEmpresas,
     loadAllData,
     offlineSync,
   ]);
