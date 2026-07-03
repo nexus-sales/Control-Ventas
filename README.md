@@ -266,6 +266,21 @@ R: ¡Sí! Usa el modo "Local" y podrás trabajar completamente offline. Cuando t
 - **SEO**: Metaetiquetas, manifest, robots.txt, sitemap.xml
 - **Performance**: Bundle optimizado, lazy loading, code splitting
 
+## 🛠️ Últimas Mejoras y Actualizaciones
+
+### **Ordenación y Búsqueda de Ventas (Julio 2026)**
+- **Ordenación por Titular/Expediente**: Habilitada la ordenación de la A a la Z (y viceversa) pulsando sobre la cabecera "Titular / Expediente" en la tabla maestra de ventas.
+- **Búsqueda por texto corregida**: Se enlazó el input de búsqueda de la interfaz (`filtros.search`) con la lógica interna del listado filtrado (`filtros.texto`), permitiendo buscar de forma instantánea por cliente, CIF, numeración, documento, producto, zona, colaborador u operador.
+
+### **Sincronización y Respaldo Centralizados (Julio 2026)**
+- **Eliminación del Widget Flotante**: Se retiró el indicador flotante de la esquina superior derecha (`OfflineStatus`) para evitar que interfiriera con el botón de modo oscuro (sol/luna).
+- **Nueva Pestaña de Sincronización en Ajustes**: Centralizadas todas las opciones de red y respaldos en **Configuración > Sincronización**, ofreciendo:
+  - Indicador visual del estado de conexión (Online / Offline).
+  - Información de última fecha/hora de sincronización y tamaño de la caché local en KB.
+  - Contador de cambios pendientes de subir a Supabase.
+  - Botón interactivo para forzar una sincronización manual con Supabase.
+  - Botón de descarga de respaldo completo de datos locales (`Backup Local` en JSON).
+
 ## Licencia
 
 [MIT](LICENSE)
