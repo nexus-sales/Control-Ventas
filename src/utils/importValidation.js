@@ -18,11 +18,13 @@ export const MAPEO_CAMPOS = {
   zona_id: ["ZONA", "zona", "region", "territory"],
   producto_id: ["PRODUCTO", "producto", "product", "servicio"],
   operador_id: ["OPERADOR", "operador", "operator", "proveedor_principal"],
-  pvp: ["PVP", "pvp", "precio", "price", "importe_base"],
+  // "importe_base" se quitó a propósito: en formatos de Excel donde la
+  // columna "IMPORTE" es en realidad el importe de comisión (no un precio),
+  // el emparejamiento difuso de autoguessMapping la confundía con PVP.
+  pvp: ["PVP", "pvp", "precio", "price"],
   cantidad: ["CANTIDAD", "cantidad", "qty", "units"],
   estado: ["ESTADO", "estado", "status", "state"],
   comision_base: ["COMISION", "comision", "commission", "comision_base"],
-  importe: ["IMPORTE", "importe", "total", "amount"],
 };
 
 // Campos básicos que van en la tabla principal
@@ -210,16 +212,14 @@ export function validateRow(row, mapping, options = {}) {
     }
   }
 
-  // Validar PVP o importe
+  // Validar PVP. No se acepta "importe" como sustituto (en algunos formatos
+  // de Excel esa columna es el importe de comisión, no un precio — usarla
+  // como PVP corrompía el cálculo de comisión). Tampoco hay valor por
+  // defecto: una fila sin PVP real se rechaza al importar, en cualquier
+  // modo, así que aquí se marca como error siempre, no solo en modo manual.
   const pvp = parseNumber(get("pvp"));
-  const importe = parseNumber(get("importe"));
-
-  if (!Number.isFinite(pvp) && !Number.isFinite(importe)) {
-    if (modoAutomatico) {
-      warnings.push("PVP faltante, se usará valor por defecto (50€)");
-    } else {
-      errors.push("PVP o importe es requerido");
-    }
+  if (!Number.isFinite(pvp)) {
+    errors.push("PVP es requerido (no se admite un valor por defecto ni se infiere de otra columna)");
   }
 
   return {
@@ -228,29 +228,6 @@ export function validateRow(row, mapping, options = {}) {
     warnings,
     hasDefaultValues: warnings.length > 0,
   };
-}
-
-/**
- * Aplica valores por defecto a una venta
- */
-export function applyDefaults(venta, modoAutomatico = false) {
-  const result = { ...venta };
-
-  // Valores por defecto básicos - SOLO campos que existen en Supabase
-  if (!result.estado) result.estado = "Confirmada";
-  if (!result.cantidad) result.cantidad = 1;
-  if (!result.cliente) result.cliente = "Cliente sin especificar";
-  if (!result.cif) result.cif = "";
-
-  // PVP por defecto en modo automático
-  if (!result.pvp && modoAutomatico) {
-    result.pvp = 50.0;
-  }
-
-  // NO agregar mes/año - pueden ser campos calculados en Supabase
-  // NO agregar id - Supabase lo maneja automáticamente
-  
-  return result;
 }
 
 /**

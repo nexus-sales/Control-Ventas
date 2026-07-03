@@ -374,7 +374,11 @@ const ProductosSection = React.memo(() => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                            {productosPagina.map(p => (
+                            {productosPagina.map(p => {
+                                const sinPvp = p.pvp === null || p.pvp === undefined;
+                                const sinComision = p.comision_valor === null || p.comision_valor === undefined;
+                                const incompleto = !p.operador_id || sinPvp || sinComision;
+                                return (
                                 <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
                                     <td className="px-4 py-4 text-center">
                                         <input
@@ -387,10 +391,10 @@ const ProductosSection = React.memo(() => {
                                     <td className="px-4 py-4">
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <span className="font-bold text-slate-900 dark:text-white">{p.nombre}</span>
-                                            {(!p.operador_id || p.comision_valor === null || p.comision_valor === undefined) && (
+                                            {incompleto && (
                                                 <span
                                                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                                    title="El Excel de origen no traía operador y/o comisión para este producto — complétalo manualmente"
+                                                    title="El Excel de origen no traía PVP, operador y/o comisión para este producto — complétalo manualmente"
                                                 >
                                                     ⚠️ Incompleto
                                                 </span>
@@ -404,10 +408,14 @@ const ProductosSection = React.memo(() => {
                                         <FamiliaBadge familia={p.familia} />
                                     </td>
                                     <td className="px-4 py-4">
-                                        <span className="font-black text-[var(--brand-primary)]">{p.pvp} €</span>
+                                        {sinPvp ? (
+                                            <span className="text-slate-400 dark:text-slate-500 text-xs font-medium italic">Sin definir</span>
+                                        ) : (
+                                            <span className="font-black text-[var(--brand-primary)]">{p.pvp} €</span>
+                                        )}
                                     </td>
                                     <td className="px-4 py-4">
-                                        {p.comision_valor === null || p.comision_valor === undefined ? (
+                                        {sinComision ? (
                                             <span className="text-slate-400 dark:text-slate-500 text-xs font-medium italic">Sin definir</span>
                                         ) : (
                                             <>
@@ -435,7 +443,8 @@ const ProductosSection = React.memo(() => {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                             {productosFiltrados.length === 0 && (
                                 <tr>
                                     <td colSpan={7} className="px-4 py-12 text-center">

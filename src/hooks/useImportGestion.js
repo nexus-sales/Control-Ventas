@@ -3,7 +3,6 @@ import { useData } from "../context/AppContexts";
 import {
   autoguessMapping,
   validateRow,
-  applyDefaults,
   parseDate,
   parseNumber,
 } from "../utils/importValidation";
@@ -109,14 +108,15 @@ const generateReadableId = (prefix, name, existingIds = new Set()) => {
 // importarDatos) para poder testearla sin renderizar el hook — recibe
 // existingIds como parámetro en vez de leerlo de un `indexers` externo.
 //
-// Deliberadamente NO inventa valores de negocio que el Excel no trae
-// (operador_id, comision_valor, sector, nivel_id): si el dato no se resolvió
+// Deliberadamente NO inventa valores de negocio que el Excel no trae (pvp,
+// operador_id, comision_valor, sector, nivel_id): si el dato no se resolvió
 // en la fila de origen, se deja en null explícito en vez de un valor
-// plausible pero falso (antes: comision_valor 15.0 fijo, sector 'telefonia'
-// fijo, nivel_id apuntando a un nivel inexistente 'NIVEL_COLABORADOR') — un
-// producto/operador con estos campos en null se marca como "incompleto" en
-// ProductosSection.jsx/OperadoresSection.jsx para que el admin lo complete
-// a mano con el dato real de negocio, que no se puede derivar del código.
+// plausible pero falso (antes: pvp 50€ fijo, comision_valor 15.0 fijo,
+// sector 'telefonia' fijo, nivel_id apuntando a un nivel inexistente
+// 'NIVEL_COLABORADOR') — un producto/operador con estos campos en null se
+// marca como "incompleto" en ProductosSection.jsx/OperadoresSection.jsx
+// para que el admin lo complete a mano con el dato real de negocio, que no
+// se puede derivar del código.
 export function createEntityWithReadableId(type, name, existingIds, additionalData = {}) {
   const prefixMap = {
     productos: 'prod',
@@ -138,16 +138,25 @@ export function createEntityWithReadableId(type, name, existingIds, additionalDa
       return {
         ...baseData,
         nivel_id: null, // Sin dato de nivel en el Excel; lo asigna el admin.
-        pct_colaborador_default: 0.15,
-        tipo_fiscal: 'Autónomo',
-        irpf_retencion: 'Exento',
+        // tipo_fiscal en mayúsculas sin tilde: es el formato que el resto de
+        // la app compara con === (getIrpfPct, normalizarTipoFiscal) — 'Autónomo'
+        // no coincidía nunca, así que el IRPF de un colaborador autocreado
+        // salía siempre 0% sin que nadie lo notara.
+        tipo_fiscal: 'AUTONOMO',
+        // pct_colaborador_default e irpf_retencion se quitaron: no son
+        // columnas reales de colaboradores_cv (PGRST204 "columna no
+        // encontrada", confirmado en vivo) — igual que nivel_id, bloqueaban
+        // la sincronización de cualquier colaborador autocreado por import.
+        // Se deja que apliquen los defaults reales de la tabla
+        // (pct_colaborador 0.50, irpf 0, exento_impuestos false) en vez de
+        // inventar un reemplazo.
         ...additionalData
       };
     case 'productos':
       return {
         ...baseData,
         codigo: name.slice(0, 10).toUpperCase(),
-        pvp: Number(additionalData.pvp || 50.0),
+        pvp: null, // Sin PVP real en el Excel; sin additionalData.pvp, queda explícito (nunca 50€ fijo).
         comision_tipo: 'porcentaje',
         comision_valor: null, // Sin comisión en el Excel; sin additionalData.comision_valor, queda explícito.
         operador_id: null, // Sin operador resuelto en el Excel; sin additionalData.operador_id, queda explícito.
@@ -170,6 +179,26 @@ export function createEntityWithReadableId(type, name, existingIds, additionalDa
     default:
       return { ...baseData, ...additionalData };
   }
+}
+
+// Lista los motivos por los que una fila de importación debe rechazarse en
+// vez de importarse con un valor arbitrario. Una venta representa dinero ya
+// vendido: antes de este fix, zona/producto/operador sin resolver caían al
+// primer elemento de la lista local existente, y un PVP ausente se rellenaba
+// con 50€ fijo — la fila "pasaba" con datos falsos en vez de avisar. Ahora
+// se listan TODOS los motivos de rechazo de la fila, no solo el primero que
+// se encuentre, para que el resumen de importación sea útil de verdad.
+// Exportada (mismo patrón que resolveImpuestosZona/createEntityWithReadableId)
+// para poder testear el criterio de rechazo sin renderizar el hook.
+export function resolverMotivosRechazoVenta({ cliente, colaborador_id, zona_id, producto_id, operador_id, pvpValido }) {
+  const motivos = [];
+  if (!cliente) motivos.push("cliente");
+  if (!colaborador_id) motivos.push("colaborador");
+  if (!zona_id) motivos.push("zona");
+  if (!producto_id) motivos.push("producto");
+  if (!operador_id) motivos.push("operador");
+  if (!pvpValido) motivos.push("PVP");
+  return motivos;
 }
 
 // Helper para formatear fecha
@@ -587,24 +616,17 @@ export function useImportGestion({
 
           const fecha =
             parseDate(get("fecha")) || new Date().toISOString().slice(0, 10);
-          const cliente = get("cliente") || `Cliente ${index + 1}`;
+          const cliente = get("cliente");
           const colaboradorNombre = get("colaborador_id");
-
-          if (!cliente || !colaboradorNombre) {
-            rechazadas++;
-            erroresDetallados.push({
-              fila: index + 1,
-              errores: ["Faltan datos mínimos: cliente o colaborador"],
-            });
-            continue;
-          }
+          const pvpExcel = parseNumber(get("pvp"));
+          const pvpValido = Number.isFinite(pvpExcel);
 
           // -------- COLABORADOR --------
           let colaborador_id = resolveId(
             colaboradorNombre,
             indexers.colaboradores
           );
-          if (!colaborador_id && state.crearAutomaticamente) {
+          if (!colaborador_id && state.crearAutomaticamente && colaboradorNombre) {
             const norm = normalizeNameSearch(colaboradorNombre);
             if (!colaboradoresToCreateByName[norm]) {
               colaboradoresToCreateByName[norm] = createEntityWithReadableId(
@@ -632,9 +654,6 @@ export function useImportGestion({
             }
             zona_id = zonasToCreateByName[norm].id;
           }
-          if (!zona_id && zonas[0]?.id) {
-            zona_id = zonas[0].id;
-          }
 
           // -------- OPERADOR -------- (antes que PRODUCTO: un producto nuevo
           // necesita poder heredar el operador ya resuelto en esta misma fila)
@@ -652,9 +671,6 @@ export function useImportGestion({
             }
             operador_id = operadoresToCreateByName[norm].id;
           }
-          if (!operador_id && operadores[0]?.id) {
-            operador_id = operadores[0].id;
-          }
 
           // -------- PRODUCTO --------
           const productoNombre = get("producto_id");
@@ -662,37 +678,36 @@ export function useImportGestion({
           if (!producto_id && state.crearAutomaticamente && productoNombre) {
             const norm = normalizeNameSearch(productoNombre);
             if (!productosToCreateByName[norm]) {
-              const comisionExcel = parseNumber(get("comision_base"));
               productosToCreateByName[norm] = createEntityWithReadableId(
                 'productos',
                 productoNombre,
                 indexers.existingIds,
                 {
-                  pvp: Number(parseNumber(get("pvp")) || 50.0),
-                  // Ninguno de los dos se inventa si el Excel no lo trae: se
+                  // Ninguno de los tres se inventa si el Excel no lo trae: se
                   // propaga el operador ya resuelto en esta fila (o null si
-                  // tampoco se resolvió), y la comisión solo si el Excel la
-                  // trae de verdad — sin fallback a un valor que parezca real.
+                  // tampoco se resolvió); PVP y comisión quedan null si el
+                  // Excel no trae un valor real — antes: PVP 50€ fijo y
+                  // comisión copiada de "comision_base" (un importe en euros
+                  // en este formato de Excel, no un porcentaje, lo que
+                  // producía comisiones del tipo "350%").
+                  pvp: pvpValido ? pvpExcel : null,
                   operador_id: operador_id || null,
-                  comision_valor: Number.isFinite(comisionExcel) ? comisionExcel : null,
                 }
               );
               productosNuevos.add(productoNombre);
             }
             producto_id = productosToCreateByName[norm].id;
           }
-          if (!producto_id && productos[0]?.id) {
-            producto_id = productos[0].id;
-          }
 
-          if (!colaborador_id || !zona_id) {
+          const motivosRechazo = resolverMotivosRechazoVenta({
+            cliente, colaborador_id, zona_id, producto_id, operador_id, pvpValido,
+          });
+
+          if (motivosRechazo.length > 0) {
             rechazadas++;
             erroresDetallados.push({
               fila: index + 1,
-              errores: [
-                `No se pudo resolver: ${!colaborador_id ? "colaborador" : "zona"
-                }`,
-              ],
+              errores: [`No se pudo resolver: ${motivosRechazo.join(", ")}`],
             });
             continue;
           }
@@ -710,7 +725,7 @@ export function useImportGestion({
             zona_id,
             producto_id,
             operador_id,
-            pvp: Number(parseNumber(get("pvp")) || 50.0),
+            pvp: pvpExcel,
             cantidad: Number(parseNumber(get("cantidad")) || 1),
             estado: (get("estado") || "Confirmada").slice(0, 50),
             documento: (get("documento") || "").slice(0, 100),
@@ -735,7 +750,7 @@ export function useImportGestion({
             }
           }
 
-          let ventaFinal = applyDefaults(ventaBase, modo === "inteligente");
+          let ventaFinal = ventaBase;
 
           // Guardar extras
           if (state.guardarExtras) {
@@ -830,9 +845,6 @@ export function useImportGestion({
     [
       state,
       indexers,
-      zonas,
-      productos,
-      operadores,
       setVentas,
       autoCreacionDisponible,
       setProductos,
