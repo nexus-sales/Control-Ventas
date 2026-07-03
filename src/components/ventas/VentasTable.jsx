@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
-import { Edit3, Eye, X, Package, Zap, User, MapPin, Calendar } from 'lucide-react';
+import { Edit3, Eye, X, Package, Zap, User, MapPin, Calendar, ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const formatDate = (dateStr) => {
@@ -75,6 +75,8 @@ export function VentasTable({
   resolveColaboradorName: _resolveColaboradorName,
   resolveZonaName: _resolveZonaName,
   resolveOperadorName: _resolveOperadorName,
+  sortConfig = null,
+  onSort = null,
 }) {
   const indexers = useMemo(() => ({
     productos:    Object.fromEntries(productos.map(p => [p.id, p])),
@@ -128,8 +130,19 @@ export function VentasTable({
                   className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                 />
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                <div className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> Titular / Expediente</div>
+              <th
+                className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors select-none"
+                onClick={() => onSort && onSort('cliente')}
+              >
+                <div className="flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" />
+                  <span>Titular / Expediente</span>
+                  {sortConfig?.key === 'cliente' && (
+                    sortConfig.direction === 'asc'
+                      ? <ChevronUp className="w-3.5 h-3.5 text-indigo-500 ml-1 inline" />
+                      : <ChevronDown className="w-3.5 h-3.5 text-indigo-500 ml-1 inline" />
+                  )}
+                </div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                 <div className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5" /> Servicio</div>

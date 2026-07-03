@@ -71,6 +71,16 @@ export default function VentasPage() {
     producto_nombre: '',
     pvp: 0,
   });
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  const handleSort = useCallback((key) => {
+    setSortConfig(prev => {
+      if (prev && prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  }, []);
 
   const entidadesSafe = useMemo(() => ({
     operadores: Array.isArray(data?.operadores) ? data.operadores : [],
@@ -88,7 +98,7 @@ export default function VentasPage() {
   const ventasCalc = useMemo(() => {
     if (datosSafe.ventasFiltradas.length === 0) return [];
 
-    return datosSafe.ventasFiltradas.map((venta) => {
+    const enriched = datosSafe.ventasFiltradas.map((venta) => {
       try {
         const producto = datosSafe.productos.find(p => p?.id === venta?.producto_id);
         const colaborador = datosSafe.colaboradores.find(c => c?.id === venta?.colaborador_id);
@@ -120,7 +130,23 @@ export default function VentasPage() {
         };
       }
     });
-  }, [datosSafe, entidadesSafe]);
+
+    if (sortConfig && sortConfig.key) {
+      enriched.sort((a, b) => {
+        let valA = '';
+        let valB = '';
+        if (sortConfig.key === 'cliente') {
+          valA = a.cliente || '';
+          valB = b.cliente || '';
+        }
+        return sortConfig.direction === 'asc'
+          ? valA.localeCompare(valB, 'es', { sensitivity: 'base' })
+          : valB.localeCompare(valA, 'es', { sensitivity: 'base' });
+      });
+    }
+
+    return enriched;
+  }, [datosSafe, entidadesSafe, sortConfig]);
 
   const pagination = usePagination(ventasCalc, 25);
 
@@ -379,6 +405,8 @@ export default function VentasPage() {
             onDefinePvp={openPvpModal}
             isVentaBlocked={isVentaBlocked}
             isAdmin={isAdmin}
+            sortConfig={sortConfig}
+            onSort={handleSort}
           />
         </div>
       </div>

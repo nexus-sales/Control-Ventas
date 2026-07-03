@@ -5,6 +5,7 @@ import { getColaboradorNivelId } from '../utils/calculos';
 // Filtros iniciales para gestión de ventas
 const INITIAL_FILTERS = {
   texto: "",
+  search: "",
   colaborador_id: "",
   zona_id: "",
   operador_id: "",
@@ -300,8 +301,8 @@ export function useVentasGestion(customFields = []) {
         if (filtros.montoMax && pvpValue > Number(filtros.montoMax)) return false;
 
         // 🎯 MEJORA: Búsqueda de texto mejorada (incluye nombres resueltos)
-        if (filtros.texto) {
-          const searchTerm = filtros.texto.toLowerCase();
+        const textQuery = (filtros.texto || filtros.search || "").trim().toLowerCase();
+        if (textQuery) {
           const searchableText = [
             venta.cliente,
             venta.cif,
@@ -312,7 +313,7 @@ export function useVentasGestion(customFields = []) {
             venta.zonaNombre,        // 🎯 NUEVA
             venta.operadorNombre     // 🎯 NUEVA
           ].join(' ').toLowerCase();
-          if (!searchableText.includes(searchTerm)) return false;
+          if (!searchableText.includes(textQuery)) return false;
         }
 
         return true;
