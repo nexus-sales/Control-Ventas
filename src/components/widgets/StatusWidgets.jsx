@@ -129,7 +129,6 @@ function PWAUpdatePrompt() {
 export default function StatusWidgets() {
   return (
     <>
-      <OfflineStatus />
       <PWAUpdatePrompt />
     </>
   );
