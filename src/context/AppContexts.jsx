@@ -215,7 +215,7 @@ export function DataProvider({ children }) {
   const [isDataLoading, setIsDataLoading] = useState(false);
   const initRef = useRef(false);
 
-  const { isOnline, pendingChanges, addPendingChange, resolvePendingChange, lastSyncTime, createEmergencyBackup, getOfflineInfo, clearPendingChanges } = useOfflineSync();
+  const { isOnline, pendingChanges, addPendingChange, resolvePendingChange, lastSyncTime, createEmergencyBackup, getOfflineInfo } = useOfflineSync();
   const [syncToast, setSyncToast] = useState(null);
   // Evita reintentos en cascada: cada resolución exitosa dentro de retryPendingSync
   // cambia la referencia de pendingChanges, lo que re-dispara el useEffect de abajo
@@ -287,34 +287,44 @@ export function DataProvider({ children }) {
 
       notifySync("Subiendo datos locales a Supabase...", "info");
 
-      // 1. Subir todas las colecciones locales a Supabase usando upsert
+      // Sube cada colección reutilizando syncCollectionToSupabase — el mismo
+      // camino que usa el guardado normal, probado con tests hoy. Antes: un
+      // upsert crudo por colección aquí mismo, sin pasar por
+      // addPendingChange/resolvePendingChange, y clearPendingChanges()
+      // incondicional al final aunque el bucle de arriba hubiera fallado —
+      // borraba el rastro de qué no se pudo subir, justo el problema que
+      // resolvimos hoy en el guardado normal.
+      let huboErrores = false;
       for (const collection of Object.keys(STORAGE_KEYS)) {
         const localData = getFromStorage(STORAGE_KEYS[collection], []);
         if (localData && localData.length > 0) {
-          const tableName = `${collection}_cv`;
-          const { error } = await supabase.from(tableName).upsert(localData, { onConflict: 'id' });
-          if (error) {
-            console.error(`Error al subir ${collection}:`, error);
-            notifySync(`Error al subir ${collection}: ${error.message}`, "error");
-          }
+          const ok = await syncCollectionToSupabase({
+            supabase,
+            collection,
+            newData: localData,
+            addPendingChange,
+            resolvePendingChange,
+            notify: notifySync,
+          });
+          if (!ok) huboErrores = true;
         }
       }
 
-      // 2. Limpiar cambios pendientes ya que se acaba de sincronizar todo con éxito
-      if (clearPendingChanges) {
-        clearPendingChanges();
-      }
-
-      // 3. Traer datos frescos del servidor para estar 100% al día
+      // Traer datos frescos del servidor para estar al día
       await loadAllData();
-      notifySync("Sincronización completada con éxito", "success");
+
+      if (huboErrores) {
+        notifySync("Sincronización completada con errores — revisa qué colecciones quedaron pendientes.", "error");
+      } else {
+        notifySync("Sincronización completada con éxito", "success");
+      }
     } catch (err) {
       console.error('Error en syncNow:', err);
       notifySync("Error al sincronizar: " + (err.message || err), "error");
     } finally {
       setIsDataLoading(false);
     }
-  }, [isOnline, pendingChanges, resolvePendingChange, loadAllData, notifySync, clearPendingChanges]);
+  }, [loadAllData, notifySync, addPendingChange, resolvePendingChange]);
 
   // Función para guardar una colección (Híbrida: Local + Supabase).
   // El guardado local es incondicional e inmediato (offline-first intencional:
