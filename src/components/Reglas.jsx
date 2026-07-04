@@ -68,10 +68,12 @@ export default function Reglas() {
 
   // Funciones para reglas
   const handleModalReglaSave = (regla, shouldClose) => {
-    if (regla.id) {
+    const isEditing = modalRegla && modalRegla.id && reglas.some(r => r.id === modalRegla.id);
+
+    if (isEditing) {
       setReglas(prev => prev.map((r) => (r.id === regla.id ? regla : r)));
     } else {
-      const nuevaRegla = { ...regla, id: `r_${Date.now()}` };
+      const nuevaRegla = { ...regla, id: regla.id || `r_${Date.now()}` };
       setReglas(prev => [nuevaRegla, ...prev]);
     }
 

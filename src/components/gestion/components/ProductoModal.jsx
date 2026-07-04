@@ -19,7 +19,6 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
             comision_fija: producto.comision_fija ?? "",
             comision_porcentaje: producto.comision_porcentaje ?? "",
             comisiones_historial: Array.isArray(producto.comisiones_historial) ? producto.comisiones_historial : [],
-            customFields: { ...producto.customFields }
         } : {
             operador_id: operadores[0]?.id || "",
             sector: operadores[0]?.sector || "",
@@ -42,7 +41,6 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
             email: "",
             telefono: "",
             observaciones: "",
-            customFields: {}
         }
     );
 
@@ -110,12 +108,12 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
             comision_valor: form.comision_valor ? Number(form.comision_valor) : 0,
             comision_fija: form.comision_fija === "" ? 0 : Number(form.comision_fija),
             comision_porcentaje: form.comision_porcentaje === "" ? 0 : Number(form.comision_porcentaje),
-            comision_vigencia_desde: form.comision_vigencia_desde || "",
-            comision_vigencia_hasta: form.comision_vigencia_hasta || "",
-            comision_cliente_nuevo: form.comision_cliente_nuevo === "" ? "" : Number(form.comision_cliente_nuevo),
-            comision_cliente_existente: form.comision_cliente_existente === "" ? "" : Number(form.comision_cliente_existente),
-            comision_portabilidad: form.comision_portabilidad === "" ? "" : Number(form.comision_portabilidad),
-            comision_alta_nueva: form.comision_alta_nueva === "" ? "" : Number(form.comision_alta_nueva),
+            comision_vigencia_desde: form.comision_vigencia_desde || null,
+            comision_vigencia_hasta: form.comision_vigencia_hasta || null,
+            comision_cliente_nuevo: form.comision_cliente_nuevo === "" ? null : Number(form.comision_cliente_nuevo),
+            comision_cliente_existente: form.comision_cliente_existente === "" ? null : Number(form.comision_cliente_existente),
+            comision_portabilidad: form.comision_portabilidad === "" ? null : Number(form.comision_portabilidad),
+            comision_alta_nueva: form.comision_alta_nueva === "" ? null : Number(form.comision_alta_nueva),
             activo: true,
             fecha_actualizacion: new Date().toISOString()
         };
