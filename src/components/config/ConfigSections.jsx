@@ -38,7 +38,13 @@ export default function ConfigSections({ zonas = [] }) {
       colorCorporativo: "#6D28D9"
     };
     if (Array.isArray(globalData?.empresa) && globalData.empresa.length > 0) {
-      return { ...defaultData, ...globalData.empresa[0] };
+      const merged = { ...defaultData, ...globalData.empresa[0] };
+      // Una fila real con colorCorporativo NULL (creada antes de que existiera
+      // el campo, o sincronizada así) pisaría el valor por defecto de arriba
+      // con null — ColorPicker.jsx hace color.toUpperCase() sin guardas, así
+      // que esto crasheaba toda la pestaña de Empresa.
+      merged.colorCorporativo = merged.colorCorporativo || defaultData.colorCorporativo;
+      return merged;
     }
     // Fallback inicial
     try {

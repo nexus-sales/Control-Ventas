@@ -2,6 +2,7 @@ import React from "react";
 import { Palette } from "lucide-react";
 
 const ColorPicker = React.memo(({ color, onChange }) => {
+    const colorSeguro = color || "#6D28D9";
     return (
         <div className="flex flex-col items-center gap-4 p-6 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl shadow-sm w-full transition-all">
             <div className="flex items-center gap-2 font-bold text-slate-700 dark:text-gray-200 uppercase text-xs tracking-wider">
@@ -12,11 +13,11 @@ const ColorPicker = React.memo(({ color, onChange }) => {
             <div className="relative group p-1 bg-white dark:bg-gray-900 rounded-full shadow-inner border border-slate-200 dark:border-gray-700">
                 <div
                     className="w-24 h-24 rounded-full shadow-lg border-4 border-white dark:border-gray-800 transition-transform group-hover:scale-105"
-                    style={{ background: color }}
+                    style={{ background: colorSeguro }}
                 />
                 <input
                     type="color"
-                    value={color}
+                    value={colorSeguro}
                     onChange={e => onChange(e.target.value)}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
@@ -24,7 +25,7 @@ const ColorPicker = React.memo(({ color, onChange }) => {
 
             <div className="text-center">
                 <div className="text-lg font-black text-slate-900 dark:text-white font-mono tracking-tighter">
-                    {color.toUpperCase()}
+                    {colorSeguro.toUpperCase()}
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1 uppercase">Haz click en el círculo <br /> para elegir color</p>
             </div>
@@ -34,7 +35,7 @@ const ColorPicker = React.memo(({ color, onChange }) => {
                     <button
                         key={preset}
                         onClick={() => onChange(preset)}
-                        className={`w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 shadow-sm transition-transform hover:scale-125 ${color === preset ? 'ring-2 ring-[var(--brand-primary)]' : ''}`}
+                        className={`w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 shadow-sm transition-transform hover:scale-125 ${colorSeguro === preset ? 'ring-2 ring-[var(--brand-primary)]' : ''}`}
                         style={{ background: preset }}
                     />
                 ))}
