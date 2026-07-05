@@ -219,12 +219,21 @@ export default function VentasPage() {
     });
   }, [addVenta, closeModal, notify]);
 
-  const handleUpdateVenta = useCallback((ventaData) => {
-    if (selectedVenta?.id) {
+  // VentaFormModal llama a onSave(formData.id, dataToSave) al editar (2
+  // argumentos) — esta función solo recibía uno (ventaData), así que
+  // `ventaData` terminaba siendo en realidad el id (un string) y
+  // `dataToSave` (los cambios reales) se descartaba en silencio. updateVenta
+  // recibía entonces `changes` = un string: `{...venta, ...changes}` no
+  // mezcla ningún campo real de un string (solo índices numéricos), así que
+  // NINGÚN cambio de edición llegaba a guardarse jamás, aunque el guardado
+  // "tuviera éxito" (local + Supabase, sin avisar de nada porque no fallaba,
+  // simplemente no aplicaba los cambios).
+  const handleUpdateVenta = useCallback((ventaId, ventaData) => {
+    if (ventaId) {
       closeModal();
-      updateVenta(selectedVenta.id, ventaData).then((synced) => {
+      updateVenta(ventaId, ventaData).then((synced) => {
         if (!synced) {
-          notify?.(`Los cambios en la venta de "${ventaData.cliente || selectedVenta.cliente || 'este cliente'}" se guardaron en este dispositivo, pero no se pudieron sincronizar con el servidor.`, 'error');
+          notify?.(`Los cambios en la venta de "${ventaData.cliente || selectedVenta?.cliente || 'este cliente'}" se guardaron en este dispositivo, pero no se pudieron sincronizar con el servidor.`, 'error');
         }
       });
     }
