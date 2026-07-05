@@ -224,8 +224,15 @@ export default function LiquidacionesPage() {
     }
 
     setLiquidaciones(prev => [...nuevas, ...prev]);
-    if (decomisionesPeriodo.length > 0) {
-      setDecomisiones(prev => [...decomisionesPeriodo.map(d => ({ ...d, id: `deco_${Date.now()}_${d.venta_id}`, fecha_generacion: new Date().toISOString() })), ...prev]);
+    // Filtrar contra las ya insertadas (por venta_id), igual que "nuevas" arriba
+    // — sin esto, regenerar liquidaciones tras un alta tardía de un colaborador
+    // reinserta también las decomisiones de los colaboradores que ya estaban
+    // liquidados, duplicando sus importes.
+    const decomisionesNuevas = decomisionesPeriodo.filter(
+      d => !decomisiones.some(existing => existing.venta_id === d.venta_id)
+    );
+    if (decomisionesNuevas.length > 0) {
+      setDecomisiones(prev => [...decomisionesNuevas.map(d => ({ ...d, id: `deco_${Date.now()}_${d.venta_id}`, fecha_generacion: new Date().toISOString() })), ...prev]);
     }
     setToast({ message: `Se generaron ${nuevas.length} liquidaciones correctamente.`, type: "success" });
   };

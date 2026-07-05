@@ -8,6 +8,7 @@ import { saveAs } from "file-saver";
 import OperadorModal from "./OperadorModal";
 import { cleanOperadores, cleanProductosRobust } from "../utils/gestionUtils";
 import { glassStyles, cardHoverStyles } from "../../../utils/designUtils";
+import { escapeCsvCell } from "../../../utils/csv";
 
 // ==========================================
 // COMPONENTE: Tarjeta de Sector Premium
@@ -190,7 +191,7 @@ const OperadoresSection = React.memo(() => {
             o.email
         ]);
         const csv = [headers.join(",")]
-            .concat(rows.map(r => r.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(",")))
+            .concat(rows.map(r => r.map(escapeCsvCell).join(",")))
             .join("\r\n");
 
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useData } from '../context/AppContexts';
 import { getColaboradorNivelId } from '../utils/calculos';
+import { escapeCsvCell } from '../utils/csv';
 
 // Filtros iniciales para gestión de ventas
 const INITIAL_FILTERS = {
@@ -551,10 +552,7 @@ export function useVentasGestion(customFields = []) {
       const csvContent = [
         headers.join(','),
         ...datosExport.map(row =>
-          headers.map(header => {
-            const value = String(row[header] || '');
-            return `"${value.replace(/"/g, '""')}"`;
-          }).join(',')
+          headers.map(header => escapeCsvCell(row[header])).join(',')
         )
       ].join('\n');
 

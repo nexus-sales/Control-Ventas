@@ -1,8 +1,12 @@
 // src/constants.js
 
 // =================== AUTH CONFIGURATION ===================
-// Modo de desarrollo: bypass de autenticación
-export const AUTH_BYPASS = false; // Cambiar a false en producción
+// Modo de desarrollo: bypass de autenticación. Activa el flag de abajo para
+// probarlo en local — `&& import.meta.env.DEV` garantiza que un build de
+// producción (vite build) lo deja en false pase lo que pase, aunque alguien
+// olvide revertir el flag antes de desplegar.
+const AUTH_BYPASS_DEV_FLAG = false;
+export const AUTH_BYPASS = AUTH_BYPASS_DEV_FLAG && import.meta.env.DEV;
 
 // Usuario simulado para desarrollo
 export const MOCK_USER = {

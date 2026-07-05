@@ -1,4 +1,5 @@
 // Funciones utilitarias para liquidaciones, decomisiones y exportaciones
+import { escapeCsvCell } from '../../utils/csv';
 
 export function monthOf(dateISO) {
   return dateISO?.slice(0, 7);
@@ -15,12 +16,6 @@ function escapeHtml(value = "") {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-}
-
-function escapeCsvCell(value = "") {
-  const text = String(value ?? "");
-  const neutralized = /^[=+\-@]/.test(text) ? `'${text}` : text;
-  return `"${neutralized.replace(/"/g, '""')}"`;
 }
 
 export function obtenerDatosZona(colaborador, zonas) {

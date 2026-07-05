@@ -204,32 +204,27 @@ Si no quieres usar Supabase, simplemente:
 public/                    # Archivos estáticos y PWA
 ├── icons/                 # Iconos de la aplicación
 ├── manifest.json          # Configuración PWA
-└── favicon.ico           # Favicon
+└── favicon.ico            # Favicon
 
 src/
-├── components/           # Componentes React organizados por funcionalidad
-│   ├── auth/            # Autenticación (LoginScreen, GuardedRoute)
-│   ├── common/          # Componentes comunes (Loading, ErrorBoundary, SyncButton)
-│   ├── config/          # Configuración (Operadores, Productos, Zonas)
-│   ├── layout/          # Layout (Header, Sidebar, LayoutShell)
-│   ├── ui/              # Componentes UI reutilizables (Card, Toast, Pill)
-│   └── ventas/          # Gestión de ventas y modales
-├── context/             # Contextos React
-│   ├── AuthContext.jsx  # Gestión de autenticación híbrida
-│   └── DataContext.jsx  # Gestión de datos y sincronización
-├── hooks/               # Custom hooks
-│   ├── useAuth.js       # Hook de autenticación
-│   ├── useData.js       # Hook de gestión de datos
-│   └── useVentas*.js    # Hooks específicos de ventas
-├── services/            # Servicios externos
-│   └── supabaseService.js # Integración con Supabase
-├── utils/               # Utilidades y helpers
-│   ├── auth.js          # Funciones de autenticación local
-│   ├── storage.js       # Gestión de LocalStorage
-│   ├── calculos.js      # Cálculos de negocio
-│   └── constants.js     # Constantes globales
-└── lib/                 # Librerías externas
-    └── supabaseClient.js # Cliente de Supabase
+├── components/            # Componentes React organizados por funcionalidad
+│   ├── auth/              # LoginScreen, AccessDeniedScreen, Forgot/ResetPassword
+│   ├── admin/             # UserManagement (activar usuarios, cambiar roles)
+│   ├── colaboradores/     # Gestión de colaboradores
+│   ├── config/            # Configuración (Empresa, Zonas, Campos Personalizados)
+│   ├── dashboard/         # Widgets del dashboard principal
+│   ├── gestion/           # Operadores, Productos (catálogo y comisiones)
+│   ├── layout/            # Header, Sidebar, LayoutShell
+│   ├── liquidaciones/     # Liquidaciones y decomisiones
+│   ├── reglas/            # Reglas de comisión y Niveles
+│   ├── ui/                # Componentes UI reutilizables (Card, Toast, Pagination)
+│   ├── ventas/            # Gestión de ventas, tabla, filtros y modales
+│   └── widgets/           # PWAUpdatePrompt y otros widgets compartidos
+├── context/               # AppContexts.jsx (Auth + Data), offlineSyncHelpers.js
+├── hooks/                 # useVentasGestion, useImportGestion, useOfflineSync...
+├── utils/                 # calculos.js (motor de comisiones), csv.js, storage.js...
+├── data/                  # Modelos de datos (customFieldsModel.js)
+└── lib/                   # supabase.js (cliente de Supabase), utils.js
 ```
 
 ## 🔧 Troubleshooting y FAQ
@@ -257,11 +252,11 @@ R: ¡Sí! Usa el modo "Local" y podrás trabajar completamente offline. Cuando t
 
 ## 🔒 Seguridad y buenas prácticas
 
-- **Autenticación**: Sistema seguro con hash de contraseñas
-- **Autorización**: Control de acceso basado en roles (en desarrollo)
+- **Autenticación**: Supabase Auth (email/contraseña), sin gestión propia de contraseñas
+- **Autorización**: RLS en Postgres por rol (`admin`/`user`/`viewer`) — ver `docs/ACCESS_CONTROL_GUIDE.md`
 - **Encriptación**: Comunicación HTTPS con Supabase
-- **Privacidad**: Datos locales solo en tu dispositivo
-- **Cabeceras HTTP**: Configuración recomendada en `SECURITY_HEADERS.md`
+- **Privacidad**: Datos locales solo en tu dispositivo (localStorage)
+- **Cabeceras HTTP**: CSP y demás cabeceras configuradas en `vercel.json`
 - **Accesibilidad**: Labels, navegación por teclado, ARIA
 - **SEO**: Metaetiquetas, manifest, robots.txt, sitemap.xml
 - **Performance**: Bundle optimizado, lazy loading, code splitting
@@ -280,10 +275,6 @@ R: ¡Sí! Usa el modo "Local" y podrás trabajar completamente offline. Cuando t
   - Contador de cambios pendientes de subir a Supabase.
   - Botón interactivo para forzar una sincronización manual con Supabase.
   - Botón de descarga de respaldo completo de datos locales (`Backup Local` en JSON).
-
-## Licencia
-
-[MIT](LICENSE)
 
 ---
 

@@ -1,4 +1,14 @@
 -- ============================================================================
+-- ⚠️  ARCHIVO OBSOLETO - NO EJECUTAR
+-- ============================================================================
+--
+-- Define un segundo trigger sobre auth.users
+-- (on_auth_user_created_cv_restrictive) que la app actual no espera y que
+-- convive de forma confusa con el trigger real (on_auth_user_created_cv de
+-- supabase-setup-cv-REAL.sql). Si se ejecutó alguna vez, verifica y limpia
+-- con: migrations/2026xxxx_verificar_trigger_legacy_auth_users.sql
+-- ============================================================================
+-- ============================================================================
 -- CONFIGURACIÓN DE PRIVACIDAD EXTREMA PARA CONTROL DE VENTAS (CV)
 -- ============================================================================
 

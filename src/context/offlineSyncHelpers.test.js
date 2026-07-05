@@ -40,8 +40,11 @@ describe('syncCollectionToSupabase', () => {
     });
 
     expect(result).toBe(false);
+    // Tras el fallback fila-a-fila (añadido en el commit 87725084), un fallo
+    // de lote reintenta cada fila individualmente y agrega los motivos de
+    // las que siguen fallando en un solo mensaje "Errores en filas: ...".
     expect(addPendingChange).toHaveBeenCalledWith(
-      expect.objectContaining({ collection: 'ventas', payload: newData, recordIds: ['v1'], reason: 'RLS violation' })
+      expect.objectContaining({ collection: 'ventas', payload: newData, recordIds: ['v1'], reason: 'Errores en filas: v1: RLS violation' })
     );
     expect(notify).toHaveBeenCalledWith(expect.stringContaining('ventas'), 'error');
   });
@@ -176,10 +179,12 @@ describe('guardedRetryPendingSync — evita reintentos en cascada', () => {
     expect(pendingChanges[0].id).toBe('c3');
 
     // Sin el guard, cada uno de los 2 éxitos habría relanzado un retry completo
-    // que volvería a intentar c3 (hasta 3 intentos en total). Con el guard,
-    // las re-llamadas quedan bloqueadas mientras la original sigue en curso:
-    // c3 solo se intenta 1 vez en toda la ráfaga.
-    expect(upsertCallsByTable['productos_cv']).toBe(1);
+    // que volvería a intentar c3 (muchos más intentos en total). Con el guard,
+    // las re-llamadas quedan bloqueadas mientras la original sigue en curso: c3
+    // solo se intenta una vez en toda la ráfaga — pero ese único intento hace 2
+    // llamadas de upsert (lote completo + fallback fila-a-fila del commit
+    // 87725084, que reintenta cada fila individualmente si el lote falla).
+    expect(upsertCallsByTable['productos_cv']).toBe(2);
     expect(isRetryingRef.current).toBe(false);
   });
 });

@@ -1,3 +1,15 @@
+-- ============================================================================
+-- ⚠️  ARCHIVO OBSOLETO - NO EJECUTAR
+-- ============================================================================
+--
+-- Referencia tablas sin sufijo _cv (operadores, productos, ventas, zonas)
+-- que ya no existen, y define políticas RLS "USING (true) WITH CHECK (true)"
+-- — el mismo patrón que tuvo que revertirse en profiles por ser una fuga de
+-- seguridad (ver migrations/2026xxxx_profiles_cerrar_rls_publico.sql). No
+-- copies esas políticas a mano en el SQL Editor real.
+--
+-- El esquema y las políticas reales viven en supabase-setup-cv-REAL.sql.
+-- ============================================================================
 -- ====================================================================
 -- SCRIPT PARA ARREGLAR ERRORES DE BASE DE DATOS
 -- ====================================================================

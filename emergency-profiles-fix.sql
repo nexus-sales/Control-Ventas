@@ -1,3 +1,24 @@
+-- ============================================================================
+-- ⚠️  ARCHIVO OBSOLETO - NO EJECUTAR (confirmado peligroso, ya limpiado)
+-- ============================================================================
+--
+-- Este script de emergencia creaba el trigger on_auth_user_created (SIN
+-- sufijo _cv) sobre auth.users, que intentaba dar rol='admin', activo=true
+-- por defecto a CUALQUIER registro nuevo en public.profiles — una tabla
+-- COMPARTIDA entre todas las apps del proyecto Supabase. Se confirmó
+-- instalado y habilitado el 2026-07-05, y se eliminó (junto con
+-- on_auth_user_created_cv_restrictive de supabase-privacidad-cv.sql) con
+-- migrations/2026xxxx_verificar_trigger_legacy_auth_users.sql.
+--
+-- El esquema real de profiles NO tiene columnas "rol"/"activo" (usa "role"
+-- e "is_blocked"), así que el INSERT de este trigger fallaba por columna
+-- inexistente en cada intento — probablemente esa era la causa de que el
+-- alta de usuarios nuevos estuviera rota antes de esta limpieza, más que
+-- una escalada de privilegios exitosa (el INSERT nunca llegaba a completarse).
+--
+-- El modelo real de aprobación manual (activo=false hasta que un admin lo
+-- active) vive en supabase-setup-cv-REAL.sql / migrations/, no aquí.
+-- ============================================================================
 -- ====================================================================
 -- SCRIPT DE EMERGENCIA: CREAR SOLO TABLA PROFILES
 -- ====================================================================

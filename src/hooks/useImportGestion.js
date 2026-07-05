@@ -7,6 +7,7 @@ import {
   parseNumber,
   normalizeNameSearch,
 } from "../utils/importValidation";
+import { escapeCsvCell } from "../utils/csv";
 
 // =================== CONFIGURACIÓN Y CONSTANTES ===================
 
@@ -964,12 +965,7 @@ export function useImportGestion({
           contenido = [
             headers.join(","),
             ...datosExport.map((row) =>
-              headers
-                .map((header) => {
-                  const value = String(row[header] || "");
-                  return `"${value.replace(/"/g, '""')}"`;
-                })
-                .join(",")
+              headers.map((header) => escapeCsvCell(row[header])).join(",")
             ),
           ].join("\n");
           mimeType = "text/csv;charset=utf-8;";

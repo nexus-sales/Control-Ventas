@@ -8,6 +8,7 @@ import { saveAs } from "file-saver";
 import ProductoModal from "./ProductoModal";
 import FamiliaBadge from "./FamiliaBadge";
 import { cleanOperadores, cleanProductosRobust, normalizeText } from "../utils/gestionUtils";
+import { escapeCsvCell } from "../../../utils/csv";
 import { glassStyles, cardHoverStyles } from "../../../utils/designUtils";
 
 // Para tipo 'mixto' el cálculo real (getProductoComisionBase, calculos.js)
@@ -209,7 +210,7 @@ const ProductosSection = React.memo(() => {
         ]);
 
         const csv = [headers.join(",")]
-            .concat(rows.map(r => r.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(",")))
+            .concat(rows.map(r => r.map(escapeCsvCell).join(",")))
             .join("\r\n");
 
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

@@ -664,7 +664,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- VENTAS
 CREATE POLICY "cv_ventas_select" ON public.ventas_cv FOR SELECT USING (tiene_acceso_cv());
 CREATE POLICY "cv_ventas_insert" ON public.ventas_cv FOR INSERT WITH CHECK (puede_editar_cv());
-CREATE POLICY "cv_ventas_update" ON public.ventas_cv FOR UPDATE USING (puede_editar_cv());
+CREATE POLICY "cv_ventas_update" ON public.ventas_cv FOR UPDATE USING (puede_editar_cv()) WITH CHECK (puede_editar_cv());
 CREATE POLICY "cv_ventas_delete" ON public.ventas_cv FOR DELETE USING (es_admin_cv());
 
 -- COLABORADORES

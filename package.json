@@ -14,11 +14,10 @@
     "test:ui": "vitest --ui",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext js,jsx --fix",
-    "format": "echo 'Prettier not configured yet'",
-    "format:check": "echo 'Prettier not configured yet'",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "type-check": "echo 'Type checking not configured (JavaScript project)'",
     "validate": "npm run lint && npm run test",
-    "healthcheck": "node -e \"import('./src/utils/healthcheck.js').then(m => m.healthcheck().then(console.log))\"",
     "deploy": "vercel --prod",
     "deploy:preview": "vercel",
     "vercel:env": "vercel env add"

@@ -31,12 +31,17 @@ const CustomFieldsSection = React.memo(() => {
         }
     }, [data?.custom_fields]);
 
-    // Setter envolvente para mantener la sincronización y disparar eventos
+    // Setter envolvente para mantener la sincronización y disparar eventos.
+    // setCustomFields (createSetter en AppContexts.jsx) ya resuelve el updater
+    // funcional contra el estado más reciente internamente — reenviar el
+    // updateFn tal cual (sin resolverlo aquí contra `campos`) evita que este
+    // setter dependa de `campos` y quede obsoleto en los callbacks memoizados
+    // de abajo.
     const setCampos = useCallback((updateFn) => {
-        const nextCampos = typeof updateFn === 'function' ? updateFn(campos) : updateFn;
-        setCustomFields(nextCampos);
+        const result = setCustomFields(updateFn);
         window.dispatchEvent(new Event('customFieldsUpdated'));
-    }, [campos, setCustomFields]);
+        return result;
+    }, [setCustomFields]);
     const [nuevoCampo, setNuevoCampo] = useState({
         nombre: '',
         tipo: 'texto',
@@ -95,19 +100,19 @@ const CustomFieldsSection = React.memo(() => {
             nombre: '', tipo: 'texto', modulo: 'ventas', opciones: '',
             requerido: false, orden: campos.length + 2, activo: true
         });
-    }, [nuevoCampo, campos]);
+    }, [nuevoCampo, campos, setCampos]);
 
     const handleDeleteCampo = useCallback((id) => {
         if (window.confirm('¿Estás seguro de que quieres eliminar este campo?')) {
             setCampos(prev => prev.filter(c => c.id !== id));
         }
-    }, []);
+    }, [setCampos]);
 
     const handleToggleActive = useCallback((id) => {
         setCampos(prev => prev.map(c =>
             c.id === id ? { ...c, activo: !c.activo } : c
         ));
-    }, []);
+    }, [setCampos]);
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

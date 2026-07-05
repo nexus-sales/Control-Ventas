@@ -1,3 +1,15 @@
+-- ============================================================================
+-- ⚠️  ARCHIVO OBSOLETO - NO EJECUTAR
+-- ============================================================================
+--
+-- Este script también define un trigger on_auth_user_created (SIN sufijo
+-- _cv) sobre auth.users, que toca public.profiles — tabla compartida entre
+-- apps. Si se ejecutó alguna vez, verifica y limpia con:
+--   migrations/2026xxxx_verificar_trigger_legacy_auth_users.sql
+--
+-- El modelo de acceso real (RLS + usuarios_cv + profiles) vive en
+-- supabase-setup-cv-REAL.sql / migrations/, no aquí.
+-- ============================================================================
 -- ====================================================================
 -- SCRIPT COMPLETO PARA CONFIGURAR CONTROL DE ACCESO EN SUPABASE
 -- ====================================================================
