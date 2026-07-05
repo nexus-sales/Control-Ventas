@@ -192,18 +192,27 @@ export function evaluateRules({
   return reglas
     .filter(
       (r) =>
+        r.activo !== false &&
         r.operador_id === operador_id &&
         (r.producto_id == null || r.producto_id === producto_id) &&
-        r.nivel === nivel,
+        // nivel_id es la columna real de reglas_cv (antes se comparaba
+        // r.nivel, que nunca existe en ninguna regla real — ninguna regla
+        // llegaba a aplicarse nunca). Sin nivel_id asignado, la regla aplica
+        // a cualquier nivel.
+        (r.nivel_id == null || r.nivel_id === nivel),
     )
     .sort((a, b) => (b.prioridad || 0) - (a.prioridad || 0))
     .reduce(
       (acc, r) =>
         acc +
-        (r.tipo === "%"
+        // tipo real (CHECK de reglas_cv): 'porcentaje' | 'fija' | 'escalonada' | 'bonus'.
+        // "escalonada"/"bonus" se tratan como importe fijo por ahora (no hay
+        // lógica de tramos implementada); antes se comparaba contra "%", un
+        // valor que el tipo real nunca tiene.
+        (r.tipo === "porcentaje"
           ? (r.pct_sobre === "ComisiónOperador" ? refComOper : refBase) *
-            Number(r.valor)
-          : Number(r.valor)),
+            Number(r.valor || 0)
+          : Number(r.valor || 0)),
       0,
     );
 }
@@ -287,8 +296,13 @@ export function computeVenta({
       _debug: {
         comision_producto_tipo: producto.comision_tipo,
         comision_producto_valor: producto.comision_valor,
+        // Misma condición que el override real (líneas 73-76): un
+        // colaborador sin el campo (undefined, típico de altas antiguas)
+        // salía marcado aquí como "personalizada" solo por comprobar
+        // !== null sin excluir undefined — desviaba el diagnóstico en
+        // soporte, aunque no afectaba al cálculo real.
         comision_colaborador_es_personalizada:
-          colab.comision_personalizada !== null,
+          colab.comision_personalizada !== null && colab.comision_personalizada !== undefined,
         comision_colaborador_tipo:
           colab.comision_tipo_personalizada ||
           niveles.find((n) => n.id === getColaboradorNivelId(colab))?.comision_tipo,

@@ -194,7 +194,7 @@ function Alert({ type, title, message, action, priority: _priority = 'normal', i
   const IconToUse = Icon || (type === 'error' ? AlertCircle : type === 'success' ? CheckCircle : Zap);
 
   return (
-    <div className={`${glassStyles} border-l-4 ${styles[type]} p-5 rounded-3xl transition-all hover:translate-x-1`}>
+    <div className={`${glassStyles()} border-l-4 ${styles[type]} p-5 rounded-3xl transition-all hover:translate-x-1`}>
       <div className="flex items-start gap-4">
         <div className={`p-2 rounded-xl bg-white dark:bg-slate-900 shadow-sm`}>
           <IconToUse className="w-5 h-5" />

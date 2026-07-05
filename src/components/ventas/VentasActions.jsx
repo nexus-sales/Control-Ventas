@@ -5,7 +5,6 @@ import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function VentasActions({
-  ventasCount: _ventasCount,
   selectedIds,
   onNewVenta,
   onDeleteSelected,

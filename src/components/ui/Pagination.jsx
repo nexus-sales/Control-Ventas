@@ -33,7 +33,7 @@ export default function Pagination({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className={`${glassStyles} flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl`}>
+    <div className={`${glassStyles()} flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl`}>
       {/* Información de elementos */}
       <div className="flex flex-col sm:flex-row items-center gap-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
         <div>

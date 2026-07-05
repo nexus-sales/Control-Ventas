@@ -77,7 +77,7 @@ export function LayoutShell({ children }) {
                   </div>
                 )}
                 <span className="font-semibold text-sm text-slate-900 dark:text-white truncate">
-                  {empresaLocal?.nombre || "NextSales"}
+                  {empresaLocal?.nombre || "Configura tu empresa"}
                 </span>
               </div>
             )}

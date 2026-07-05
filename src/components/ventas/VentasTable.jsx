@@ -69,12 +69,7 @@ export function VentasTable({
   onEdit,
   onView,
   onDelete,
-  onActivate: _onActivate,
   isAdmin = false,
-  resolveProductoName: _resolveProductoName,
-  resolveColaboradorName: _resolveColaboradorName,
-  resolveZonaName: _resolveZonaName,
-  resolveOperadorName: _resolveOperadorName,
   sortConfig = null,
   onSort = null,
 }) {
@@ -273,7 +268,11 @@ export function VentasTable({
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => onDelete && onDelete(venta.id)}
+                            onClick={() => {
+                              if (window.confirm(`¿Eliminar la venta de "${venta.cliente || 'este cliente'}"? Esta acción no se puede deshacer.`)) {
+                                onDelete && onDelete(venta.id);
+                              }
+                            }}
                             className="p-1.5 rounded-md text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors"
                             title="Eliminar"
                           >

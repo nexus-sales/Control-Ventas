@@ -232,7 +232,7 @@ describe('loadCollectionData — el remoto vacío no debe ganarle a un local con
     expect(supabase.from).not.toHaveBeenCalled();
   });
 
-  it('remoto con error + local con datos: conserva el local, sin avisar (comportamiento de fallback ya existente, no es el caso nuevo)', async () => {
+  it('remoto con error + local con datos: conserva el local y avisa del error de lectura', async () => {
     const supabase = makeSupabaseSelectMock({ selectError: { message: 'RLS violation' } });
     const getFromStorage = vi.fn().mockReturnValue([{ id: 'v1' }]);
     const notify = vi.fn();
@@ -243,7 +243,7 @@ describe('loadCollectionData — el remoto vacío no debe ganarle a un local con
     });
 
     expect(resultado).toEqual([{ id: 'v1' }]);
-    expect(notify).not.toHaveBeenCalled();
+    expect(notify).toHaveBeenCalledWith(expect.stringContaining('ventas'), 'error');
   });
 
   it('remoto vacío + local también vacío: no avisa (no hay nada que "perder")', async () => {

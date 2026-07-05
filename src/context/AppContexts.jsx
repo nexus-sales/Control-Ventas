@@ -22,7 +22,9 @@ const STORAGE_KEYS = {
   niveles: 'cv_niveles_v3',
   reglas: 'cv_reglas_v3',
   liquidaciones: 'cv_liquidaciones_v3',
-  decomisiones: 'cv_decomisiones_v3'
+  decomisiones: 'cv_decomisiones_v3',
+  empresa: 'empresaData',
+  custom_fields: 'customFields'
 };
 
 // Columnas explícitas por colección para el fetch general (hallazgo MEDIO Auditor:
@@ -48,7 +50,10 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(() => AUTH_BYPASS ? { ...MOCK_USER, rol: 'admin', activo: true, app_access: ['CV'] } : null);
   const [loading, setLoading] = useState(!AUTH_BYPASS);
 
-  // Función para cargar el perfil del usuario desde usuarios_cv
+  // Carga el perfil del usuario uniendo dos tablas: usuarios_cv (rol, activo,
+  // app_access — específico de Control de Ventas) y profiles (nombre, email —
+  // identidad compartida por todas las apps de este proyecto Supabase;
+  // usuarios_cv no la duplica). Ver migrations/2026xxxx_usuarios_cv_sin_duplicar_profiles.sql.
   const fetchProfile = useCallback(async (userId, email) => {
     try {
       const { data, error } = await supabase
@@ -57,20 +62,27 @@ export function AuthProvider({ children }) {
         .eq('user_id', userId)
         .single();
 
+      let usuarioCv = data;
+
       if (error) {
         if (error.code === 'PGRST116') {
           // Si no existe el perfil, lo creamos automáticamente
           console.warn('Perfil no encontrado, creando perfil automáticamente...');
 
+          // rol 'user' / activo false / app_access vacío: es lo único que
+          // permite la política RLS cv_usuarios_insert_own (evita que
+          // cualquiera se autoconceda admin insertando su propio perfil).
+          // Un admin existente debe activar el perfil y darle acceso desde
+          // la pantalla de Administración; para el primer admin de una BD
+          // recién creada, hace falta promocionarlo a mano por SQL (ver
+          // supabase-setup-cv-REAL.sql, sección 17).
           const { data: newProfile, error: insertError } = await supabase
             .from('usuarios_cv')
             .insert({
               user_id: userId,
-              email: email,
-              nombre_completo: email,
-              rol: 'admin', // Primer usuario como admin
-              activo: true,
-              app_access: ['CV']
+              rol: 'user',
+              activo: false,
+              app_access: []
             })
             .select()
             .single();
@@ -80,11 +92,23 @@ export function AuthProvider({ children }) {
             return null;
           }
 
-          return newProfile;
+          usuarioCv = newProfile;
+        } else {
+          throw error;
         }
-        throw error;
       }
-      return data;
+
+      const { data: identidad } = await supabase
+        .from('profiles')
+        .select('nombre, email')
+        .eq('id', userId)
+        .single();
+
+      return {
+        ...usuarioCv,
+        nombre_completo: identidad?.nombre || null,
+        email: identidad?.email || email,
+      };
     } catch (err) {
       console.error('Error fetching profile:', err);
       return null;
@@ -92,8 +116,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    // Ambas rutas (el evento inicial de onAuthStateChange y este
+    // getSession().then) llaman a fetchProfile en paralelo y escriben en el
+    // mismo setUser/setProfile — sin este guard, si la que responde más
+    // tarde no es la más reciente (red lenta, perfil cambiado entre medias),
+    // "gana" igualmente y pisa el resultado correcto. Mismo patrón
+    // `cancelado` que ya usa ColaboradorEditModal.jsx para su propio fetch.
+    let cancelado = false;
+
     // 1. Escuchar cambios en la autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (cancelado) return;
       if (AUTH_BYPASS && !session) return;
 
       const currentUser = session?.user || (AUTH_BYPASS ? MOCK_USER : null);
@@ -101,6 +134,7 @@ export function AuthProvider({ children }) {
 
       if (currentUser) {
         const userProfile = await fetchProfile(currentUser.id, currentUser.email);
+        if (cancelado) return;
         setProfile(userProfile);
       } else {
         setProfile(null);
@@ -111,6 +145,7 @@ export function AuthProvider({ children }) {
 
     // 2. Verificar sesión inicial
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (cancelado) return;
       if (AUTH_BYPASS && !session) {
         setLoading(false);
         return;
@@ -121,6 +156,7 @@ export function AuthProvider({ children }) {
 
       if (currentUser) {
         const userProfile = await fetchProfile(currentUser.id, currentUser.email);
+        if (cancelado) return;
         setProfile(userProfile);
       }
 
@@ -128,6 +164,7 @@ export function AuthProvider({ children }) {
     });
 
     return () => {
+      cancelado = true;
       subscription.unsubscribe();
     };
   }, [fetchProfile]);
@@ -208,7 +245,9 @@ export function DataProvider({ children }) {
     niveles: [],
     reglas: [],
     liquidaciones: [],
-    decomisiones: []
+    decomisiones: [],
+    empresa: [],
+    custom_fields: []
   });
 
   const [dataInitialized, setDataInitialized] = useState(false);
@@ -294,9 +333,27 @@ export function DataProvider({ children }) {
       // incondicional al final aunque el bucle de arriba hubiera fallado —
       // borraba el rastro de qué no se pudo subir, justo el problema que
       // resolvimos hoy en el guardado normal.
+      // Definir el orden de sincronización correcto basado en dependencias de BD
+      const ORDEN_SINCRONIZACION = [
+        'empresa',
+        'custom_fields',
+        'zonas',
+        'niveles',
+        'operadores',
+        'colaboradores', // depende de zonas y niveles
+        'productos',     // depende de operadores
+        'ventas',        // depende de colaboradores, productos, operadores, zonas
+        'reglas',
+        'liquidaciones', // depende de colaboradores y ventas
+        'decomisiones'   // depende de ventas y colaboradores
+      ];
+
       let huboErrores = false;
-      for (const collection of Object.keys(STORAGE_KEYS)) {
-        const localData = getFromStorage(STORAGE_KEYS[collection], []);
+      for (const collection of ORDEN_SINCRONIZACION) {
+        const key = STORAGE_KEYS[collection];
+        if (!key) continue;
+
+        const localData = getFromStorage(key, []);
         if (localData && localData.length > 0) {
           const ok = await syncCollectionToSupabase({
             supabase,
@@ -332,13 +389,17 @@ export function DataProvider({ children }) {
   // Supabase es "mejor esfuerzo": si falla, syncCollectionToSupabase la marca
   // como pendiente (addPendingChange) y avisa con un toast inmediato, en vez
   // de fallar en silencio.
-  const saveCollectionData = useCallback(async (collection, newData) => {
+  const saveCollectionData = useCallback((collection, newData) => {
     const key = STORAGE_KEYS[collection];
-    if (!key) return false;
+    if (!key) return Promise.resolve(false);
 
     saveToStorage(key, newData);
 
-    await syncCollectionToSupabase({
+    // Antes: `await syncCollectionToSupabase(...); return true;` — devolvía
+    // éxito siempre, incluso cuando la sincronización remota fallaba. Los
+    // llamadores (addVenta/updateVenta, etc.) no tenían forma de saber si el
+    // guardado remoto funcionó o no.
+    return syncCollectionToSupabase({
       supabase,
       collection,
       newData,
@@ -346,8 +407,6 @@ export function DataProvider({ children }) {
       resolvePendingChange,
       notify: notifySync,
     });
-
-    return true;
   }, [addPendingChange, resolvePendingChange, notifySync]);
 
   // Reintento real al recuperar conexión: recorre pendingChanges y reintenta
@@ -365,19 +424,27 @@ export function DataProvider({ children }) {
   // Setters para cada colección
   const createSetter = useCallback((collection) => {
     return (update) => {
+      // syncPromise se reasigna dentro del updater de setData, que React
+      // ejecuta de forma síncrona en esta misma llamada (antes de que
+      // createSetter retorne) — así el resultado real de saveCollectionData
+      // (y por tanto de syncCollectionToSupabase) llega a quien llame a
+      // setVentas/setColaboradores/etc. y decida esperarlo, sin bloquear a
+      // quien no lo espere (el guardado local sigue siendo inmediato).
+      let syncPromise = Promise.resolve(true);
       setData(prev => {
         const currentData = prev[collection] || [];
         const newData = typeof update === 'function' ? update(currentData) : update;
         const finalData = Array.isArray(newData) ? newData : [];
 
         // Guardar en localStorage
-        saveCollectionData(collection, finalData);
+        syncPromise = saveCollectionData(collection, finalData);
 
         return {
           ...prev,
           [collection]: finalData
         };
       });
+      return syncPromise;
     };
   }, [saveCollectionData]);
 
@@ -391,6 +458,8 @@ export function DataProvider({ children }) {
   const setReglas = useMemo(() => createSetter('reglas'), [createSetter]);
   const setLiquidaciones = useMemo(() => createSetter('liquidaciones'), [createSetter]);
   const setDecomisiones = useMemo(() => createSetter('decomisiones'), [createSetter]);
+  const setEmpresa = useMemo(() => createSetter('empresa'), [createSetter]);
+  const setCustomFields = useMemo(() => createSetter('custom_fields'), [createSetter]);
 
   // Inicialización
   useEffect(() => {
@@ -427,8 +496,11 @@ export function DataProvider({ children }) {
     setReglas,
     setLiquidaciones,
     setDecomisiones,
+    setEmpresa,
+    setCustomFields,
     refreshData: syncNow,
     offlineSync,
+    notify: notifySync,
   }), [
     data,
     dataInitialized,
@@ -442,8 +514,11 @@ export function DataProvider({ children }) {
     setReglas,
     setLiquidaciones,
     setDecomisiones,
+    setEmpresa,
+    setCustomFields,
     syncNow,
     offlineSync,
+    notifySync,
   ]);
 
   return (

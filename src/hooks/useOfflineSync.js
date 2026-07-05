@@ -2,6 +2,26 @@
 // Hook para manejar sincronización offline/online
 import { useState, useEffect, useCallback } from 'react';
 
+// Debe coincidir con STORAGE_KEYS en AppContexts.jsx (no se importa de ahí
+// para evitar un ciclo: AppContexts.jsx ya importa este hook). Antes solo
+// tenía 4 de las 10 colecciones — el "backup de emergencia" y el tamaño de
+// caché mostrado en Config→Sincronización omitían zonas, niveles, reglas,
+// decomisiones, empresa y custom_fields sin ningún aviso de que el backup
+// era parcial.
+const TODAS_LAS_STORAGE_KEYS = {
+  ventas: 'cv_ventas_v3',
+  colaboradores: 'cv_colaboradores_v3',
+  productos: 'cv_productos_v3',
+  operadores: 'cv_operadores_v3',
+  zonas: 'cv_zonas_v3',
+  niveles: 'cv_niveles_v3',
+  reglas: 'cv_reglas_v3',
+  liquidaciones: 'cv_liquidaciones_v3',
+  decomisiones: 'cv_decomisiones_v3',
+  empresa: 'empresaData',
+  custom_fields: 'customFields',
+};
+
 export function useOfflineSync() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingChanges, setPendingChanges] = useState(() => {
@@ -83,14 +103,16 @@ export function useOfflineSync() {
   // Crear backup de emergencia
   const createEmergencyBackup = useCallback(() => {
     const backupData = {
-      ventas: JSON.parse(localStorage.getItem('appcv_ventas') || '[]'),
-      colaboradores: JSON.parse(localStorage.getItem('appcv_colaboradores') || '[]'),
-      productos: JSON.parse(localStorage.getItem('cv_productos_v3') || '[]'),
-      operadores: JSON.parse(localStorage.getItem('appcv_operadores') || '[]'),
-      liquidaciones: JSON.parse(localStorage.getItem('appcv_liquidaciones') || '[]'),
       timestamp: new Date().toISOString(),
-      version: '2.0'
+      version: '2.0',
     };
+    Object.entries(TODAS_LAS_STORAGE_KEYS).forEach(([nombre, key]) => {
+      try {
+        backupData[nombre] = JSON.parse(localStorage.getItem(key) || (key === 'empresaData' ? '{}' : '[]'));
+      } catch {
+        backupData[nombre] = key === 'empresaData' ? {} : [];
+      }
+    });
 
     const backupBlob = new Blob([JSON.stringify(backupData, null, 2)], { 
       type: 'application/json' 
@@ -110,15 +132,13 @@ export function useOfflineSync() {
 
   // Información del estado offline
   const getOfflineInfo = useCallback(() => {
-    const sizeInfo = {
-      ventas: (localStorage.getItem('appcv_ventas') || '').length,
-      productos: (localStorage.getItem('cv_productos_v3') || '').length,
-      colaboradores: (localStorage.getItem('appcv_colaboradores') || '').length,
-      total: 0
-    };
-    
-    sizeInfo.total = Object.values(sizeInfo).reduce((acc, val) => acc + val, 0);
-    
+    const sizeInfo = {};
+    Object.entries(TODAS_LAS_STORAGE_KEYS).forEach(([nombre, key]) => {
+      sizeInfo[nombre] = (localStorage.getItem(key) || '').length;
+    });
+    const total = Object.values(sizeInfo).reduce((acc, val) => acc + val, 0);
+    sizeInfo.total = total;
+
     return {
       isOnline,
       pendingChangesCount: pendingChanges.length,

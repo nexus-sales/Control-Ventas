@@ -11,19 +11,9 @@ export default function ImportExcelMapperWrapper() {
     setOperadores,
     setColaboradores,
     setZonas,
-    refreshData,
   } = useData();
 
-  // Callback de éxito: fuerza recarga global de datos tras importar
-    const onImportSuccess = async () => {
-    if (typeof refreshData === 'function') {
-      await refreshData();
-    }
-    // Aquí podrías mostrar una notificación si lo deseas
-    // if (result?.ventasCreadas > 0) {
-    //   showSuccess(`🎉 ${result.ventasCreadas} ventas importadas y visibles inmediatamente`);
-    // }
-  };
+  const onImportSuccess = async () => true;
 
   if (!dataInitialized) {
     return (

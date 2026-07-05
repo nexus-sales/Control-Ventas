@@ -368,7 +368,11 @@ export function useVentasGestion(customFields = []) {
   // =================== ⚡ OPERACIONES CRUD ===================
 
   // 🎯 MEJORA: Agregar venta con ID más legible
-  const addVenta = useCallback((ventaData) => {
+  // Devuelve { id, synced }: el guardado local ya ocurrió cuando esta promesa
+  // resuelve (es instantáneo), `synced` solo indica si además llegó a
+  // Supabase — permite a quien llama avisar del fallo remoto sin bloquear el
+  // cierre del formulario en él (ver handleSaveVenta en VentasPage.jsx).
+  const addVenta = useCallback(async (ventaData) => {
     // 🎯 MEJORA: ID más legible para ventas
     const clienteSlug = ventaData.cliente ?
       ventaData.cliente.slice(0, 8).replace(/[^a-zA-Z0-9]/g, '').toLowerCase() :
@@ -391,20 +395,28 @@ export function useVentasGestion(customFields = []) {
     const nuevaVenta = {
       id,
       ...standardFields,
-      customFields: customFieldsData,
+      // standardFields.customFields ya trae el objeto anidado que arma
+      // VentaFormModal (dataToSave.customFields); customFieldsData son
+      // props sueltas cf_* de nivel superior, si las hubiera. Se fusionan
+      // en vez de que una pise a la otra — antes esta línea sobreescribía
+      // siempre con customFieldsData (normalmente {}), perdiendo los
+      // campos personalizados de cualquier venta nueva.
+      customFields: { ...(standardFields.customFields || {}), ...customFieldsData },
       pvp: Number(ventaData.pvp || 0),
       cantidad: Number(ventaData.cantidad || 1),
       fecha: ventaData.fecha || new Date().toISOString().slice(0, 10),
       estado: ventaData.estado || "PENDIENTE",
     };
 
-    setVentas(prev => [nuevaVenta, ...prev]);
-    return id;
+    const synced = await setVentas(prev => [nuevaVenta, ...prev]);
+    return { id, synced };
   }, [setVentas]);
 
-  // Actualizar venta existente
-  const updateVenta = useCallback((ventaId, changes) => {
-    setVentas(prev =>
+  // Actualizar venta existente. Devuelve `synced` con el mismo criterio que
+  // addVenta: el guardado local ya ocurrió cuando resuelve, `synced` solo
+  // indica si además llegó a Supabase.
+  const updateVenta = useCallback(async (ventaId, changes) => {
+    const synced = await setVentas(prev =>
       prev.map(venta =>
         venta.id === ventaId
           ? {
@@ -415,6 +427,7 @@ export function useVentasGestion(customFields = []) {
           : venta
       )
     );
+    return synced;
   }, [setVentas]);
 
   // Eliminar venta individual

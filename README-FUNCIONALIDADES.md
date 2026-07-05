@@ -2,9 +2,9 @@
 
 ## 🚀 Funcionalidades Restauradas
 
-### ✅ Autenticación Dual
-- **Login Local**: Usando contraseña por defecto `admin123`
+### ✅ Autenticación Supabase
 - **Login Supabase**: Con email y contraseña (requiere configuración)
+- **Aprobación de acceso**: Las cuentas nuevas deben ser activadas por un administrador.
 
 ### ✅ Almacenamiento Híbrido
 - **Almacenamiento Local**: Funciona sin conexión usando LocalStorage
@@ -14,6 +14,8 @@
 ### ✅ Indicadores de Estado
 - **Icono de Base de Datos**: Muestra si está usando "Solo Local" o "Supabase + Local"
 - **Botón de Sincronización**: Solo aparece cuando Supabase está disponible
+- **Badge de Cambios Pendientes**: Muestra cuántos guardados no han llegado aún a Supabase
+- **Aviso de Fallo de Sincronización**: Notificación inmediata (toast) si un guardado no se pudo sincronizar con el servidor
 
 ## 🔧 Configuración de Supabase
 
@@ -42,10 +44,9 @@ La aplicación espera las siguientes tablas:
 
 ## 🎯 Cómo Funciona
 
-### Modo Solo Local (Sin Supabase)
-- ✅ Funciona completamente offline
-- ✅ Datos guardados en LocalStorage del navegador
-- ✅ Login con contraseña local: `admin123`
+### Modo Local de Datos (Sin Supabase)
+- ✅ Los datos ya cargados pueden consultarse desde LocalStorage del navegador
+- ✅ El acceso sigue dependiendo de una sesión/autorización válida
 
 ### Modo Híbrido (Con Supabase)
 - ✅ Datos sincronizados automáticamente
@@ -62,8 +63,7 @@ La aplicación espera las siguientes tablas:
 ## 📱 Interfaz de Usuario
 
 ### Pantalla de Login
-- **Toggle Local/Supabase**: Cambiar entre métodos de autenticación
-- **Campo Email**: Solo aparece en modo Supabase
+- **Campo Email**: Identifica la cuenta de Supabase
 - **Mostrar/Ocultar Contraseña**: Botón de visibilidad
 
 ### Sidebar
@@ -73,10 +73,12 @@ La aplicación espera las siguientes tablas:
 
 ## 🔄 Proceso de Sincronización
 
-1. **Automática**: Al guardar datos (si Supabase está disponible)
-2. **Manual**: Usando el botón "Sincronizar" 
-3. **Bidireccional**: Local ↔ Supabase
-4. **Con Reintentos**: 3 intentos automáticos en caso de fallo
+1. **Guardado local siempre**: Al guardar, los datos quedan en LocalStorage de inmediato, sin esperar al servidor
+2. **Sincronización automática**: Si hay sesión y conexión, el mismo guardado intenta subirse a Supabase en segundo plano
+3. **Aviso inmediato si falla**: Si la sincronización remota no se completa (sin sesión, sin conexión, error del servidor), aparece un aviso visible al momento y el cambio queda marcado como pendiente
+4. **Reintento al reconectar**: Al recuperar conexión se reintentan automáticamente todos los cambios pendientes; los que tengan éxito se limpian de la cola y los que sigan fallando quedan para el siguiente intento
+5. **Manual**: Usando el botón "Sincronizar"
+6. **Bidireccional**: Local ↔ Supabase
 
 ## 🛠 Desarrollo
 

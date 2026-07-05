@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Package, Euro, TrendingUp, Star, Zap, ArrowUpRight } from 'lucide-react';
+import { Package, Euro, TrendingUp, Star, Zap, ArrowUpRight, AlertCircle } from 'lucide-react';
 import { euro, glassStyles } from '../../utils/designUtils';
 import { cn } from '../../lib/utils';
 import { motion } from 'framer-motion';
@@ -79,6 +79,7 @@ export function VentasStats({ ventasCalc, productos = [] }) {
     let totalPvp = 0;
     let countConPvp = 0;
     let comisionesTotal = 0;
+    let countConCalculo = 0;
 
     ventasCalc.forEach((v) => {
       const prod = productos.find((p) => p?.id === v.producto_id);
@@ -93,6 +94,7 @@ export function VentasStats({ ventasCalc, productos = [] }) {
 
       if (v._calc?.ok) {
         comisionesTotal += v._calc.detalle.comBruta || 0;
+        countConCalculo++;
       }
     });
 
@@ -102,49 +104,72 @@ export function VentasStats({ ventasCalc, productos = [] }) {
       comisionesTotal,
       ticketMedio: countConPvp > 0 ? totalPvp / countConPvp : 0,
       ventasSinPvp: ventasCalc.length - countConPvp,
+      // Mismo patrón que Dashboard.jsx: si hay ventas pero ninguna resolvió su
+      // cálculo de comisión (producto/operador/zona/colaborador), el 0,00€ de
+      // "Comisión Estimada" no es un dato real — es un cálculo que no se pudo
+      // completar, y debe distinguirse visualmente de una comisión legítima.
+      comisionSinCalcular: ventasCalc.length > 0 && countConCalculo === 0,
     };
   }, [ventasCalc, productos]);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-      <StatCard
-        title="Operaciones"
-        value={estadisticas.totalVentas}
-        subtitle={estadisticas.ventasSinPvp > 0 ? `${estadisticas.ventasSinPvp} Pendientes Datos` : "Sync Completa"}
-        icon={Package}
-        gradientFrom="brand"
-        gradientTo="brand"
-        delay={0.1}
-        trend="+12%"
-      />
-      <StatCard
-        title="Facturación Brut."
-        value={euro(estadisticas.volumenTotal)}
-        subtitle="Valor Total Mercado"
-        icon={Euro}
-        gradientFrom="from-emerald-600"
-        gradientTo="to-teal-700"
-        delay={0.2}
-      />
-      <StatCard
-        title="Comisión Estimada"
-        value={euro(estadisticas.comisionesTotal)}
-        subtitle="Revenue Stream"
-        icon={TrendingUp}
-        gradientFrom="from-purple-600"
-        gradientTo="to-fuchsia-700"
-        delay={0.3}
-        trend="High"
-      />
-      <StatCard
-        title="Cierre Promedio"
-        value={euro(estadisticas.ticketMedio)}
-        subtitle="Eficiencia / Ticket"
-        icon={Star}
-        gradientFrom="from-amber-500"
-        gradientTo="to-orange-600"
-        delay={0.4}
-      />
+    <div className="space-y-6">
+      {/* Mismo patrón que Dashboard.jsx (!hayDatos && total > 0): distingue un
+          0,00€ real de un cálculo que no se pudo completar. */}
+      {estadisticas.comisionSinCalcular && (
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-3xl p-6 flex items-start gap-4">
+          <div className="p-3 rounded-2xl bg-rose-500 shadow-lg shadow-rose-500/20">
+            <AlertCircle className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h4 className="text-lg font-black text-rose-600 dark:text-rose-400">Datos Parciales Detectados</h4>
+            <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">
+              Hay {estadisticas.totalVentas} operaciones registradas pero ninguna tiene la comisión calculada
+              (producto, operador, zona o colaborador sin resolver). La Comisión Estimada de 0,00€ de abajo
+              no es un dato real — revisa las referencias de estas ventas antes de darlo por definitivo.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <StatCard
+          title="Operaciones"
+          value={estadisticas.totalVentas}
+          subtitle={estadisticas.ventasSinPvp > 0 ? `${estadisticas.ventasSinPvp} Pendientes Datos` : "Sync Completa"}
+          icon={Package}
+          gradientFrom="brand"
+          gradientTo="brand"
+          delay={0.1}
+        />
+        <StatCard
+          title="Facturación Brut."
+          value={euro(estadisticas.volumenTotal)}
+          subtitle="Valor Total Mercado"
+          icon={Euro}
+          gradientFrom="from-emerald-600"
+          gradientTo="to-teal-700"
+          delay={0.2}
+        />
+        <StatCard
+          title="Comisión Estimada"
+          value={euro(estadisticas.comisionesTotal)}
+          subtitle={estadisticas.comisionSinCalcular ? "Sin calcular" : "Revenue Stream"}
+          icon={estadisticas.comisionSinCalcular ? AlertCircle : TrendingUp}
+          gradientFrom={estadisticas.comisionSinCalcular ? "from-rose-500" : "from-purple-600"}
+          gradientTo={estadisticas.comisionSinCalcular ? "to-rose-600" : "to-fuchsia-700"}
+          delay={0.3}
+        />
+        <StatCard
+          title="Cierre Promedio"
+          value={euro(estadisticas.ticketMedio)}
+          subtitle="Eficiencia / Ticket"
+          icon={Star}
+          gradientFrom="from-amber-500"
+          gradientTo="to-orange-600"
+          delay={0.4}
+        />
+      </div>
     </div>
   );
 }

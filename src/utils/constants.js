@@ -1,21 +1,11 @@
+// Único uso real: LayoutShell.jsx guarda si el sidebar está colapsado. Las
+// demás colecciones (ventas, colaboradores, niveles...) usan STORAGE_KEYS en
+// AppContexts.jsx — tener una segunda copia aquí, sin uso, solo arriesgaba
+// que alguien la editara pensando que era la fuente real y las dos
+// terminaran desincronizadas.
 export const LS_KEYS = {
-  ventas: "appcv_ventas",
-  colaboradores: "appcv_colaboradores",
-  niveles: "appcv_niveles",
-  operadores: "appcv_operadores",
-  productos: "cv_productos_v3",
-  zonas: "appcv_zonas",
-  reglas: "appcv_reglas",
-  liquidaciones: "appcv_liquidaciones",
-  currentUser: "appcv_current_user",
   ui: "appcv_ui",
-  seedVersion: "appcv_seed_version",
-  lastSync: "appcv_last_sync",
 };
-
-export const SEED_VERSION = 8;
-export const LS_USER = "appcv.user";
-export const LS_AUTH = "appcv.auth";
 
 // Sectores y familias de productos
 export const SECTORES = {
@@ -61,5 +51,3 @@ export const FAMILIA_STYLES = {
   "default": { icon: "Package", color: "slate" }
 };
 
-// Clave de seguridad para administración
-export const CLAVE_GERENTE = "@LMB1828re"; // Cambia esta clave aquí

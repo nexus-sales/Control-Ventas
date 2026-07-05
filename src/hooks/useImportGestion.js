@@ -5,6 +5,7 @@ import {
   validateRow,
   parseDate,
   parseNumber,
+  normalizeNameSearch,
 } from "../utils/importValidation";
 
 // =================== CONFIGURACIÓN Y CONSTANTES ===================
@@ -17,17 +18,6 @@ const detectSeparator = (line) => {
   ]);
   counts.sort((a, b) => b[1] - a[1]);
   return counts[0][1] > 0 ? counts[0][0] : ",";
-};
-
-// 🎯 MEJORA: Normalización mejorada para búsquedas case-insensitive
-const normalizeNameSearch = (name) => {
-  if (!name || typeof name !== "string") return "";
-  return name
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/['`´']/g, "")
-    .trim()
-    .toUpperCase();
 };
 
 // Impuestos conocidos por nombre de zona, para que una zona autocreada durante
@@ -716,9 +706,19 @@ export function useImportGestion({
           const clienteSlug = cliente.slice(0, 8).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
           const ventaId = generateReadableId('venta', clienteSlug, indexers.existingIds);
 
+          // mes/año: se leen del Excel si existen (columnas MES y AÑO), o se
+          // derivan de la fecha. El trigger calculate_mes_año_cv los calcula
+          // automáticamente en Supabase al insertar, pero se guardan también
+          // en el objeto local para que los filtros de la app funcionen offline.
+          const fechaDate = fecha ? new Date(fecha) : new Date();
+          const mesValor = Number(parseNumber(get("mes"))) || (fechaDate.getMonth() + 1);
+          const añoValor = Number(parseNumber(get("año"))) || fechaDate.getFullYear();
+
           const ventaBase = {
             id: ventaId,
             fecha,
+            mes: mesValor,
+            año: añoValor,
             cliente: cliente.slice(0, 255),
             cif: (get("cif") || "").slice(0, 20),
             colaborador_id,
@@ -728,18 +728,28 @@ export function useImportGestion({
             pvp: pvpExcel,
             cantidad: Number(parseNumber(get("cantidad")) || 1),
             estado: (get("estado") || "Confirmada").slice(0, 50),
-            documento: (get("documento") || "").slice(0, 100),
-            numeracion: (get("numeracion") || "").slice(0, 50),
-            telefono_fijo: (get("telefono_fijo") || "").slice(0, 20),
-            telefono_movil: (get("telefono_movil") || "").slice(0, 20),
+            // Campos con columna directa en ventas_cv:
+            numeracion:    (get("numeracion")    || "").slice(0, 100),
+            telefono_fijo: (get("telefono_fijo") || "").slice(0, 30),
+            telefono_movil:(get("telefono_movil")|| "").slice(0, 30),
             observaciones: (get("observaciones") || "").slice(0, 500),
+            // documento: columna propia en ventas_cv, distinta de numeracion
+            // (referencia de contrato en papel u otro documento asociado).
+            documento: (get("documento") || "").slice(0, 100),
           };
 
-          // Campos personalizados
+          // Campos personalizados. get(`cf_${field.id}`) usa el mapeo
+          // explícito si el usuario lo configuró; si no, se intenta resolver
+          // directamente por el nombre de la columna del Excel — antes este
+          // "plan B" era get(field.nombre), que busca en state.mapping[field.nombre]
+          // (mapping está indexado por claves internas como "cliente"/"pvp"/
+          // "cf_123", nunca por el nombre visible del campo), así que
+          // prácticamente nunca encontraba nada.
           if (state.customFields.length > 0) {
             const customFieldsData = {};
             state.customFields.forEach((field) => {
-              const fieldValue = get(`cf_${field.id}`) || get(field.nombre) || "";
+              const directo = row[field.nombre];
+              const fieldValue = get(`cf_${field.id}`) || (directo ? String(directo).trim() : null) || "";
               if (fieldValue) {
                 customFieldsData[`cf_${field.id}`] = fieldValue;
               }

@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { X, User, Building2, Percent, Phone, MapPin, Shield, Save, Zap, Mail, Calendar, Briefcase, FileText, AlertCircle } from 'lucide-react';
 import Modal from "../ui/Modal";
 import { Input, Select, Label, Button, TextArea } from "../ui/FormElements";
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '../../lib/utils';
+import { motion } from 'framer-motion';
 import { getIrpfPct, normalizeFactor, getColaboradorNivelId } from '../../utils/calculos';
 import { useAuth } from '../../context/AppContexts';
 import { supabase } from '../../lib/supabase';
@@ -27,7 +26,6 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       // este formulario guardaba "nivel" — se lee con fallback para no perder
       // la asignación de colaboradores ya guardados en local con ese nombre.
       nivel_id: getColaboradorNivelId(colaborador),
-      pct_colaborador: colaborador.pct_colaborador ?? "",
       tipo_fiscal: colaborador.tipo_fiscal || "AUTONOMO",
       zona_id: colaborador.zona_id || "",
       telefono: colaborador.telefono || "",
@@ -37,17 +35,20 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       estado: colaborador.estado || "ACTIVO",
       fecha_baja: colaborador.fecha_baja || "",
       observaciones: colaborador.observaciones || "",
-      comision_personalizada_activa: colaborador.comision_personalizada_activa || false,
-      telefonia_tipo: colaborador.telefonia_tipo || 'porcentaje',
-      telefonia_valor: colaborador.telefonia_valor || 0.05,
-      energia_tipo: colaborador.energia_tipo || 'porcentaje',
-      energia_valor: colaborador.energia_valor || 0.05,
-      seguridad_tipo: colaborador.seguridad_tipo || 'fijo',
-      seguridad_valor: colaborador.seguridad_valor || 250,
+      // pct_telefonia/pct_energia/fijo_seguridad son las columnas reales que
+      // lee getColaboradorComision (calculos.js) para el override por
+      // sector de este colaborador sobre los valores de su nivel — no
+      // "telefonia_tipo/telefonia_valor/..." (nombres que no existen en
+      // colaboradores_cv, así que el panel de "Esquema Especial" nunca
+      // había tenido ningún efecto real). El tipo no es elegible: Telefonía/
+      // Energía siempre son % y Seguridad siempre importe fijo, igual que en
+      // los niveles.
+      pct_telefonia: colaborador.pct_telefonia ?? "",
+      pct_energia: colaborador.pct_energia ?? "",
+      fijo_seguridad: colaborador.fijo_seguridad ?? "",
     } : {
       nombre: "",
       nivel_id: niveles.length > 0 ? niveles[0].id : "",
-      pct_colaborador: "",
       fecha_alta: new Date().toISOString().slice(0, 10),
       tipo_fiscal: "AUTONOMO",
       zona_id: "",
@@ -58,13 +59,9 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       estado: "ACTIVO",
       fecha_baja: "",
       observaciones: "",
-      comision_personalizada_activa: false,
-      telefonia_tipo: 'porcentaje',
-      telefonia_valor: 0.05,
-      energia_tipo: 'porcentaje',
-      energia_valor: 0.05,
-      seguridad_tipo: 'fijo',
-      seguridad_valor: 250,
+      pct_telefonia: "",
+      pct_energia: "",
+      fijo_seguridad: "",
     }
   );
 
@@ -128,7 +125,13 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
       email: draft.email?.trim() || "",
       telefono: draft.telefono?.trim() || "",
       observaciones: draft.observaciones?.trim() || "",
-      pct_colaborador: draft.pct_colaborador === "" ? null : Number(draft.pct_colaborador),
+      // pct_colaborador (resto de un modelo de comisión única anterior al
+      // actual por sector) no tiene ningún <input> en este formulario ni lo
+      // lee getColaboradorComision (calculos.js) — se deja de tocar aquí en
+      // vez de seguir arrastrándolo sin uso en cada guardado.
+      pct_telefonia: draft.pct_telefonia === "" ? null : Number(draft.pct_telefonia),
+      pct_energia: draft.pct_energia === "" ? null : Number(draft.pct_energia),
+      fijo_seguridad: draft.fijo_seguridad === "" ? null : Number(draft.fijo_seguridad),
       irpf_calculado: calcularIrpfFicha(draft.tipo_fiscal, draft.fecha_alta, draft.cif_dni),
       exento_impuestos: (() => {
         const tipo = normalizarTipoFiscal(draft.tipo_fiscal);
@@ -421,72 +424,39 @@ export default function ColaboradorEditModal({ colaborador, onSave, onClose, niv
             </div>
 
             <div className="space-y-6">
-              <div
-                onClick={() => setDraft(d => ({ ...d, comision_personalizada_activa: !d.comision_personalizada_activa }))}
-                className={cn(
-                  "p-6 rounded-[2.5rem] border-2 border-dashed transition-all cursor-pointer flex flex-col items-center text-center gap-4",
-                  draft.comision_personalizada_activa
-                    ? "bg-purple-500/10 border-purple-500 border-solid shadow-xl shadow-purple-500/10"
-                    : "bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 opacity-60 hover:opacity-100"
-                )}
-              >
-                <div className={cn(
-                  "w-14 h-14 rounded-[1.5rem] flex items-center justify-center shadow-lg transition-transform",
-                  draft.comision_personalizada_activa ? "bg-purple-500 text-white rotate-6" : "bg-slate-200 dark:bg-slate-800 text-slate-400"
-                )}>
-                  <Zap className="w-7 h-7" />
-                </div>
-                <div>
-                  <h4 className="font-black text-sm uppercase tracking-wide">Liquidez Personalizada</h4>
-                  <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-bold">
-                    {draft.comision_personalizada_activa ? "Override del Nivel Activo" : "Usando Valores del Nivel"}
-                  </p>
-                </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Deja un campo en blanco para que este colaborador use el valor de su nivel ({nivelSeleccionado?.nombre || "sin nivel"}). Rellénalo solo para forzar un valor distinto para él.
+              </p>
+
+              <div className="space-y-4 p-6 rounded-[2rem] bg-blue-500/5 border border-blue-500/10">
+                <Label className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> Telefonía (%)</Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  placeholder={`Nivel: ${((normalizeFactor(nivelSeleccionado?.pct_telefonia) ?? 0) * 100).toFixed(0)}%`}
+                  value={draft.pct_telefonia}
+                  onChange={(e) => setDraft(d => ({ ...d, pct_telefonia: e.target.value }))}
+                />
               </div>
 
-              <AnimatePresence>
-                {draft.comision_personalizada_activa && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, height: 'auto', scale: 1 }}
-                    exit={{ opacity: 0, height: 0, scale: 0.95 }}
-                    className="space-y-6 overflow-hidden"
-                  >
-                    <div className="space-y-4 p-6 rounded-[2rem] bg-blue-500/5 border border-blue-500/10">
-                      <Label className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> Telefonía</Label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <Select value={draft.telefonia_tipo} onChange={(e) => setDraft(d => ({ ...d, telefonia_tipo: e.target.value }))}>
-                          <option value="porcentaje">Porcentaje %</option>
-                          <option value="fijo">Importe Fijo €</option>
-                        </Select>
-                        <Input type="number" step="0.01" value={draft.telefonia_valor} onChange={(e) => setDraft(d => ({ ...d, telefonia_valor: parseFloat(e.target.value) || 0 }))} />
-                      </div>
-                    </div>
+              <div className="space-y-4 p-6 rounded-[2rem] bg-amber-500/5 border border-amber-500/10">
+                <Label className="flex items-center gap-2"><Zap className="w-3.5 h-3.5" /> Energía (%)</Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  placeholder={`Nivel: ${((normalizeFactor(nivelSeleccionado?.pct_energia) ?? 0) * 100).toFixed(0)}%`}
+                  value={draft.pct_energia}
+                  onChange={(e) => setDraft(d => ({ ...d, pct_energia: e.target.value }))}
+                />
+              </div>
 
-                    <div className="space-y-4 p-6 rounded-[2rem] bg-amber-500/5 border border-amber-500/10">
-                      <Label className="flex items-center gap-2"><Zap className="w-3.5 h-3.5" /> Energía</Label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <Select value={draft.energia_tipo} onChange={(e) => setDraft(d => ({ ...d, energia_tipo: e.target.value }))}>
-                          <option value="porcentaje">Porcentaje %</option>
-                          <option value="fijo">Importe Fijo €</option>
-                        </Select>
-                        <Input type="number" step="0.01" value={draft.energia_valor} onChange={(e) => setDraft(d => ({ ...d, energia_valor: parseFloat(e.target.value) || 0 }))} />
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 p-6 rounded-[2rem] bg-emerald-500/5 border border-emerald-500/10">
-                      <Label className="flex items-center gap-2"><Shield className="w-3.5 h-3.5" /> Seguridad</Label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <Select value={draft.seguridad_tipo} onChange={(e) => setDraft(d => ({ ...d, seguridad_tipo: e.target.value }))}>
-                          <option value="fijo">Importe Fijo €</option>
-                          <option value="porcentaje">Porcentaje %</option>
-                        </Select>
-                        <Input type="number" step="0.01" value={draft.seguridad_valor} onChange={(e) => setDraft(d => ({ ...d, seguridad_valor: parseFloat(e.target.value) || 0 }))} />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <div className="space-y-4 p-6 rounded-[2rem] bg-emerald-500/5 border border-emerald-500/10">
+                <Label className="flex items-center gap-2"><Shield className="w-3.5 h-3.5" /> Seguridad (€ fijo)</Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  placeholder={`Nivel: €${nivelSeleccionado?.fijo_seguridad ?? 0}`}
+                  value={draft.fijo_seguridad}
+                  onChange={(e) => setDraft(d => ({ ...d, fijo_seguridad: e.target.value }))}
+                />
+              </div>
 
               <div className="p-10 rounded-[2.5rem] bg-indigo-500/5 border border-indigo-500/10 flex flex-col items-center text-center">
                 <Briefcase className="w-10 h-10 text-indigo-500/30 mb-4" />

@@ -2,13 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { UserCheck, UserX, Shield, Mail, RefreshCw, Search } from 'lucide-react';
 import Card from '../ui/Card';
+import { useAuth } from '../../context/AppContexts';
 
 export default function UserManagement() {
+    const { user: currentUser } = useAuth();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('');
     const [isRefreshing, setIsRefreshing] = useState(false);
 
+    // usuarios_cv guarda rol/activo/app_access (específico de esta app);
+    // nombre/email viven en `profiles` (identidad compartida entre apps de
+    // este proyecto Supabase) y se unen aquí en el cliente por user_id/id.
     const fetchUsers = useCallback(async () => {
         setIsRefreshing(true);
         try {
@@ -18,7 +23,20 @@ export default function UserManagement() {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            setUsers(data || []);
+
+            const userIds = (data || []).map(u => u.user_id).filter(Boolean);
+            const { data: perfiles } = userIds.length > 0
+                ? await supabase.from('profiles').select('id, nombre, email').in('id', userIds)
+                : { data: [] };
+            const perfilesPorId = Object.fromEntries((perfiles || []).map(p => [p.id, p]));
+
+            const usersConIdentidad = (data || []).map(u => ({
+                ...u,
+                nombre_completo: perfilesPorId[u.user_id]?.nombre || null,
+                email: perfilesPorId[u.user_id]?.email || null,
+            }));
+
+            setUsers(usersConIdentidad);
         } catch (err) {
             console.error('Error fetching users:', err);
         } finally {
@@ -31,7 +49,23 @@ export default function UserManagement() {
         fetchUsers();
     }, [fetchUsers]);
 
-    const toggleUserActive = async (userId, currentStatus) => {
+    // El trigger anti-autoescalada (prevent_self_escalation_usuarios_cv) solo
+    // impide que un NO-admin se autoconceda rol/activo/app_access — a un admin
+    // real no lo protege de sí mismo. Sin esta confirmación, un cambio
+    // accidental en la fila propia deja al único admin sin acceso a esta
+    // pantalla, y recuperarlo exige entrar a la consola SQL de Supabase.
+    const esUsuarioActual = useCallback(
+        (u) => Boolean(currentUser?.id) && u.user_id === currentUser.id,
+        [currentUser?.id]
+    );
+
+    const toggleUserActive = async (targetUser) => {
+        const { id: userId, activo: currentStatus } = targetUser;
+        if (esUsuarioActual(targetUser) && currentStatus) {
+            if (!window.confirm('Estás a punto de desactivar TU PROPIA cuenta. Perderás acceso a esta pantalla de inmediato y solo podrás recuperarlo por SQL directo en Supabase. ¿Continuar?')) {
+                return;
+            }
+        }
         try {
             const { error } = await supabase
                 .from('usuarios_cv')
@@ -50,7 +84,13 @@ export default function UserManagement() {
         }
     };
 
-    const changeUserRole = async (userId, newRole) => {
+    const changeUserRole = async (targetUser, newRole) => {
+        const { id: userId } = targetUser;
+        if (esUsuarioActual(targetUser) && targetUser.rol === 'admin' && newRole !== 'admin') {
+            if (!window.confirm(`Estás a punto de quitarte a ti mismo el rol de admin (nuevo rol: ${newRole.toUpperCase()}). Perderás acceso a esta pantalla de inmediato y solo podrás recuperarlo por SQL directo en Supabase. ¿Continuar?`)) {
+                return;
+            }
+        }
         try {
             const { error } = await supabase
                 .from('usuarios_cv')
@@ -136,7 +176,12 @@ export default function UserManagement() {
                                                     {u.nombre_completo ? u.nombre_completo[0] : (u.email ? u.email[0] : '?')}
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-slate-900 dark:text-white leading-tight">{u.nombre_completo || 'Sin nombre'}</p>
+                                                    <p className="font-bold text-slate-900 dark:text-white leading-tight">
+                                                        {u.nombre_completo || 'Sin nombre'}
+                                                        {esUsuarioActual(u) && (
+                                                            <span className="ml-2 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 px-1.5 py-0.5 rounded">Tú</span>
+                                                        )}
+                                                    </p>
                                                     <p className="text-xs text-slate-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
                                                         <Mail className="w-3 h-3" />
                                                         {u.email}
@@ -147,7 +192,7 @@ export default function UserManagement() {
                                         <td className="px-6 py-4">
                                             <select
                                                 value={u.rol}
-                                                onChange={(e) => changeUserRole(u.id, e.target.value)}
+                                                onChange={(e) => changeUserRole(u, e.target.value)}
                                                 className="bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg px-2 py-1 text-xs font-medium focus:ring-2 focus:ring-[var(--brand-primary)] outline-none"
                                             >
                                                 <option value="user">USER</option>
@@ -175,7 +220,7 @@ export default function UserManagement() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <button
-                                                onClick={() => toggleUserActive(u.id, u.activo)}
+                                                onClick={() => toggleUserActive(u)}
                                                 className={`p-2 rounded-xl transition-all ${u.activo
                                                     ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
                                                     : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'

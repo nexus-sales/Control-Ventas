@@ -7,9 +7,8 @@ Bienvenido a Control de Ventas, la solución integral para la gestión de fuerza
 
 ### Acceso
 1. Ingrese a la URL de la aplicación.
-2. Utilice sus credenciales para iniciar sesión.
-   - **Usuario Demo:** `admin@test.com`
-   - **Contraseña:** `admin123`
+2. Utilice las credenciales de Supabase asignadas por el administrador.
+3. Si su cuenta aún no está activa, solicite acceso desde la pantalla de inicio de sesión.
 
 ## 📊 Dashboard
 El panel principal ofrece una vista en tiempo real de:

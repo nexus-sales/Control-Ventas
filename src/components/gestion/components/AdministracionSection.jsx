@@ -1,16 +1,25 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Trash2, Shield, Lock, FileText, Download, Users, Briefcase } from "lucide-react";
-import { CLAVE_GERENTE } from "../../../utils/constants";
 import Card from "../../ui/Card";
 import UserManagement from "../../admin/UserManagement";
 import { useAuth } from "../../../context/AppContexts";
+import { getFromStorage, saveToStorage } from "../../../utils/storage";
+
+const ACUERDOS_STORAGE_KEY = "cv_acuerdos_legacy";
 
 const AdministracionSection = React.memo(() => {
     const { isAdmin: isSupabaseAdmin } = useAuth();
     const OPERADORES = ["Telefonía", "Energía", "Seguridad"];
 
     const [activeTab, setActiveTab] = useState("usuarios"); // 'usuarios' o 'acuerdos'
-    const [acuerdos, setAcuerdos] = useState([]);
+    // La pantalla dice "Historial de Acuerdos (LocalStorage)" pero antes era
+    // solo useState — se perdía al cambiar de pestaña (el componente se
+    // desmonta) o al recargar. Ahora sí persiste donde dice que persiste.
+    const [acuerdos, setAcuerdos] = useState(() => getFromStorage(ACUERDOS_STORAGE_KEY, []));
+
+    useEffect(() => {
+        saveToStorage(ACUERDOS_STORAGE_KEY, acuerdos);
+    }, [acuerdos]);
     const [form, setForm] = useState({
         sector: "Telefonía",
         operador: "",
@@ -21,20 +30,6 @@ const AdministracionSection = React.memo(() => {
         archivo: null,
         archivoNombre: ""
     });
-    const [clave, setClave] = useState("");
-    const [acceso, setAcceso] = useState(false);
-    const [errorClave, setErrorClave] = useState("");
-
-    const handleClaveSubmit = useCallback((e) => {
-        e.preventDefault();
-        if (clave === CLAVE_GERENTE) {
-            setAcceso(true);
-            setErrorClave("");
-        } else {
-            setErrorClave("Clave incorrecta");
-        }
-    }, [clave]);
-
     const handleFormSubmit = useCallback((e) => {
         e.preventDefault();
         if (!form.operador.trim() || !form.nombre.trim() || !form.comision.trim()) {
@@ -60,10 +55,7 @@ const AdministracionSection = React.memo(() => {
         }
     }, []);
 
-    // Si es admin de Supabase, saltamos la clave de gerente
-    const tieneAcceso = acceso || isSupabaseAdmin;
-
-    if (!tieneAcceso) {
+    if (!isSupabaseAdmin) {
         return (
             <div className="max-w-md mx-auto mt-16 p-8 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-800">
                 <div className="flex flex-col items-center mb-6">
@@ -71,33 +63,8 @@ const AdministracionSection = React.memo(() => {
                         <Lock className="w-8 h-8 text-[var(--brand-primary)]" />
                     </div>
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Área Restringida</h2>
-                    <p className="text-slate-500 dark:text-gray-400 text-sm text-center mt-2">Introduce la clave de gerente o inicia sesión como administrador.</p>
+                    <p className="text-slate-500 dark:text-gray-400 text-sm text-center mt-2">Necesitas una sesión con permisos de administrador para acceder.</p>
                 </div>
-
-                <form onSubmit={handleClaveSubmit} className="space-y-4">
-                    <div>
-                        <input
-                            type="password"
-                            className="w-full border border-slate-300 dark:border-gray-700 rounded-xl px-4 py-3 bg-white dark:bg-gray-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent transition-all outline-none"
-                            placeholder="••••••••"
-                            value={clave}
-                            onChange={e => setClave(e.target.value)}
-                            required
-                            autoFocus
-                        />
-                    </div>
-                    {errorClave && (
-                        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
-                            <span>⚠️ {errorClave}</span>
-                        </div>
-                    )}
-                    <button
-                        type="submit"
-                        className="w-full bg-[var(--brand-primary)] hover:opacity-90 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-[var(--brand-primary)]/20 active:scale-[0.98]"
-                    >
-                        Validar Acceso
-                    </button>
-                </form>
             </div>
         );
     }

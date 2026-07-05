@@ -135,6 +135,7 @@ export default function Reglas() {
           onClose={() => setModalRegla(null)}
           operadores={operadores}
           productos={productos}
+          niveles={niveles}
         />
       )}
 
@@ -409,6 +410,7 @@ export default function Reglas() {
                     <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Tipo</th>
                     <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Sobre</th>
                     <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Valor</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Nivel</th>
                     <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Prioridad</th>
                     <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 text-center">Acciones</th>
                   </tr>
@@ -437,11 +439,11 @@ export default function Reglas() {
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase ${r.tipo === "%"
+                          <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase ${r.tipo === "porcentaje"
                             ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                             : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                             }`}>
-                            {r.tipo === "%" ? "Porcentaje" : "Fijo"}
+                            {r.tipo === "porcentaje" ? "Porcentaje" : "Fijo"}
                           </span>
                         </td>
                         <td className="px-4 py-4">
@@ -451,7 +453,12 @@ export default function Reglas() {
                         </td>
                         <td className="px-4 py-4">
                           <span className="font-black text-slate-900 dark:text-white">
-                            {r.tipo === "%" ? `${(r.valor * 100).toFixed(2)}%` : `${r.valor.toFixed(2)} €`}
+                            {r.tipo === "porcentaje" ? `${((r.valor || 0) * 100).toFixed(2)}%` : `${(r.valor || 0).toFixed(2)} €`}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                            {r.nivel_id ? (niveles.find((n) => n.id === r.nivel_id)?.nombre || r.nivel_id) : "Todos"}
                           </span>
                         </td>
                         <td className="px-4 py-4">

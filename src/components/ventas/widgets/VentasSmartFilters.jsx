@@ -30,8 +30,13 @@ function FilterTag({ label, onRemove, color = "bg-slate-100 text-slate-800" }) {
 }
 
 function SmartPresets({ onSelectFilter }) {
+    // useVentasGestion.js filtra por filtros.desde/hasta/mesAno — no existe
+    // ningún filtro "fecha", así que { fecha: 'today' } no hacía nada (el
+    // botón se marcaba activo pero la lista no cambiaba). "Hoy" se expresa
+    // como un rango desde/hasta de un solo día, que sí filtra de verdad.
+    const hoy = new Date().toISOString().slice(0, 10);
     const presets = [
-        { label: "Hoy", icon: Calendar, filter: { fecha: 'today' }, color: "text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 border-[var(--brand-primary)]/20" },
+        { label: "Hoy", icon: Calendar, filter: { desde: hoy, hasta: hoy }, color: "text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 border-[var(--brand-primary)]/20" },
         { label: "Sin PVP", icon: Tag, filter: { sinPvp: true }, color: "text-amber-500 bg-amber-500/10 border-amber-500/20" },
         { label: "Incidencias", icon: AlertTriangle, filter: { estado: 'INCIDENCIA' }, color: "text-rose-500 bg-rose-500/10 border-rose-500/20" },
     ];

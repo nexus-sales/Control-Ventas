@@ -22,7 +22,13 @@ export const calcularEstadoColaborador = (colaborador) => {
     // el tramo, es el IRPF que le tocaría a este colaborador si vendiera ahora mismo.
     const irpf = esAutonomo ? getIrpfPct(colaborador, new Date().toISOString()) * 100 : null;
 
-    const esta_activo = !colaborador.fecha_baja || new Date(colaborador.fecha_baja) > new Date();
+    // Antes solo miraba fecha_baja — marcar a alguien como "Inactivo" o
+    // "Suspendido" en ColaboradorEditModal.jsx (campo estado) no tenía
+    // ningún efecto: seguía apareciendo como activo en tablas, filtros y
+    // contadores mientras no se le pusiera también una fecha de baja.
+    const estadoNormalizado = (colaborador.estado || "ACTIVO").toString().toUpperCase();
+    const activoPorFecha = !colaborador.fecha_baja || new Date(colaborador.fecha_baja) > new Date();
+    const esta_activo = estadoNormalizado === "ACTIVO" && activoPorFecha;
 
     return {
         irpf_calculado: irpf,

@@ -4,6 +4,11 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  server: {
+    // Sin esto, Vite en este entorno escucha solo en ::1 (localhost IPv6) y
+    // rechaza conexiones a 127.0.0.1 — host:true lo abre a todas las interfaces.
+    host: true,
+  },
   plugins: [
     react(),
     VitePWA({

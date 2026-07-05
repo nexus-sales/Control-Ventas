@@ -160,7 +160,7 @@ export default function Colaboradores() {
           />
           <StatCard
             title="Comisión Personal"
-            value={colaboradoresProcesados.filter(c => c.comision_personalizada_activa).length}
+            value={colaboradoresProcesados.filter(c => c.pct_telefonia != null || c.pct_energia != null || c.fijo_seguridad != null).length}
             icon={Sparkles}
             gradientFrom="from-purple-500"
             gradientTo="to-violet-600"
@@ -228,6 +228,11 @@ export default function Colaboradores() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                 {colaboradoresFiltrados.map((c) => {
                   const nivelInfo = getNivelInfo(niveles, getColaboradorNivelId(c));
+                  // Override real (pct_telefonia/pct_energia/fijo_seguridad en el propio
+                  // colaborador) que getColaboradorComision (calculos.js) aplica por
+                  // campo sobre los valores del nivel — no "comision_personalizada_activa"
+                  // (nombre que nunca existió en colaboradores_cv).
+                  const tienePersonalizacion = c.pct_telefonia != null || c.pct_energia != null || c.fijo_seguridad != null;
 
                   return (
                     <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
@@ -269,7 +274,7 @@ export default function Colaboradores() {
                           }`}>
                           {nivelInfo?.nombre || getColaboradorNivelId(c)}
                         </span>
-                        {c.comision_personalizada_activa && (
+                        {tienePersonalizacion && (
                           <p className="text-xs text-amber-600 dark:text-amber-400 font-bold mt-1 flex items-center gap-1">
                             <Sparkles className="w-3 h-3" />
                             Personalizado
@@ -278,38 +283,24 @@ export default function Colaboradores() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="space-y-1">
-                          {c.comision_personalizada_activa ? (
-                            isAdmin ? (
-                              <div className="text-xs space-y-1">
-                                <div className="flex items-center gap-1">
-                                  <Phone className="w-3 h-3 text-blue-500" />
-                                  <span className="text-slate-600 dark:text-slate-300">{c.telefonia_tipo === 'fijo' ? `€${c.telefonia_valor}` : `${(c.telefonia_valor * 100).toFixed(1)}%`}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Zap className="w-3 h-3 text-yellow-500" />
-                                  <span className="text-slate-600 dark:text-slate-300">{c.energia_tipo === 'fijo' ? `€${c.energia_valor}` : `${(c.energia_valor * 100).toFixed(1)}%`}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Shield className="w-3 h-3 text-green-500" />
-                                  <span className="text-slate-600 dark:text-slate-300">{c.seguridad_tipo === 'fijo' ? `€${c.seguridad_valor}` : `${(c.seguridad_valor * 100).toFixed(1)}%`}</span>
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-slate-400 italic">Personalizado (solo admin)</span>
-                            )
-                          ) : nivelInfo ? (
+                          {tienePersonalizacion && !isAdmin ? (
+                            <span className="text-xs text-slate-400 italic">Personalizado (solo admin)</span>
+                          ) : nivelInfo || tienePersonalizacion ? (
                             <div className="text-xs space-y-1">
                               <div className="flex items-center gap-1">
                                 <Phone className="w-3 h-3 text-blue-500" />
-                                <span className="text-slate-600 dark:text-slate-300">{((normalizeFactor(nivelInfo.pct_telefonia) ?? 0) * 100).toFixed(0)}%</span>
+                                <span className="text-slate-600 dark:text-slate-300">{((normalizeFactor(c.pct_telefonia ?? nivelInfo?.pct_telefonia) ?? 0) * 100).toFixed(0)}%</span>
+                                {c.pct_telefonia != null && <Sparkles className="w-3 h-3 text-amber-500" />}
                               </div>
                               <div className="flex items-center gap-1">
                                 <Zap className="w-3 h-3 text-yellow-500" />
-                                <span className="text-slate-600 dark:text-slate-300">{((normalizeFactor(nivelInfo.pct_energia) ?? 0) * 100).toFixed(0)}%</span>
+                                <span className="text-slate-600 dark:text-slate-300">{((normalizeFactor(c.pct_energia ?? nivelInfo?.pct_energia) ?? 0) * 100).toFixed(0)}%</span>
+                                {c.pct_energia != null && <Sparkles className="w-3 h-3 text-amber-500" />}
                               </div>
                               <div className="flex items-center gap-1">
                                 <Shield className="w-3 h-3 text-green-500" />
-                                <span className="text-slate-600 dark:text-slate-300">€{(nivelInfo.fijo_seguridad || 0).toFixed(2)}</span>
+                                <span className="text-slate-600 dark:text-slate-300">€{(c.fijo_seguridad ?? nivelInfo?.fijo_seguridad ?? 0).toFixed(2)}</span>
+                                {c.fijo_seguridad != null && <Sparkles className="w-3 h-3 text-amber-500" />}
                               </div>
                             </div>
                           ) : (

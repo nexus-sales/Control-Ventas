@@ -5,11 +5,19 @@ import {
 import { SECTORES, FAMILIAS_POR_SECTOR } from "../../../utils/constants";
 import { sumarDia } from "../utils/gestionUtils";
 
+// SECTORES/FAMILIAS_POR_SECTOR usan claves en MAYÚSCULAS (TELEFONIA, ENERGIA,
+// SEGURIDAD), pero OperadorModal.jsx guarda operador.sector en minúsculas
+// (telefonia, energia...). Sin normalizar aquí, heredar el sector de un
+// operador al crear/editar un producto dejaba el <select> de Sector en
+// blanco (ningún <option> en mayúsculas coincidía) y la lista de familias
+// vacía (FAMILIAS_POR_SECTOR["telefonia"] no existe).
+const normalizeSector = (sector) => (sector ? String(sector).toUpperCase() : "");
+
 const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }) => {
     const [form, setForm] = useState(
         producto ? {
             ...producto,
-            sector: producto.sector || operadores.find(op => op.id === producto.operador_id)?.sector || "",
+            sector: normalizeSector(producto.sector || operadores.find(op => op.id === producto.operador_id)?.sector),
             comision_vigencia_desde: producto.comision_vigencia_desde || "",
             comision_vigencia_hasta: producto.comision_vigencia_hasta || "",
             comision_cliente_nuevo: producto.comision_cliente_nuevo ?? "",
@@ -21,7 +29,7 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
             comisiones_historial: Array.isArray(producto.comisiones_historial) ? producto.comisiones_historial : [],
         } : {
             operador_id: operadores[0]?.id || "",
-            sector: operadores[0]?.sector || "",
+            sector: normalizeSector(operadores[0]?.sector),
             nombre: "",
             familia: "",
             pvp: "",
@@ -57,9 +65,16 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
         if (!form.operador_id) newErrors.operador_id = "Operador es obligatorio";
         if (!form.pvp || Number(form.pvp) <= 0) newErrors.pvp = "PVP debe ser mayor que 0";
         if (form.comision_valor && Number(form.comision_valor) < 0) newErrors.comision_valor = "Comisión no puede ser negativa";
-        ["comision_cliente_nuevo", "comision_cliente_existente", "comision_portabilidad", "comision_alta_nueva"].forEach((campo) => {
-            if (form[campo] !== "" && form[campo] !== null && form[campo] !== undefined && isNaN(Number(form[campo]))) {
+        // Antes solo se comprobaba comision_valor (que ni tiene <input> propio
+        // — se rellena a partir de comision_fija/comision_porcentaje) — se
+        // podía guardar, por ejemplo, una comisión fija de -50€ sin ningún
+        // aviso, tanto en el modo simple como en los 4 campos de Telefonía.
+        ["comision_fija", "comision_porcentaje", "comision_cliente_nuevo", "comision_cliente_existente", "comision_portabilidad", "comision_alta_nueva"].forEach((campo) => {
+            if (form[campo] === "" || form[campo] === null || form[campo] === undefined) return;
+            if (isNaN(Number(form[campo]))) {
                 newErrors[campo] = "Debe ser numérico";
+            } else if (Number(form[campo]) < 0) {
+                newErrors[campo] = "No puede ser negativo";
             }
         });
         setErrors(newErrors);
@@ -125,7 +140,36 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
             cleanForm.comision_valor = cleanForm.comision_porcentaje;
         }
 
-        cleanForm.comisiones_historial = appendSnapshot(cleanForm);
+        // "Guardar" edita la vigencia actual en el sitio; solo "Nueva
+        // Vigencia" (handleNuevaVigencia) cierra un período y abre uno
+        // nuevo. Antes, "Guardar" llamaba a appendSnapshot() siempre — cada
+        // edición (aunque fuera solo el teléfono de contacto) añadía una
+        // entrada nueva al historial con el mismo "desde" que la anterior,
+        // dejando dos entradas "abiertas" a la vez sin poder saber cuál era
+        // la vigente.
+        const historialPrevio = Array.isArray(form.comisiones_historial) ? form.comisiones_historial : [];
+        if (historialPrevio.length === 0) {
+            cleanForm.comisiones_historial = appendSnapshot(cleanForm);
+        } else {
+            const historial = [...historialPrevio];
+            const idx = historial.length - 1;
+            historial[idx] = {
+                ...historial[idx],
+                comision_tipo: cleanForm.comision_tipo,
+                comision_fija: cleanForm.comision_fija,
+                comision_porcentaje: cleanForm.comision_porcentaje,
+                comision_valor: cleanForm.comision_valor,
+                comision_cliente_nuevo: cleanForm.comision_cliente_nuevo,
+                comision_cliente_existente: cleanForm.comision_cliente_existente,
+                comision_portabilidad: cleanForm.comision_portabilidad,
+                comision_alta_nueva: cleanForm.comision_alta_nueva,
+                desde: cleanForm.comision_vigencia_desde || historial[idx].desde,
+                hasta: cleanForm.comision_vigencia_hasta || historial[idx].hasta,
+                comision_vigencia_desde: cleanForm.comision_vigencia_desde || historial[idx].comision_vigencia_desde,
+                comision_vigencia_hasta: cleanForm.comision_vigencia_hasta || historial[idx].comision_vigencia_hasta,
+            };
+            cleanForm.comisiones_historial = historial;
+        }
 
         onSave(cleanForm);
         onClose();
@@ -187,7 +231,7 @@ const ProductoModal = React.memo(({ producto, onSave, onClose, operadores = [] }
                                 value={form.operador_id}
                                 onChange={e => {
                                     const selected = operadores.find(op => op.id === e.target.value);
-                                    setForm(prev => ({ ...prev, operador_id: e.target.value, sector: selected?.sector || prev.sector, familia: '' }));
+                                    setForm(prev => ({ ...prev, operador_id: e.target.value, sector: normalizeSector(selected?.sector) || prev.sector, familia: '' }));
                                 }}
                             >
                                 <option value="">Seleccionar operador</option>

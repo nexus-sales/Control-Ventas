@@ -49,14 +49,31 @@ export function calcularDecomisiones(ventas, operadores) {
       const fechaFinCompromiso = new Date(fechaInicio);
       fechaFinCompromiso.setMonth(fechaFinCompromiso.getMonth() + mesesComprometidos);
       if (fechaBaja < fechaFinCompromiso) {
+        // Aproximación en días, solo para el % de progreso mostrado
+        // (porcentaje_cumplido) — no decide qué regla se aplica.
         const mesesTranscurridos = Math.max(0, (fechaBaja - fechaInicio) / (1000 * 60 * 60 * 24 * 30.44));
         let porcentajeDecomision = 0;
-        const reglasOperador = operador.reglas_decomision || {
+        // Fusión por campo, no por objeto entero: un reglas_decomision guardado
+        // parcial (p.ej. solo {limite_meses: 3}) antes dejaba antes_6_meses/
+        // despues_6_meses en undefined -> NaN se propagaba silenciosamente
+        // hasta descartar la decomisión sin avisar (NaN > 0 es false).
+        const reglasOperador = {
           antes_6_meses: 100,
           despues_6_meses: 50,
-          limite_meses: 6
+          limite_meses: 6,
+          ...(operador.reglas_decomision || {}),
         };
-        if (mesesTranscurridos < reglasOperador.limite_meses) {
+        // Frontera con aritmética de calendario (mismo setMonth() que ya usa
+        // fechaFinCompromiso), no con mesesTranscurridos/30.44: dividir por un
+        // promedio de días por mes subestima meses en cualquier mes de 31
+        // días. Una baja a los 181 días exactos (6 meses de calendario desde
+        // el alta, limite_meses=6) daba 181/30.44 ≈ 5.94 < 6 y se clasificaba
+        // como "antes del límite" (decomisión más alta) pese a haber cumplido
+        // el compromiso justo en el límite.
+        const fechaLimiteDecomision = new Date(fechaInicio);
+        fechaLimiteDecomision.setMonth(fechaLimiteDecomision.getMonth() + reglasOperador.limite_meses);
+        const antesDelLimite = fechaBaja < fechaLimiteDecomision;
+        if (antesDelLimite) {
           porcentajeDecomision = reglasOperador.antes_6_meses / 100;
         } else {
           const porcentajeCumplido = Math.min(1, mesesTranscurridos / mesesComprometidos);
@@ -76,7 +93,7 @@ export function calcularDecomisiones(ventas, operadores) {
             meses_comprometidos: mesesComprometidos,
             meses_transcurridos: Math.round(mesesTranscurridos * 10) / 10,
             porcentaje_cumplido: Math.round((mesesTranscurridos / mesesComprometidos) * 100),
-            regla_aplicada: mesesTranscurridos < reglasOperador.limite_meses ? 'antes_limite' : 'despues_limite',
+            regla_aplicada: antesDelLimite ? 'antes_limite' : 'despues_limite',
             porcentaje_decomision: Math.round(porcentajeDecomision * 100),
             comision_original: comisionOriginal,
             importe_decomision: importeDecomision,
@@ -120,7 +137,7 @@ export function exportarCSV({ datos, nombreArchivo, setToast }) {
 export function generarInformePDF(liquidaciones, periodo, colaboradores) {
   const totalBruto = liquidaciones.reduce((sum, l) => sum + (l.bruto || 0), 0);
   const totalIRPF = liquidaciones.reduce((sum, l) => sum + (l.irpf || 0), 0);
-  const _totalDecomisiones = liquidaciones.reduce((sum, l) => sum + (l.decomisiones || 0), 0);
+  const totalDecomisiones = liquidaciones.reduce((sum, l) => sum + (l.decomisiones || 0), 0);
   const totalImpuestos = liquidaciones.reduce((sum, l) => sum + (l.impuesto_zona || 0), 0);
   const totalNeto = liquidaciones.reduce((sum, l) => sum + (l.neto || 0), 0);
 
@@ -137,7 +154,7 @@ export function generarInformePDF(liquidaciones, periodo, colaboradores) {
         .header-title h1 { color: #6d28d9; margin: 0; font-size: 28px; font-weight: 900; }
         .header-info { text-align: right; font-size: 12px; color: #64748b; }
         
-        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 40px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 40px; }
         .summary-card { padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; }
         .summary-card.accent { background: #f5f3ff; border-color: #ddd6fe; border-left-width: 5px; border-left-color: #6d28d9; }
         .card-label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 5px; }
@@ -179,6 +196,10 @@ export function generarInformePDF(liquidaciones, periodo, colaboradores) {
         <div class="summary-card">
           <div class="card-label">Impuestos (IVA)</div>
           <div class="card-value" style="color: #2563eb;">+${totalImpuestos.toFixed(2)}€</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-label">Decomisiones</div>
+          <div class="card-value" style="color: #be123c;">-${totalDecomisiones.toFixed(2)}€</div>
         </div>
         <div class="summary-card accent">
           <div class="card-label">Neto a Liquidar</div>

@@ -96,12 +96,12 @@ export const LiquidacionesDecomisiones = ({ decomisionesPeriodo, colaboradores, 
         'Fecha Venta': new Date(d.fecha_venta).toLocaleDateString('es-ES'),
         'Fecha Baja Cliente': new Date(d.fecha_baja).toLocaleDateString('es-ES'),
         'Meses Comprometidos': d.meses_comprometidos,
-        'Meses Transcurridos': d.meses_transcurridos.toFixed(1),
+        'Meses Transcurridos': (d.meses_transcurridos || 0).toFixed(1),
         'Porcentaje Cumplido': `${d.porcentaje_cumplido}%`,
         'Regla Aplicada': d.regla_aplicada === 'antes_limite' ? 'Antes del límite' : 'Después del límite',
         'Porcentaje Decomisión': `${d.porcentaje_decomision}%`,
-        'Comisión Original (€)': d.comision_original.toFixed(2),
-        'Importe Decomisión (€)': d.importe_decomision.toFixed(2),
+        'Comisión Original (€)': (d.comision_original || 0).toFixed(2),
+        'Importe Decomisión (€)': (d.importe_decomision || 0).toFixed(2),
         'Estado': d.estado
       };
     });
@@ -182,12 +182,12 @@ export const LiquidacionesDecomisiones = ({ decomisionesPeriodo, colaboradores, 
                     <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{new Date(d.fecha_venta).toLocaleDateString('es-ES')}</td>
                     <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{new Date(d.fecha_baja).toLocaleDateString('es-ES')}</td>
                     <td className="px-3 py-2.5 text-center text-slate-600 dark:text-slate-400">{d.meses_comprometidos}m</td>
-                    <td className="px-3 py-2.5 text-center text-slate-600 dark:text-slate-400">{d.meses_transcurridos.toFixed(1)}m</td>
+                    <td className="px-3 py-2.5 text-center text-slate-600 dark:text-slate-400">{(d.meses_transcurridos || 0).toFixed(1)}m</td>
                     <td className="px-3 py-2.5 text-center font-bold text-slate-700 dark:text-slate-300">{d.porcentaje_cumplido}%</td>
                     <td className="px-3 py-2.5 text-[10px] font-black uppercase text-slate-500">{d.regla_aplicada === 'antes_limite' ? 'Early' : 'Late'}</td>
                     <td className="px-3 py-2.5 text-center text-slate-600 dark:text-slate-400">{d.porcentaje_decomision}%</td>
-                    <td className="px-3 py-2.5 text-right text-slate-600 dark:text-slate-400">{d.comision_original.toFixed(2)}</td>
-                    <td className="px-3 py-2.5 text-right font-black text-rose-600 dark:text-rose-400">{d.importe_decomision.toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-right text-slate-600 dark:text-slate-400">{(d.comision_original || 0).toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-right font-black text-rose-600 dark:text-rose-400">{(d.importe_decomision || 0).toFixed(2)}</td>
                     <td className="px-3 py-2.5">
                       <span className="px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/40 text-[9px] font-black uppercase tracking-tighter text-rose-600 dark:text-rose-400">
                         {d.estado}

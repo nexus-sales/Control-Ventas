@@ -231,7 +231,13 @@ export default function Dashboard() {
 
   const byEstado = useMemo(() => {
     const counts = { Borrador: 0, Confirmada: 0, Cerrada: 0, Liquidada: 0, Instalada: 0, Activa: 0, Pendiente: 0 };
-    const buckets = { BORRADOR: 'Borrador', CONFIRMADA: 'Confirmada', CONFIRMADO: 'Confirmada', CERRADA: 'Cerrada', CERRADO: 'Cerrada', LIQUIDADA: 'Liquidada', LIQUIDADO: 'Liquidada', INSTALADA: 'Instalada', INSTALADO: 'Instalada', ACTIVO: 'Activa', ACTIVADO: 'Activa', ACTIVA: 'Activa', PENDIENTE: 'Pendiente' };
+    // ACTIVADA (con A final) faltaba aquí — es un estado real que
+    // ESTADOS_LIQUIDABLES (LiquidacionesPage.jsx) ya trata como liquidable
+    // igual que ACTIVO/ACTIVADO/ACTIVA, pero al no estar en este mapa caía
+    // en su propio bucket suelto "ACTIVADA" en vez de sumarse a "Activa" —
+    // desalineaba el conteo visual del dashboard frente a lo que realmente
+    // se liquida.
+    const buckets = { BORRADOR: 'Borrador', CONFIRMADA: 'Confirmada', CONFIRMADO: 'Confirmada', CERRADA: 'Cerrada', CERRADO: 'Cerrada', LIQUIDADA: 'Liquidada', LIQUIDADO: 'Liquidada', INSTALADA: 'Instalada', INSTALADO: 'Instalada', ACTIVO: 'Activa', ACTIVADO: 'Activa', ACTIVADA: 'Activa', ACTIVA: 'Activa', PENDIENTE: 'Pendiente' };
     ventas.forEach(v => {
       const e = (v.estado || "").toString().toUpperCase();
       const b = buckets[e] || v.estado || "Desconocido";

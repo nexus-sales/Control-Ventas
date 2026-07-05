@@ -3,12 +3,22 @@ import { Layers, X, Phone, Zap, Shield, Save } from "lucide-react";
 
 export default function NivelEditModal({ nivel, onSave, onClose }) {
   const [draft, setDraft] = useState(
-    nivel || {
+    nivel ? {
+      // Fallback genérico para sectores fuera de Telefonía/Energía/Seguridad
+      // (getColaboradorComision, calculos.js) — un nivel guardado antes de
+      // este fix puede no tener estos dos campos; se completan aquí también
+      // al editar, no solo al crear, para no dejar el <input> sin valor.
+      comision_tipo: "porcentaje",
+      comision_valor: 0.5,
+      ...nivel,
+    } : {
       id: "",
       nombre: "",
       pct_telefonia: 0.5,
       pct_energia: 0.5,
       fijo_seguridad: 15,
+      comision_tipo: "porcentaje",
+      comision_valor: 0.5,
       descripcion: "",
       tipo: "COMERCIAL",
     }
@@ -20,7 +30,10 @@ export default function NivelEditModal({ nivel, onSave, onClose }) {
       setError("ID y nombre son obligatorios");
       return;
     }
-    if (isNaN(Number(draft.pct_telefonia)) || isNaN(Number(draft.pct_energia)) || isNaN(Number(draft.fijo_seguridad))) {
+    if (
+      isNaN(Number(draft.pct_telefonia)) || isNaN(Number(draft.pct_energia)) ||
+      isNaN(Number(draft.fijo_seguridad)) || isNaN(Number(draft.comision_valor))
+    ) {
       setError("Los valores de comisión deben ser números");
       return;
     }
@@ -32,6 +45,7 @@ export default function NivelEditModal({ nivel, onSave, onClose }) {
       pct_telefonia: Number(draft.pct_telefonia),
       pct_energia: Number(draft.pct_energia),
       fijo_seguridad: Number(draft.fijo_seguridad),
+      comision_valor: Number(draft.comision_valor),
       descripcion: draft.descripcion?.trim() || "",
     };
 
@@ -146,6 +160,41 @@ export default function NivelEditModal({ nivel, onSave, onClose }) {
                 onChange={(e) => setDraft(d => ({ ...d, fijo_seguridad: e.target.value }))}
               />
               <p className="text-xs text-slate-500 dark:text-gray-400">Ej: 15 = 15€</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Fallback para sectores fuera de Telefonía/Energía/Seguridad
+            (getColaboradorComision, calculos.js) — sin esto, esos sectores
+            caían siempre al 50% fijo sin poder configurarse. */}
+        <div className="mb-6 p-4 bg-slate-50 dark:bg-gray-800/50 border border-slate-200 dark:border-gray-700 rounded-xl">
+          <h3 className="font-semibold text-slate-800 dark:text-gray-100 mb-1">Comisión Genérica</h3>
+          <p className="text-xs text-slate-500 dark:text-gray-400 mb-4">Se aplica a cualquier sector que no sea Telefonía, Energía o Seguridad.</p>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Tipo</label>
+              <select
+                className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:focus:ring-emerald-500"
+                value={draft.comision_tipo}
+                onChange={(e) => setDraft(d => ({ ...d, comision_tipo: e.target.value }))}
+              >
+                <option value="porcentaje">Porcentaje</option>
+                <option value="fijo">Importe Fijo</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-gray-300">
+                Valor {draft.comision_tipo === 'fijo' ? '(€)' : '(0-1)'}
+              </label>
+              <input
+                className="border border-slate-200 dark:border-gray-700 rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 text-slate-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:focus:ring-emerald-500"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder={draft.comision_tipo === 'fijo' ? '15' : '0.50'}
+                value={draft.comision_valor}
+                onChange={(e) => setDraft(d => ({ ...d, comision_valor: e.target.value }))}
+              />
             </div>
           </div>
         </div>

@@ -39,7 +39,7 @@ const LoadingVentas = () => (
 export default function VentasPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { data, dataInitialized } = useData();
+  const { data, dataInitialized, notify } = useData();
   const { isAdmin } = useAuth();
 
   const {
@@ -48,7 +48,6 @@ export default function VentasPage() {
     updateVenta,
     deleteVenta,
     deleteMultipleVentas,
-    updateEstado,
     updateProductPvp,
     isVentaBlocked,
     createInitialDraft,
@@ -204,17 +203,32 @@ export default function VentasPage() {
     if (exportarDatos) exportarDatos(ventasCalc, datosSafe.colaboradores, datosSafe.zonas);
   }, [exportarDatos, ventasCalc, datosSafe.colaboradores, datosSafe.zonas]);
 
+  // El guardado local es instantáneo (addVenta/updateVenta ya lo hicieron
+  // cuando resuelven); no se espera la sincronización remota para cerrar el
+  // formulario — bloquear el cierre en la red reintroduciría el riesgo de
+  // reenvíos duplicados si el usuario reintenta con la red caída. El aviso de
+  // que la sincronización remota falló llega aparte, vía notify(), atribuido
+  // a esta venta en concreto (antes solo quedaba el toast genérico de
+  // "ventas" sin sincronizar, sin decir de qué venta se trataba).
   const handleSaveVenta = useCallback((ventaData) => {
-    addVenta(ventaData);
     closeModal();
-  }, [addVenta, closeModal]);
+    addVenta(ventaData).then(({ synced }) => {
+      if (!synced) {
+        notify?.(`La venta de "${ventaData.cliente || 'este cliente'}" se guardó en este dispositivo, pero no se pudo sincronizar con el servidor.`, 'error');
+      }
+    });
+  }, [addVenta, closeModal, notify]);
 
   const handleUpdateVenta = useCallback((ventaData) => {
     if (selectedVenta?.id) {
-      updateVenta(selectedVenta.id, ventaData);
       closeModal();
+      updateVenta(selectedVenta.id, ventaData).then((synced) => {
+        if (!synced) {
+          notify?.(`Los cambios en la venta de "${ventaData.cliente || selectedVenta.cliente || 'este cliente'}" se guardaron en este dispositivo, pero no se pudieron sincronizar con el servidor.`, 'error');
+        }
+      });
     }
-  }, [updateVenta, selectedVenta, closeModal]);
+  }, [updateVenta, selectedVenta, closeModal, notify]);
 
   const handleUpdatePvp = useCallback((id, pvp) => {
     const targetId = id || pvpEdit.producto_id;
@@ -350,7 +364,6 @@ export default function VentasPage() {
           <div className="h-px bg-slate-200 dark:bg-white/5 mt-10 mb-8" />
 
           <VentasActions
-            ventasCount={ventasCalc.length}
             selectedIds={selectedIds || []}
             onNewVenta={openNewVentaModal}
             onDeleteSelected={handleDeleteSelected}
@@ -390,10 +403,6 @@ export default function VentasPage() {
             colaboradores={datosSafe.colaboradores}
             zonas={datosSafe.zonas}
             operadores={entidadesSafe.operadores}
-            resolveProductoName={resolveProductoName}
-            resolveColaboradorName={resolveColaboradorName}
-            resolveZonaName={resolveZonaName}
-            resolveOperadorName={resolveOperadorName}
             selectedIds={selectedIds || []}
             onSelect={handleSelect}
             onSelectAll={handleSelectAll}
@@ -401,7 +410,6 @@ export default function VentasPage() {
             onEdit={openEditModal}
             onView={openDetailModal}
             onDelete={(id) => deleteVenta(id)}
-            onActivate={(id) => updateEstado(id, 'ACTIVO')}
             onDefinePvp={openPvpModal}
             isVentaBlocked={isVentaBlocked}
             isAdmin={isAdmin}
@@ -425,6 +433,7 @@ export default function VentasPage() {
             colaboradores={datosSafe.colaboradores}
             zonas={datosSafe.zonas}
             niveles={entidadesSafe.niveles}
+            reglas={entidadesSafe.reglas}
             resolveProductoName={resolveProductoName}
             resolveColaboradorName={resolveColaboradorName}
             resolveZonaName={resolveZonaName}

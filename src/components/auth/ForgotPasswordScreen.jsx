@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-// ...existing code...
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
 import EmailInput from '../ui/EmailInput';
+import { supabase } from '../../lib/supabase';
 import '../../styles/login-animations.css';
 
 export default function ForgotPasswordScreen({ onBackToLogin }) {
@@ -14,7 +14,7 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!isEmailValid) {
       setMessage('Por favor, ingresa un email válido.');
       return;
@@ -23,12 +23,21 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
     setIsSubmitting(true);
     setMessage('');
 
-    // Modo localStorage local - sin servicios externos
-    setTimeout(() => {
-      setMessage('En modo local, contacta al administrador para restablecer tu contraseña.');
-      setIsSuccess(true);
-      setIsSubmitting(false);
-    }, 1000);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      setMessage(error.message || 'No se pudo enviar el correo de recuperación. Inténtalo de nuevo.');
+      return;
+    }
+
+    // Supabase no confirma si el email existe o no (evita enumerar cuentas
+    // registradas) — el mensaje es el mismo exista o no la cuenta.
+    setMessage('Si existe una cuenta con ese email, te hemos enviado un enlace para restablecer la contraseña.');
+    setIsSuccess(true);
   };
 
   const handleEmailChange = (e) => {
@@ -49,18 +58,12 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
         <div className="text-center mb-6">
           <SectionTitle className="text-gray-900 dark:text-gray-100">Recuperar Contraseña</SectionTitle>
           <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
-            En modo local, contacta al administrador para restablecer tu contraseña
+            Te enviaremos un enlace por email para restablecer tu contraseña
           </p>
         </div>
 
         {!isSuccess ? (
           <form onSubmit={handleSubmit} className="grid gap-4 w-80">
-            {/* Información de modo local */}
-            <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-2 rounded border border-gray-200 dark:border-gray-700">
-              <p>Estado: {navigator.onLine ? '🟢 Online' : '🔴 Offline'}</p>
-              <p>Modo: Solo Local - Sin servicios externos</p>
-            </div>
-            
             <EmailInput
               value={email}
               onChange={handleEmailChange}
@@ -126,11 +129,11 @@ export default function ForgotPasswordScreen({ onBackToLogin }) {
             </div>
 
             <div className="text-gray-600 dark:text-gray-400 text-sm space-y-2">
-              <p>Para restablecer tu contraseña:</p>
+              <p>Siguientes pasos:</p>
               <ul className="text-xs space-y-1">
-                <li>• Contacta al administrador del sistema</li>
-                <li>• Proporciona tu email: {email}</li>
-                <li>• El administrador creará una nueva contraseña</li>
+                <li>• Revisa la bandeja de entrada de {email}</li>
+                <li>• Abre el enlace del email para crear una nueva contraseña</li>
+                <li>• El enlace caduca pasado un tiempo — si no lo ves, revisa spam o vuelve a solicitarlo</li>
               </ul>
             </div>
 

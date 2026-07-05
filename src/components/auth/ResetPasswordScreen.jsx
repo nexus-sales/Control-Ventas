@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Card from '../ui/Card';
 import SectionTitle from '../ui/SectionTitle';
 import PasswordInput from '../ui/PasswordInput';
+import { supabase } from '../../lib/supabase';
 
 export default function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
@@ -11,23 +12,33 @@ export default function ResetPasswordScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
-  const [searchParams] = useSearchParams();
+  const [linkReady, setLinkReady] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Verificar si tenemos los parámetros necesarios para el reset
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
-    
-    if (!accessToken || !refreshToken) {
-      setMessage('Enlace de recuperación inválido o expirado.');
-      return;
-    }
-    setMessage('Funcionalidad de recuperación de contraseña no disponible en modo local.');
-  }, [searchParams]);
+    // El cliente de Supabase ya parsea el enlace de recuperación (fragmento
+    // o query, según el flujo) al cargar la página y dispara el evento
+    // PASSWORD_RECOVERY con una sesión temporal válida solo para cambiar la
+    // contraseña — parsear access_token/refresh_token a mano aquí es frágil
+    // (depende del flowType) y ya no hace falta con este patrón.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setLinkReady(true);
+        setMessage('');
+      }
+    });
+
+    // Por si el evento ya se disparó antes de suscribirnos.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setLinkReady(true);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!isPasswordValid) {
       setMessage('La contraseña no cumple con los requisitos de seguridad.');
       return;
@@ -41,12 +52,18 @@ export default function ResetPasswordScreen() {
     setIsSubmitting(true);
     setMessage('');
 
-    try {
-      setMessage('Funcionalidad de actualización de contraseña no disponible en modo local.');
-      setIsSuccess(false);
-    } finally {
-      setIsSubmitting(false);
+    const { error } = await supabase.auth.updateUser({ password });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      setMessage(error.message || 'No se pudo actualizar la contraseña. Vuelve a solicitar el enlace de recuperación.');
+      return;
     }
+
+    setMessage('Contraseña actualizada correctamente.');
+    setIsSuccess(true);
+    setTimeout(() => navigate('/login', { replace: true }), 2000);
   };
 
   const handlePasswordChange = (e) => {
@@ -69,7 +86,18 @@ export default function ResetPasswordScreen() {
           </p>
         </div>
 
-        {!isSuccess ? (
+        {!linkReady && !isSuccess ? (
+          <div className="w-80 text-center space-y-4">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
+              Verificando el enlace de recuperación...
+            </p>
+            {message && (
+              <p className="text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                {message}
+              </p>
+            )}
+          </div>
+        ) : !isSuccess ? (
           <form onSubmit={handleSubmit} className="grid gap-4 w-80">
             <PasswordInput
               value={password}
@@ -99,7 +127,7 @@ export default function ResetPasswordScreen() {
                 `}
                 required
               />
-              
+
               {confirmPassword && password !== confirmPassword && (
                 <p className="text-red-500 dark:text-red-400 text-sm flex items-center">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,7 +136,7 @@ export default function ResetPasswordScreen() {
                   Las contraseñas no coinciden
                 </p>
               )}
-              
+
               {confirmPassword && password === confirmPassword && (
                 <p className="text-green-500 dark:text-green-400 text-sm flex items-center">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

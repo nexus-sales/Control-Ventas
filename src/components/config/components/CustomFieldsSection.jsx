@@ -5,29 +5,38 @@ import {
 } from "lucide-react";
 import { crearCampoPersonalizado, ejemploCampoPersonalizado } from '../../../data/customFieldsModel';
 import Card from "../../ui/Card";
+import { useData, useAuth } from "../../../context/AppContexts";
 
 const CustomFieldsSection = React.memo(() => {
-    // Cargar campos desde localStorage o usar ejemplo por defecto
-    const [campos, setCampos] = useState(() => {
+    // Usar el hook de datos global
+    const { data, setCustomFields } = useData();
+    // La política real (puede_editar_cv()) bloquea escritura a rol 'viewer'
+    // — antes cualquier viewer veía el formulario completo "Crear Campo" y
+    // los botones de activar/eliminar, y al guardar solo le llegaba el
+    // aviso genérico de "no se pudo sincronizar", como si fuera un
+    // problema de red y no de permisos.
+    const { profile } = useAuth();
+    const puedeEditar = profile?.rol !== 'viewer';
+
+    // Obtener los campos desde el estado global o inicializar con los de localStorage / ejemplo
+    const campos = useMemo(() => {
+        if (Array.isArray(data?.custom_fields) && data.custom_fields.length > 0) {
+            return data.custom_fields;
+        }
         try {
             const saved = localStorage.getItem("customFields");
             return saved ? JSON.parse(saved) : [ejemploCampoPersonalizado];
-        } catch (e) {
-            console.error("Error cargando campos personalizados:", e);
+        } catch {
             return [ejemploCampoPersonalizado];
         }
-    });
+    }, [data?.custom_fields]);
 
-    // Guardar cambios en localStorage
-    React.useEffect(() => {
-        try {
-            localStorage.setItem("customFields", JSON.stringify(campos));
-            // Disparar evento para que otros componentes (como VentaFormModal) se enteren
-            window.dispatchEvent(new Event('customFieldsUpdated'));
-        } catch (e) {
-            console.error("Error guardando campos personalizados:", e);
-        }
-    }, [campos]);
+    // Setter envolvente para mantener la sincronización y disparar eventos
+    const setCampos = useCallback((updateFn) => {
+        const nextCampos = typeof updateFn === 'function' ? updateFn(campos) : updateFn;
+        setCustomFields(nextCampos);
+        window.dispatchEvent(new Event('customFieldsUpdated'));
+    }, [campos, setCustomFields]);
     const [nuevoCampo, setNuevoCampo] = useState({
         nombre: '',
         tipo: 'texto',
@@ -110,6 +119,15 @@ const CustomFieldsSection = React.memo(() => {
                 <p className="text-slate-500 dark:text-gray-400 mt-1">Añade información extra a tus ventas, productos o operadores de forma flexible.</p>
             </div>
 
+            {!puedeEditar && (
+                <Card className="border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-800/40 p-4">
+                    <p className="text-sm font-bold text-slate-500 dark:text-gray-400">
+                        Tu rol (viewer) solo permite consultar los campos personalizados, no crearlos ni modificarlos.
+                    </p>
+                </Card>
+            )}
+
+            {puedeEditar && (
             <Card className="border-slate-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm overflow-hidden shadow-xl">
                 <div className="bg-slate-50 dark:bg-gray-800/50 p-4 border-b border-slate-200 dark:border-gray-800">
                     <h4 className="font-bold text-slate-700 dark:text-gray-200 flex items-center gap-2">
@@ -197,6 +215,7 @@ const CustomFieldsSection = React.memo(() => {
                     </div>
                 </form>
             </Card>
+            )}
 
             <div className="space-y-4">
                 <h4 className="text-lg font-bold text-slate-800 dark:text-white px-1">Campos Configurador</h4>
@@ -224,22 +243,25 @@ const CustomFieldsSection = React.memo(() => {
 
                                     <div className="flex items-center gap-3">
                                         <button
-                                            onClick={() => handleToggleActive(campo.id)}
+                                            onClick={puedeEditar ? () => handleToggleActive(campo.id) : undefined}
+                                            disabled={!puedeEditar}
                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black transition-colors ${campo.activo
                                                 ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
                                                 : 'bg-slate-200 dark:bg-gray-800 text-slate-500 dark:text-gray-500'
-                                                }`}
+                                                } ${!puedeEditar ? 'cursor-default opacity-80' : ''}`}
                                         >
                                             {campo.activo ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
                                             {campo.activo ? 'ACTIVO' : 'INACTIVO'}
                                         </button>
 
+                                        {puedeEditar && (
                                         <button
                                             className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                                             onClick={() => handleDeleteCampo(campo.id)}
                                         >
                                             <Trash2 className="w-5 h-5" />
                                         </button>
+                                        )}
                                     </div>
                                 </div>
                             </Card>

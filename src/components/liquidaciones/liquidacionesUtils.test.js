@@ -51,6 +51,17 @@ describe('calcularDecomisiones', () => {
     expect(resultado[0].importe_decomision).toBeLessThan(100);
   });
 
+  it('en la frontera exacta del límite (6 meses de calendario justos) aplica la regla de "después del límite", no "antes"', () => {
+    // fecha 2025-01-01 -> fecha_baja 2025-07-01 son exactamente 6 meses de
+    // calendario (181 días). Dividir por 30.44 da 181/30.44 ≈ 5.94 < 6, que
+    // clasificaría esto como "antes del límite" (decomisión más alta) pese a
+    // que el cliente cumplió el compromiso justo en el límite pactado.
+    const venta = { ...ventaBase, fecha_baja: '2025-07-01', periodo_compromiso: 12 };
+    const resultado = calcularDecomisiones([venta], [operadorDefault]);
+    expect(resultado).toHaveLength(1);
+    expect(resultado[0].regla_aplicada).toBe('despues_limite');
+  });
+
   it('no genera decomisión si la baja ocurre después de cumplir todo el período comprometido', () => {
     const venta = { ...ventaBase, periodo_compromiso: 6, fecha_baja: '2026-01-01' };
     expect(calcularDecomisiones([venta], [operadorDefault])).toEqual([]);

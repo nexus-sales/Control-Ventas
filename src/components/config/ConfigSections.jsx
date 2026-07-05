@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Save, Wifi, WifiOff, RefreshCw, Download, Database, Clock, HardDrive, AlertTriangle } from "lucide-react";
-import { useData } from "../../context/AppContexts";
+import React, { useState, useCallback, useMemo } from "react";
+import { Save, Wifi, WifiOff, RefreshCw, Download, Database, Clock, HardDrive, AlertTriangle, Lock } from "lucide-react";
+import { useData, useAuth } from "../../context/AppContexts";
 import EmpresaForm from "./components/EmpresaForm";
 import LogoUploader from "./components/LogoUploader";
 import ColorPicker from "./components/ColorPicker";
@@ -17,50 +17,62 @@ import CustomFieldsSection from "./components/CustomFieldsSection";
 export default function ConfigSections({ zonas = [] }) {
   const [activeSection, setActiveSection] = useState('admin');
 
-  // Estado para datos de empresa
-  const [empresa, setEmpresa] = useState({
-    nombre: "",
-    cif: "",
-    direccion: "",
-    telefono: "",
-    email: "",
-    web: "",
-    logoUrl: "",
-    colorCorporativo: "#6D28D9"
-  });
+  // Usar el hook de datos global
+  const { data: globalData, setEmpresa: setGlobalEmpresa } = useData();
+  // La política real (cv_empresa_modify) solo permite escribir empresa_config_cv
+  // a un admin — antes cualquier rol veía el formulario completo y, al guardar,
+  // recibía el alert de éxito incondicional aunque Supabase rechazara el
+  // cambio por permisos (no por conectividad). Se restringe también en la UI.
+  const { isAdmin } = useAuth();
 
-  // Cargar datos de empresa desde localStorage
-  useEffect(() => {
+  // Estado local para edición de empresa, mapeado de data.empresa (esperamos array) o de localStorage directo
+  const empresa = useMemo(() => {
+    const defaultData = {
+      nombre: "Mi Empresa",
+      cif: "",
+      direccion: "",
+      telefono: "",
+      email: "",
+      web: "",
+      logoUrl: "",
+      colorCorporativo: "#6D28D9"
+    };
+    if (Array.isArray(globalData?.empresa) && globalData.empresa.length > 0) {
+      return { ...defaultData, ...globalData.empresa[0] };
+    }
+    // Fallback inicial
     try {
       const raw = localStorage.getItem("empresaData");
       if (raw) {
-        const data = JSON.parse(raw);
-        setEmpresa(prev => ({ ...prev, ...data }));
+        // Si hay array lo procesamos, si no lo envolvemos
+        const parsed = JSON.parse(raw);
+        return { ...defaultData, ...(Array.isArray(parsed) ? parsed[0] : parsed) };
       }
-    } catch (err) {
-      console.error("Error cargando datos de empresa:", err);
+    } catch {
+      // localStorage inaccesible o JSON corrupto: usar defaultData.
     }
-  }, []);
+    return defaultData;
+  }, [globalData?.empresa]);
 
   // Manejar cambios en datos de empresa
-  const handleEmpresaChange = useCallback((data) => {
-    setEmpresa((prev) => {
-      const newData = { ...prev, ...data };
-      try {
-        localStorage.setItem("empresaData", JSON.stringify(newData));
-        // Notificar a otros componentes que los datos han cambiado
-        window.dispatchEvent(new CustomEvent('empresaDataUpdated', { detail: newData }));
-      } catch (err) {
-        console.error("Error guardando datos de empresa:", err);
-      }
-      return newData;
-    });
-  }, []);
+  const handleEmpresaChange = useCallback((updatedFields) => {
+    const newEmpresaObj = { ...empresa, ...updatedFields };
+    // Asignar ID singleton para empresa_config_cv si no tiene
+    if (!newEmpresaObj.id) {
+      newEmpresaObj.id = "singleton-empresa-id";
+    }
+    
+    // Guardar usando el setter de DataProvider como array
+    setGlobalEmpresa([newEmpresaObj]);
+
+    // Notificar a otros componentes que los datos han cambiado (UI legado)
+    window.dispatchEvent(new CustomEvent('empresaDataUpdated', { detail: newEmpresaObj }));
+  }, [empresa, setGlobalEmpresa]);
 
   const handleSave = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('empresaDataUpdated', { detail: empresa }));
-    alert('Datos de empresa guardados correctamente');
-  }, [empresa]);
+    handleEmpresaChange({});
+    alert('Datos de empresa guardados y sincronizados correctamente');
+  }, [handleEmpresaChange]);
 
   // Secciones de configuración
   const sections = useMemo(() => [
@@ -104,30 +116,47 @@ export default function ConfigSections({ zonas = [] }) {
                 <p className="text-slate-500 dark:text-gray-400">Personaliza los datos legales y la identidad visual de tu plataforma.</p>
               </div>
 
-              <div className="grid lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-6">
-                  <EmpresaForm empresa={empresa} onChange={handleEmpresaChange} />
-                  <div className="flex justify-end">
-                    <button
-                      onClick={handleSave}
-                      className="px-6 py-2.5 bg-[var(--brand-primary)] text-white rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg flex items-center gap-2"
-                    >
-                      <Save className="w-4 h-4" />
-                      Guardar Cambios
-                    </button>
+              {isAdmin ? (
+                <div className="grid lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-2 space-y-6">
+                    <EmpresaForm empresa={empresa} onChange={handleEmpresaChange} />
+                    <div className="flex justify-end">
+                      <button
+                        onClick={handleSave}
+                        className="px-6 py-2.5 bg-[var(--brand-primary)] text-white rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg flex items-center gap-2"
+                      >
+                        <Save className="w-4 h-4" />
+                        Guardar Cambios
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    <LogoUploader
+                      logoUrl={empresa.logoUrl}
+                      onChange={logoUrl => handleEmpresaChange({ logoUrl })}
+                    />
+                    <ColorPicker
+                      color={empresa.colorCorporativo}
+                      onChange={colorCorporativo => handleEmpresaChange({ colorCorporativo })}
+                    />
                   </div>
                 </div>
-                <div className="space-y-6">
-                  <LogoUploader
-                    logoUrl={empresa.logoUrl}
-                    onChange={logoUrl => handleEmpresaChange({ logoUrl })}
-                  />
-                  <ColorPicker
-                    color={empresa.colorCorporativo}
-                    onChange={colorCorporativo => handleEmpresaChange({ colorCorporativo })}
-                  />
+              ) : (
+                <div className="rounded-2xl border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-800/40 p-6 space-y-4">
+                  <p className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">
+                    <Lock className="w-4 h-4" />
+                    Solo un administrador puede editar los datos de la empresa
+                  </p>
+                  <dl className="grid sm:grid-cols-2 gap-4 text-sm">
+                    <div><dt className="text-slate-400 dark:text-gray-500">Nombre</dt><dd className="font-bold text-slate-800 dark:text-white">{empresa.nombre || '-'}</dd></div>
+                    <div><dt className="text-slate-400 dark:text-gray-500">CIF</dt><dd className="font-bold text-slate-800 dark:text-white">{empresa.cif || '-'}</dd></div>
+                    <div><dt className="text-slate-400 dark:text-gray-500">Dirección</dt><dd className="font-bold text-slate-800 dark:text-white">{empresa.direccion || '-'}</dd></div>
+                    <div><dt className="text-slate-400 dark:text-gray-500">Teléfono</dt><dd className="font-bold text-slate-800 dark:text-white">{empresa.telefono || '-'}</dd></div>
+                    <div><dt className="text-slate-400 dark:text-gray-500">Email</dt><dd className="font-bold text-slate-800 dark:text-white">{empresa.email || '-'}</dd></div>
+                    <div><dt className="text-slate-400 dark:text-gray-500">Web</dt><dd className="font-bold text-slate-800 dark:text-white">{empresa.web || '-'}</dd></div>
+                  </dl>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}

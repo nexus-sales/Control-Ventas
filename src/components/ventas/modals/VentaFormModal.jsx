@@ -5,9 +5,13 @@ import { cn } from '../../../lib/utils';
 import Modal from '../../ui/Modal';
 import { Input, Select, Label, Button, TextArea } from '../../ui/FormElements';
 import { SECTORES, FAMILIAS_POR_SECTOR } from '../../../utils/constants';
-import { getColaboradorNivelId } from '../../../utils/calculos';
+import { getColaboradorNivelId, computeVenta } from '../../../utils/calculos';
 
-// Estados válidos para ventas
+// Estados válidos para ventas. Incluye "PENDIENTE VALIDAR" y "PENDIENTE
+// INSTALACION" porque VentasProcessWidget.jsx ya cuenta ventas reales en esos
+// estados (funnel de proceso) — antes no estaban aquí, así que editar
+// cualquier venta en uno de esos dos estados la sobreescribía en silencio
+// con el primer valor del <select> al guardar.
 const ESTADOS_VALIDOS = [
   "Confirmada",
   "Pendiente",
@@ -17,6 +21,8 @@ const ESTADOS_VALIDOS = [
   "Rechazada",
   "ACTIVO",
   "PENDIENTE",
+  "PENDIENTE VALIDAR",
+  "PENDIENTE INSTALACION",
   "SCORING",
   "INCIDENCIA",
   "INSTALACION",
@@ -142,6 +148,7 @@ export const VentaFormModal = ({
   operadores = [],
   productos = [],
   niveles = [],
+  reglas = [],
   initialCustomFields = [], // Prop opcional
   createInitialDraft,
   resolveColaboradorName,
@@ -187,6 +194,7 @@ export const VentaFormModal = ({
   const colaboradoresData = useMemo(() => colaboradores || [], [colaboradores]);
   const zonasData = useMemo(() => zonas || [], [zonas]);
   const nivelesData = useMemo(() => niveles || [], [niveles]);
+  const reglasData = useMemo(() => reglas || [], [reglas]);
 
   // Filtrar y preparar zonas asegurando que tengan nombre
   const zonasDisponibles = useMemo(() => {
@@ -289,35 +297,42 @@ export const VentaFormModal = ({
     return errors;
   }, [formData, customFieldsConfig]);
 
-  // Estadísticas del formulario
+  // Estadísticas del formulario. La estimación de comisión llama al mismo
+  // motor real que usa el resto de la app (computeVenta, calculos.js) sobre
+  // un "borrador" de venta hecho con los datos actuales del formulario —
+  // antes este panel reimplementaba el cálculo a mano (pvp × base%) y
+  // mostraba eso como "Estimación Neta" sin aplicar reglas de comisión,
+  // IRPF del colaborador, comisión personalizada ni el ajuste por impuesto
+  // de zona (IVA/IGIC), así que podía no coincidir con la comisión que
+  // luego se ve para esa misma venta ya guardada en la tabla/dashboard.
   const formStats = useMemo(() => {
     const pvpValue = Number(formData.pvp) || 0;
-    const comisionBase = Number(formData.comision_base) || 0;
-    const tipoComision = formData.comision_tipo || 'porcentaje';
 
-    // La comisión estimada es lo que cobra el comercial directamente:
-    // - porcentaje: PVP × base% (ej: 50€ × 80% = 40€)
-    // - fijo: el importe fijo indicado
-    // - mixto: fijo + porcentaje sobre PVP
-    let comisionEstimada = 0;
-    if (tipoComision === 'porcentaje') {
-      comisionEstimada = pvpValue * (comisionBase / 100);
-    } else if (tipoComision === 'fijo') {
-      comisionEstimada = comisionBase;
-    } else if (tipoComision === 'mixto') {
-      const fija = Number(formData.comision_fija) || 0;
-      const pct = Number(formData.comision_porcentaje) || 0;
-      comisionEstimada = fija + (pvpValue * pct / 100);
-    }
+    const calc = computeVenta({
+      venta: { ...formData, pvp: pvpValue },
+      productos: productosDisponibles,
+      operadores: operadoresDisponibles,
+      zonas: zonasDisponibles,
+      colaboradores: colaboradoresDisponibles,
+      niveles: nivelesData,
+      reglas: reglasData,
+    });
+
+    const comisionBruta = calc.ok ? calc.detalle.comBruta : 0;
+    // "Estimación Neta": lo que el colaborador cobra de verdad, ya con su
+    // reparto (parteColab) y su IRPF descontado (netoColab) — no la bruta
+    // de la empresa.
+    const comisionEstimada = calc.ok ? calc.detalle.netoColab : 0;
 
     return {
       pvp: pvpValue,
+      comisionBruta,
       comisionEstimada,
       hasErrors: Object.keys(validationErrors).length > 0,
       isComplete: !!(formData.cliente && formData.fecha && formData.colaborador_id && formData.zona_id),
       hasMissingData: colaboradoresDisponibles.length === 0 || zonasDisponibles.length === 0,
     };
-  }, [formData, colaboradoresDisponibles.length, zonasDisponibles.length, validationErrors]);
+  }, [formData, colaboradoresDisponibles, zonasDisponibles, operadoresDisponibles, productosDisponibles, nivelesData, reglasData, validationErrors]);
 
   // Producto, colaborador, operador y zona seleccionados
   const productoSeleccionado = useMemo(() =>
@@ -948,6 +963,15 @@ export const VentaFormModal = ({
                       onChange={(e) => updateField('estado', e.target.value)}
                       className="font-black text-blue-600 dark:text-blue-400"
                     >
+                      {/* El importador de Excel acepta cualquier texto libre como estado
+                          (useImportGestion.js) — si la venta trae uno que no está en
+                          ESTADOS_VALIDOS, se añade aquí como opción extra en vez de
+                          dejar el <select> sin esa opción, que provocaba que se
+                          sobreescribiera en silencio con lo que el navegador dejara
+                          seleccionado al guardar. */}
+                      {formData.estado && !ESTADOS_VALIDOS.includes(formData.estado) && (
+                        <option value={formData.estado}>{formData.estado} (importado)</option>
+                      )}
                       {ESTADOS_VALIDOS.map((est) => (
                         <option key={est} value={est}>{est}</option>
                       ))}
@@ -1012,12 +1036,13 @@ export const VentaFormModal = ({
                   </div>
                   {formData.comision_tipo === 'porcentaje' && formStats.pvp > 0 && (
                     <p className="text-xs text-slate-400 dark:text-slate-500">
-                      = {((formStats.pvp * (Number(formData.comision_base) || 0)) / 100).toFixed(2)} € sobre PVP
+                      = {formStats.comisionBruta.toFixed(2)} € bruto sobre PVP (antes del reparto con el colaborador)
                     </p>
                   )}
                 </div>
 
-                {/* Factor agente — informativo, no afecta la estimación */}
+                {/* Factor de reparto real del colaborador — se aplica sobre la
+                    comisión bruta para dar la "Estimación comisión" de abajo. */}
                 <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 space-y-2">
                   <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Factor distribución agente</span>
                   <div className="flex gap-2 items-center">
@@ -1037,7 +1062,7 @@ export const VentaFormModal = ({
                 {/* Estimación neta */}
                 <div className="flex items-center justify-between px-5 py-4 bg-slate-50 dark:bg-slate-800/50">
                   <div>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-0.5">Estimación comisión</p>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-0.5">Estimación comisión (neta, tras reparto)</p>
                     <p className="text-2xl font-bold text-slate-900 dark:text-white">
                       {formStats.comisionEstimada.toFixed(2)} €
                     </p>

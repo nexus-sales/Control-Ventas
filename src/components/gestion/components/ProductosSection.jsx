@@ -10,6 +10,22 @@ import FamiliaBadge from "./FamiliaBadge";
 import { cleanOperadores, cleanProductosRobust, normalizeText } from "../utils/gestionUtils";
 import { glassStyles, cardHoverStyles } from "../../../utils/designUtils";
 
+// Para tipo 'mixto' el cálculo real (getProductoComisionBase, calculos.js)
+// usa comision_fija/comision_porcentaje por separado — comision_valor no se
+// rellena para ese tipo y quedaba en 0, así que la tabla y el CSV mostraban
+// "0€" para cualquier producto con comisión mixta aunque el cálculo real
+// fuera correcto.
+function formatComision(producto) {
+    if (producto.comision_tipo === 'mixto') {
+        const fija = Number(producto.comision_fija) || 0;
+        const porcentaje = Number(producto.comision_porcentaje) || 0;
+        if (!fija && !porcentaje) return null;
+        return `${fija.toFixed(2)}€ + ${porcentaje}%`;
+    }
+    if (producto.comision_valor === null || producto.comision_valor === undefined) return null;
+    return `${producto.comision_valor}${producto.comision_tipo === 'porcentaje' ? '%' : '€'}`;
+}
+
 // ==========================================
 // COMPONENTE: Tarjeta de Estadística Premium
 // ==========================================
@@ -185,7 +201,7 @@ const ProductosSection = React.memo(() => {
             getOperadorNombre(p.operador_id),
             p.familia,
             p.pvp,
-            p.comision_valor,
+            formatComision(p) ?? '',
             p.comision_tipo,
             p.contacto,
             p.email,
@@ -376,7 +392,8 @@ const ProductosSection = React.memo(() => {
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                             {productosPagina.map(p => {
                                 const sinPvp = p.pvp === null || p.pvp === undefined;
-                                const sinComision = p.comision_valor === null || p.comision_valor === undefined;
+                                const comisionDisplay = formatComision(p);
+                                const sinComision = comisionDisplay === null;
                                 const incompleto = !p.operador_id || sinPvp || sinComision;
                                 return (
                                 <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
@@ -418,10 +435,7 @@ const ProductosSection = React.memo(() => {
                                         {sinComision ? (
                                             <span className="text-slate-400 dark:text-slate-500 text-xs font-medium italic">Sin definir</span>
                                         ) : (
-                                            <>
-                                                <span className="font-bold text-slate-800 dark:text-white">{p.comision_valor}</span>
-                                                <span className="ml-1 text-slate-500 text-xs font-medium">{p.comision_tipo === 'porcentaje' ? '%' : '€'}</span>
-                                            </>
+                                            <span className="font-bold text-slate-800 dark:text-white">{comisionDisplay}</span>
                                         )}
                                     </td>
                                     <td className="px-4 py-4">
