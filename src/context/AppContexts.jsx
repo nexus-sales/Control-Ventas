@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 
 // Importar contextos desde contexts.js
 import { AuthContext, DataContext, ThemeContext, AppContext } from './contexts';
+import { useAuth } from './hooks';
 
 // Importar constantes y helpers
 import { AUTH_BYPASS, MOCK_USER } from '../constants';
@@ -236,6 +237,11 @@ export function AuthProvider({ children }) {
 
 // =================== 📊 DATA PROVIDER ===================
 export function DataProvider({ children }) {
+  // DataProvider vive dentro de AuthProvider, así que puede leer el usuario
+  // ya resuelto — necesario para recargar los datos cuando aparece una
+  // sesión sin que el componente se remonte (ver useEffect de más abajo).
+  const { user } = useAuth();
+
   const [data, setData] = useState({
     ventas: [],
     colaboradores: [],
@@ -253,6 +259,7 @@ export function DataProvider({ children }) {
   const [dataInitialized, setDataInitialized] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
   const initRef = useRef(false);
+  const hadSessionRef = useRef(false);
 
   const { isOnline, pendingChanges, addPendingChange, resolvePendingChange, lastSyncTime, createEmergencyBackup, getOfflineInfo } = useOfflineSync();
   const [syncToast, setSyncToast] = useState(null);
@@ -461,14 +468,32 @@ export function DataProvider({ children }) {
   const setEmpresa = useMemo(() => createSetter('empresa'), [createSetter]);
   const setCustomFields = useMemo(() => createSetter('custom_fields'), [createSetter]);
 
-  // Inicialización
+  // Inicialización. loadAllData() siempre se llama al montar (aunque no haya
+  // sesión todavía, para que el modo offline-first tenga los datos locales
+  // disponibles de inmediato). Pero AuthProvider no renderiza a sus hijos
+  // hasta que resuelve el primer chequeo de auth (ver su `if (loading)
+  // return <spinner>`), así que DataProvider monta UNA sola vez — si en ese
+  // momento aún no había sesión y el usuario inicia sesión normalmente
+  // (sin recargar la página), este efecto no se repetía nunca (initRef ya
+  // en true) y los datos se quedaban como en el montaje inicial (sin
+  // sesión, solo lo local) hasta que alguien refrescaba a mano. Aquí se
+  // detecta esa transición real de "sin sesión" a "con sesión" y se repite
+  // la carga, esta vez con la sesión ya disponible.
   useEffect(() => {
-    if (initRef.current) return;
-    initRef.current = true;
+    const haySesionAhora = !!user?.id;
 
-    // Debug: DataProvider inicializando
-    loadAllData();
-  }, [loadAllData]);
+    if (!initRef.current) {
+      initRef.current = true;
+      hadSessionRef.current = haySesionAhora;
+      loadAllData();
+      return;
+    }
+
+    if (!hadSessionRef.current && haySesionAhora) {
+      loadAllData();
+    }
+    hadSessionRef.current = haySesionAhora;
+  }, [user?.id, loadAllData]);
 
   // offlineSync agrupa el estado de sincronización para quien lo necesite mostrar
   // (StatusWidgets.jsx) — una sola instancia real de useOfflineSync, la de aquí;

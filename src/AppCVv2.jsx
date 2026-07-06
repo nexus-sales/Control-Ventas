@@ -86,7 +86,6 @@ function MainLayout() {
     <ProtectedRoute>
       <LayoutShell>
         <Outlet />
-        <StatusWidgets />
       </LayoutShell>
     </ProtectedRoute>
   );
@@ -96,6 +95,13 @@ function MainLayout() {
 function AppContent() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
+      {/* Fuera de ProtectedRoute a propósito: si el Service Worker sirve un
+          bundle viejo tras un despliegue, el aviso de "Nueva Versión" debe
+          verse también en /login — antes solo se montaba dentro del área
+          autenticada, así que alguien atascado en una versión vieja de la
+          pantalla de login nunca llegaba a ver el aviso ni el botón de
+          actualizar, y su único recurso era borrar caché a mano. */}
+      <StatusWidgets />
       <Routes>
         {/* Rutas públicas */}
         <Route path="/login" element={<LoginScreen />} />
